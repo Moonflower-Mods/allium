@@ -1,9 +1,9 @@
-# Fabric Example Mod
+# Allium
+Lua Plugin loader for Java Minecraft.
 
-## Setup
+Currently, only functioning and in development in fabric, but should (in theory) be very easily portable to forge.
 
-For setup instructions please see the [fabric wiki page](https://fabricmc.net/wiki/tutorial:setup) that relates to the IDE that you are using.
-
-## License
-
-This template is available under the CC0 license. Feel free to learn from it and incorporate it in your own projects.
+## But Allium is for ComputerCraft?
+You're right! That's moved to (allium-cc)[https://github.com/hugeblank/allium-cc]. I think this project is going to be
+more important going forward, as it has serious utility, moreso than the dinky CC counterpart. Plus this is in active
+development, so stick around!
