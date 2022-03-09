@@ -14,19 +14,21 @@ package me.hugeblank.allium;
 import me.hugeblank.allium.loader.Plugin;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
-import net.fabricmc.api.ModInitializer;
+import net.fabricmc.api.DedicatedServerModInitializer;
+import net.minecraft.server.MinecraftServer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.util.Objects;
 
-public class Allium implements ModInitializer {
+public class Allium implements DedicatedServerModInitializer {
     public static final String ID = "allium";
     public static final Logger LOGGER = LoggerFactory.getLogger(ID);
+    public static MinecraftServer SERVER;
 
     @Override
-    public void onInitialize() {
+    public void onInitializeServer() {
         Events.init();
         LOGGER.info("here!");
         File[] files = Objects.requireNonNull(FileHelper.getPluginsDirectory().listFiles());

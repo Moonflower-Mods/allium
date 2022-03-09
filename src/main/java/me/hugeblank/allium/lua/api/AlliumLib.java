@@ -13,16 +13,16 @@ public record AlliumLib(Plugin plugin) implements LuaLibrary {
     public LuaValue add(LuaState state, LuaTable env) {
         LuaTable lib = new LuaTable();
         // Stuff should be here
-        LibFunction.bind(lib, () -> new AlliumLib2(this.plugin), new String[]{"onEvent"});
+        LibFunction.bind(lib, () -> new AlliumLibTwoArgFunction(this.plugin), new String[]{"onEvent"});
         env.rawset("allium", lib);
         state.loadedPackages.rawset("allium", lib);
         return lib;
     }
 
-    private static final class AlliumLib2 extends TwoArgFunction {
+    private static final class AlliumLibTwoArgFunction extends TwoArgFunction {
         private final Plugin plugin;
 
-        AlliumLib2(Plugin plugin) {
+        AlliumLibTwoArgFunction(Plugin plugin) {
             this.plugin = plugin;
         }
 

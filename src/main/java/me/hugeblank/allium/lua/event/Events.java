@@ -7,6 +7,7 @@ import org.squiddev.cobalt.ValueFactory;
 
 public class Events {
     public static final Event CHAT_MESSAGE;
+    public static final Event PLAYER_TICK;
     static {
         CHAT_MESSAGE = new Event("chat_message", (objects) -> {
             // Expects: [ServerPlayerEntity player, String message]
@@ -16,6 +17,16 @@ public class Events {
                 String name = player.getEntityName();
                 String uuid = player.getUuidAsString();
                 return ValueFactory.varargsOf(LuaString.valueOf(name), LuaString.valueOf(uuid), LuaString.valueOf(message));
+            } catch(ClassCastException e) {
+                return Constants.NIL;
+            }
+        });
+        PLAYER_TICK = new Event("player_tick", (objects) -> {
+            try {
+                ServerPlayerEntity player = (ServerPlayerEntity)objects[0];
+                String name = player.getEntityName();
+                String uuid = player.getUuidAsString();
+                return ValueFactory.varargsOf(LuaString.valueOf(name), LuaString.valueOf(uuid));
             } catch(ClassCastException e) {
                 return Constants.NIL;
             }
