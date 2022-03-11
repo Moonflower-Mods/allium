@@ -9,13 +9,13 @@ import java.nio.file.Path;
 
 public class FileHelper {
     /* Allium Plugin directory spec
-        /plugins
+        /scripts
             /<unique dir name> | unique file name, bonus point if using the namespace ID
                 /<libs and stuff>
                 main.lua | file loaded by Allium
      */
 
-    public static final File PLUGIN_DIR = FabricLoader.getInstance().getGameDir().resolve("plugins").toFile();
+    public static final File PLUGIN_DIR = FabricLoader.getInstance().getGameDir().resolve("scripts").toFile();
 
     public static File getPluginsDirectory() {
         if (!PLUGIN_DIR.exists()) {

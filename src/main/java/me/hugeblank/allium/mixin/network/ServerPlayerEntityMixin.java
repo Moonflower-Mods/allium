@@ -18,6 +18,6 @@ public class ServerPlayerEntityMixin{
 
     @Inject(at = @At("HEAD"), method = "playerTick()V")
     private void tick(CallbackInfo ci) {
-        Events.PLAYER_TICK.queueEvent(((ServerPlayerInteractionManagerAccessor)interactionManager).getPlayer());
+        Events.PLAYER_TICK.queueEvent(this);
     }
 }
