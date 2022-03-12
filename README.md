@@ -9,18 +9,29 @@ This is the test script I'm using, if you'd like to play/develop with Allium for
 This should be pasted in your game directory, as plugins/test/main.lua
 
 ```lua
+-- Allium Test Plugin
+-- (c) hugeblank 2022
+-- no rights reserved
+-- Test plugin that demonstrates the capabilities of Allium.
+allium.onEvent("chat_message", function(e, player, message)
+    -- this gets logged under the "test" namespace because the anonymous function gets called after the plugin returns
+    -- the information that registers it
+    print(player:getName():asString().." said "..message)
+end)
 
-allium.onEvent("chat_message", function(e, name, uuid, message)
-    print(name.." said "..message)
+allium.onEvent("player_join", function(e, player)
+    print(game.listPlayers()[1])
 end)
 
 local i = 0
-allium.onEvent("player_tick", function(e, name, uuid)
-    local player = players.getPlayer(name)
-    player.setExperienceLevel(i)
-    i=(i+1)%20
+allium.onEvent("player_tick", function(e, player)
+    player:setExperienceLevel(i)
+    i=(i+1)%40
+    local world = player:getWorld()
+    world:setBlockState(player:getBlockPos():down(), game.getBlock("minecraft:diorite"):getDefaultState())
 end)
 
+-- This doesn't get logged under the "test" namespace since Allium doesn't know what plugin is running until the return
 print("Loading test plugin!\n", "Test", 1, 2, 3)
 
 return {

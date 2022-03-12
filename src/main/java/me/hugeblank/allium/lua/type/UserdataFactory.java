@@ -32,6 +32,7 @@ public class UserdataFactory<T> {
     }
 
     {
+        // TODO: logical operators!!!
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {

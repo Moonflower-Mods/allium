@@ -24,14 +24,14 @@ public class GameLib implements LuaLibrary {
         // Stuff should be here
         env.rawset("game", lib);
         LibFunction.bind(lib, GameLibFunctions::new, new String[]{
-                "getPlayer",
-                "getBlockPos",
-                "getBlock",
-                "getItem",
-                "getWorld",
-                "listBlocks",
-                "listItems",
-                "listPlayers"
+                "getPlayer", // Takes in a players username, returns a ServerPlayerEntity
+                "getBlockPos", // Takes in 3 numbers, returns a BlockPos
+                "getBlock", // Takes in a block identifier *string*, returns a Block
+                "getItem", // Takes in an item identifier *string*, returns an Item
+                "getWorld", // Takes in a world identifier *string*, returns a ServerWorld
+                "listBlocks", // Lists all blocks provided by the game. Identifier key, Block value
+                "listItems", // Lists all items provided by the game. Identifier key, Item value
+                "listPlayers" // Lists all players currently online.
         });
         state.loadedPackages.rawset("game", lib);
         return lib;
@@ -48,7 +48,7 @@ public class GameLib implements LuaLibrary {
                     if (player == null) throw new LuaError("Player '" + username + "' does not exist");
                     return UserdataTypes.PLAYER.create(player);
                 case 1:
-                    return UserdataTypes.BLOCK_POS.create(new BlockPos(
+                    return UserdataTypes.BLOCKPOS.create(new BlockPos(
                             args.arg(1).checkInteger(),
                             args.arg(2).checkInteger(),
                             args.arg(3).checkInteger()

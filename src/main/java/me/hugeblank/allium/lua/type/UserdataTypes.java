@@ -4,6 +4,7 @@ import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.Item;
+import net.minecraft.item.ItemStack;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
@@ -14,25 +15,28 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class UserdataTypes {
+    // Unlocked types! These are available in one way or another on the Lua side.
     public static final Map<Class<?>, UserdataFactory<?>> TYPES = new HashMap<>();
     public static final UserdataFactory<ServerPlayerEntity> PLAYER;
-    public static final UserdataFactory<BlockPos> BLOCK_POS;
+    public static final UserdataFactory<BlockPos> BLOCKPOS;
     public static final UserdataFactory<Block> BLOCK;
     public static final UserdataFactory<Item> ITEM;
+    public static final UserdataFactory<ItemStack> ITEMSTACK;
     public static final UserdataFactory<World> WORLD;
-    public static final UserdataFactory<BlockState> BLOCK_STATE;
-    public static final UserdataFactory<DamageSource> DAMAGE_SOURCE;
+    public static final UserdataFactory<BlockState> BLOCKSTATE;
+    public static final UserdataFactory<DamageSource> DAMAGESOURCE;
     public static final UserdataFactory<Identifier> IDENTIFIER;
     public static final UserdataFactory<Text> TEXT;
 
     static {
         PLAYER = register(ServerPlayerEntity.class);
-        BLOCK_POS = register(BlockPos.class);
+        BLOCKPOS = register(BlockPos.class);
         BLOCK = register(Block.class);
         ITEM = register(Item.class);
+        ITEMSTACK = register(ItemStack.class);
         WORLD = register(World.class);
-        BLOCK_STATE = register(BlockState.class);
-        DAMAGE_SOURCE = register(DamageSource.class);
+        BLOCKSTATE = register(BlockState.class);
+        DAMAGESOURCE = register(DamageSource.class);
         IDENTIFIER = register(Identifier.class);
         TEXT = register(Text.class);
     }

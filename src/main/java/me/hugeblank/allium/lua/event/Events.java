@@ -58,7 +58,7 @@ public class Events {
             try {
                 return ValueFactory.varargsOf(
                         UserdataTypes.PLAYER.create(objects[0]),
-                        UserdataTypes.BLOCK_STATE.create(objects[1])
+                        UserdataTypes.BLOCKSTATE.create(objects[1])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
@@ -68,7 +68,7 @@ public class Events {
             try {
                 return ValueFactory.varargsOf(
                         UserdataTypes.PLAYER.create(objects[0]),
-                        UserdataTypes.DAMAGE_SOURCE.create(objects[1])
+                        UserdataTypes.DAMAGESOURCE.create(objects[1])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
