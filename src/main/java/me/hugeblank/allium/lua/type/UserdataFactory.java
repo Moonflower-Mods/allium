@@ -5,6 +5,7 @@
 // If someone wants to SCP this, please by all means do so.
 package me.hugeblank.allium.lua.type;
 
+import me.hugeblank.allium.Allium;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
@@ -34,13 +35,26 @@ public class UserdataFactory<T> {
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-                String name = arg2.checkString();
-                List<Method> matches = new ArrayList<>();
-                methods.forEach((method -> {
-                    if (method.getName().equals(name)) {
-                        matches.add(method);
-                    }
-                }));
+                String name = arg2.checkString(); // mapped name
+                List<Method> matches = new ArrayList<>(); // intermediary method (in production [oh god.])
+                    methods.forEach((method -> {
+                        if (Allium.DEVELOPMENT) {
+                            // Fun fact! Allium runs better in a dev environment!
+                            // See below for more information.
+                            if (method.getName().equals(name)) {
+                                matches.add(method);
+                            }
+                        } else {
+                            // This is tragic but a necessary evil
+                            // methods can have the same mapped name, but the intermediary value changes
+                            // O(n^(go f*ck yourself))
+                            Allium.MAPPINGS.forEach((key, value) -> {
+                                if (name.equals(value)) {
+                                    matches.add(method);
+                                }
+                            });
+                        }
+                    }));
                 if (matches.size() > 0) return new UDFFunctions<>(clazz, matches);
                 return Constants.NIL;
             }

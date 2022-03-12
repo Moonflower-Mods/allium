@@ -12,6 +12,8 @@ import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
+import java.util.List;
+
 public class GameLib implements LuaLibrary {
 
     public GameLib() {}
@@ -83,11 +85,10 @@ public class GameLib implements LuaLibrary {
                     return items;
                 case 7:
                     LuaTable players = new LuaTable();
-                    final int[] pid = {0};
-                    Allium.SERVER.getPlayerManager().getPlayerList().forEach((p) -> {
-                        players.rawset(pid[0], UserdataTypes.PLAYER.create(p));
-                        pid[0]++;
-                    });
+                    List<ServerPlayerEntity> pl = Allium.SERVER.getPlayerManager().getPlayerList();
+                    for (int i = 1; i <= pl.size(); i++) {
+                        players.rawset(i, UserdataTypes.PLAYER.create(pl));
+                    }
                     return players;
             }
             return Constants.NIL;
