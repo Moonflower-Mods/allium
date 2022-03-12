@@ -8,15 +8,16 @@ import org.squiddev.cobalt.function.LuaFunction;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 
 public class Event {
-    private static final HashMap<String, Event> EVENTS = new HashMap<>();
+    private static final Map<String, Event> EVENTS = new HashMap<>();
 
     private final String name;
     private final Function<Object[], Varargs> convert;
     private final List<Pair<Plugin, LuaFunction>> listeners = new ArrayList<>();
-    Event(String name, Function<Object[], Varargs> convert) {
+    public Event(String name, Function<Object[], Varargs> convert) {
         this.name = name;
         this.convert = convert;
         EVENTS.put(this.name, this);
@@ -33,7 +34,7 @@ public class Event {
         return listeners;
     }
 
-    public static HashMap<String, Event> getEvents() {
+    public static Map<String, Event> getEvents() {
         return EVENTS;
     }
 
