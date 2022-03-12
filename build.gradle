@@ -33,7 +33,7 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	embedAPI "org.squiddev:Cobalt:${project.cobalt_version}" // For those beloved allium Java codebase users
+	embedAPI "org.squiddev:Cobalt:${project.cobalt_version}"
 	embedAPI "net.fabricmc:tiny-mappings-parser:${project.tiny_parser}"
 
 
