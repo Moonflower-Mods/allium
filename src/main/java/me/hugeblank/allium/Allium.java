@@ -45,6 +45,7 @@ public class Allium implements DedicatedServerModInitializer {
 
         LOGGER.info("Loading NathanFudge's Yarn Remapper");
         MAPPINGS = YarnLoader.init();
+
         LOGGER.info("Initializing events");
         Events.init();
         LOGGER.info("Loading Plugins");
@@ -55,6 +56,5 @@ public class Allium implements DedicatedServerModInitializer {
                 LOGGER.info(plugin + " loaded");
             }
         }
-
     }
 }

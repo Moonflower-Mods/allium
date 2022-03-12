@@ -17,7 +17,10 @@ repositories {
 		url "https://squiddev.cc/maven"
 	}
 
-
+	/*maven {
+		name "NucleMaven™"
+		url "https://maven.nucleoid.xyz"
+	}*/
 }
 
 configurations {
@@ -32,6 +35,12 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	embedAPI "org.squiddev:Cobalt:${project.cobalt_version}" // For those beloved allium Java codebase users
 	embedAPI "net.fabricmc:tiny-mappings-parser:${project.tiny_parser}"
+
+
+	// Used for testing
+	// modImplementation "net.fabricmc.fabric-api:fabric-api:0.47.8+1.18.2"
+	// modImplementation include("eu.pb4:placeholder-api:1.1.3+1.17.1")
+	// modImplementation include("eu.pb4:polymer:0.2.0-beta.29+1.18.2")
 }
 
 processResources {
