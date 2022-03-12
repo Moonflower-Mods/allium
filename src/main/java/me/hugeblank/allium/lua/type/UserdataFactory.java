@@ -1,0 +1,144 @@
+// Eldritch horrors, sponsored by hugeblank!
+// This class converts all public methods from any class from Java -> Lua.
+// It's one saving grace is that I've restricted it from chewing through *every* class.
+// The fact that it could though... *shivers* euhh. I'm so sorry.
+// If someone wants to SCP this, please by all means do so.
+package me.hugeblank.allium.lua.type;
+
+import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.function.TwoArgFunction;
+import org.squiddev.cobalt.function.VarArgFunction;
+
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+public class UserdataFactory<T> {
+    private final Class<T> clazz;
+    private final List<Method> methods;
+    private final LuaTable metatable = new LuaTable();
+
+    public UserdataFactory(Class<T> clazz) {
+        this.clazz = clazz;
+        this.methods = Arrays.asList(clazz.getMethods());
+    }
+
+    public LuaUserdata create(Object instance) {
+        return new LuaUserdata(instance, metatable);
+    }
+
+    {
+        metatable.rawset("__index", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+                String name = arg2.checkString();
+                List<Method> matches = new ArrayList<>();
+                methods.forEach((method -> {
+                    if (method.getName().equals(name)) {
+                        matches.add(method);
+                    }
+                }));
+                if (matches.size() > 0) return new UDFFunctions<>(clazz, matches);
+                return Constants.NIL;
+            }
+        });
+    }
+
+    private static final class UDFFunctions<T> extends VarArgFunction {
+        private final Class<T> clazz;
+        private final List<Method> matches;
+
+        public UDFFunctions(Class<T> clazz, List<Method> matches) {
+            this.clazz = clazz;
+            this.matches = matches;
+        }
+
+        @Override
+        public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+            T instance = args.arg(1).checkUserdata(clazz);
+            List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
+            for (Method method : matches) { // For each matched method from the index call
+                StringBuilder paramString = new StringBuilder();
+                int ind = 2;
+                Class<?>[] parameters = method.getParameterTypes();
+                Object[] arguments = new Object[parameters.length];
+                for (Class<?> clatz : parameters) { // For each parameter in the matched call
+                    if (clatz.isPrimitive()) {
+                        if (args.arg(ind).isInteger() && clatz.equals(int.class)) { // int
+                            arguments[ind-2] = args.arg(ind).toInteger();
+                            ind++;
+                        } else if (args.arg(ind).isNumber() && clatz.equals(double.class)) { // double
+                            arguments[ind-2] = args.arg(ind).toDouble();
+                            ind++;
+                        } else if (args.arg(ind).isLong() && clatz.equals(long.class)) { // long
+                            arguments[ind-2] = args.arg(ind).toLong();
+                            ind++;
+                        } else if (args.arg(ind).isBoolean() && clatz.equals(boolean.class)) { // boolean
+                            arguments[ind-2] = args.arg(ind).toBoolean();
+                            ind++;
+                        }
+                    } else if (args.arg(ind).isString() && clatz.equals(String.class)) { // string
+                        arguments[ind-2] = args.arg(ind).toString();
+                        ind++;
+                    } else if (args.arg(ind).isUserdata(clatz)) { // Is the argument provided by user of the right type?
+                        arguments[ind-2] = args.arg(ind).checkUserdata(clatz);
+                        ind++;
+                    }
+                    if (ind-1 == parameters.length) {
+                        // Prepare for the worst by creating a string of
+                        // these parameters in case there's no header match
+                        paramString.append(clatz.getName());
+                    } else {
+                        paramString.append(clatz.getName()).append(", ");
+                    }
+                }
+                paramList.add(paramString.toString());
+                if (ind-2 == parameters.length) { // Found a match!
+                    try { // Get the return type, invoke method, cast returned value, cry.
+                        Class<?> ret = method.getReturnType();
+                        Object out = method.invoke(instance, arguments);
+                        if (out != null && ret.isPrimitive()) {
+                            if (ret.equals(int.class)) { // int
+                                return ValueFactory.valueOf((int)out);
+                            } else if (ret.equals(double.class)) { // double
+                                return ValueFactory.valueOf((double)out);
+                            } else if (ret.equals(long.class)) { // long
+                                return ValueFactory.valueOf((long)out);
+                            } else if (ret.equals(boolean.class)) { // boolean
+                                return ValueFactory.valueOf((boolean)out);
+                            }
+                        } else if (out != null && ret.equals(String.class)) { // string
+                            return ValueFactory.valueOf((String)out);
+                        } else if (out != null && ret.isAssignableFrom(out.getClass()) && UserdataTypes.TYPES.containsKey(ret)) {
+                            return UserdataTypes.TYPES.get(ret).create(ret.cast(out));
+                        } else if (out != null) { // On the off chance this object can be cast to an unlocked class
+                            // Why would anyone let me have access to a computer
+                            for (Map.Entry<Class<?>, UserdataFactory<?>> udata : UserdataTypes.TYPES.entrySet()) {
+                                if (udata.getKey().isAssignableFrom(out.getClass())) {
+                                    return udata.getValue().create(out);
+                                }
+                            }
+                            // Admit defeat
+                            throw new LuaError("Could not find valid userdata return for " + ret.getName());
+                        } else {
+                            return Constants.NIL;
+                        }
+                    } catch (IllegalAccessException | InvocationTargetException e) {
+                        throw new LuaError(e);
+                    }
+                }
+            }
+            StringBuilder error = new StringBuilder("Could not find parameter match for called function " +
+                    this.matches.get(0).getName() +
+                    "\nThe following are correct argument types:\n"
+            );
+            for (String headers : paramList) {
+                error.append(headers).append("\n");
+            }
+            throw new LuaError(error.toString());
+        }
+    }
+}

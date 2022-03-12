@@ -1,8 +1,12 @@
 package me.hugeblank.allium.lua.api;
 
-import me.hugeblank.allium.lua.type.BlockPosType;
-import me.hugeblank.allium.lua.type.PlayerType;
+import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.lua.type.UserdataTypes;
+import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.server.world.ServerWorld;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
+import net.minecraft.util.registry.Registry;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
@@ -21,7 +25,8 @@ public class GameLib implements LuaLibrary {
                 "getPlayer",
                 "getBlockPos",
                 "getBlock",
-                "getItem"
+                "getItem",
+                "getWorld"
         });
         state.loadedPackages.rawset("game", lib);
         return lib;
@@ -30,16 +35,41 @@ public class GameLib implements LuaLibrary {
     private static final class GameLibFunctions extends VarArgFunction {
 
         @Override
-        public Varargs invoke(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
+        public Varargs invoke(LuaState state, Varargs args) throws LuaError {
             switch (opcode) {
                 case 0:
-                    return PlayerType.create(args.arg(1).checkString());
+                    String username = args.arg(1).checkString();
+                    ServerPlayerEntity player = Allium.SERVER.getPlayerManager().getPlayer(username);
+                    if (player == null) throw new LuaError("Player '" + username + "' does not exist");
+                    return UserdataTypes.PLAYER.create(player);
                 case 1:
-                    return new BlockPosType(new BlockPos(args.arg(1).checkDouble(), args.arg(2).checkDouble(), args.arg(3).checkDouble())).build();
+                    return UserdataTypes.BLOCK_POS.create(new BlockPos(
+                            args.arg(1).checkInteger(),
+                            args.arg(2).checkInteger(),
+                            args.arg(3).checkInteger()
+                            )
+                    );
                 case 2:
-                    // TODO Block API
+                    return UserdataTypes.BLOCK.create(
+                        Allium.SERVER.getRegistryManager()
+                                .get(Registry.BLOCK_KEY)
+                                .get(new Identifier(args.arg(1).checkString()))
+                    );
                 case 3:
-                    // TODO Item API
+                    return UserdataTypes.ITEM.create(
+                            Allium.SERVER.getRegistryManager()
+                                    .get(Registry.ITEM_KEY)
+                                    .get(new Identifier(args.arg(1).checkString()))
+                    );
+                case 4:
+                    Identifier id = new Identifier(args.arg(1).checkString());
+                    final ServerWorld[] world = new ServerWorld[1];
+                    Allium.SERVER.getWorlds().forEach((serverWorld -> {
+                        if (serverWorld.getRegistryKey().getValue().equals(id))
+                            world[0] = serverWorld;
+                    }));
+                    if (world[0] == null) throw new LuaError("World " + id + " does not exist");
+                    return UserdataTypes.WORLD.create(world[0]);
             }
             return Constants.NIL;
         }
