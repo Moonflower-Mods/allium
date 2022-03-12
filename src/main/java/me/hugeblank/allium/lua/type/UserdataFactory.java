@@ -66,26 +66,67 @@ public class UserdataFactory<T> {
                 Class<?>[] parameters = method.getParameterTypes();
                 Object[] arguments = new Object[parameters.length];
                 for (Class<?> clatz : parameters) { // For each parameter in the matched call
-                    if (clatz.isPrimitive()) {
-                        if (args.arg(ind).isInteger() && clatz.equals(int.class)) { // int
-                            arguments[ind-2] = args.arg(ind).toInteger();
+                    if (clatz.isArray()) {
+                        if (!args.arg(ind).isTable())
+                            throw new LuaError(
+                                    "Expected table of "
+                                    + clatz.getComponentType()
+                                    + "s, got "
+                                    + args.arg(ind).typeName()
+                            );
+                        LuaTable table = args.arg(ind).checkTable();
+                        Object[] arr = new Object[table.getArrayLength()];
+                        if (clatz.getComponentType().isPrimitive()) {
+                            if (clatz.getComponentType().equals(int.class)) { // int
+                                for (int i = 1; i <= arr.length; i++) {
+                                    arr[i] = table.rawget(i).checkInteger();
+                                }
+                            } else if (clatz.getComponentType().equals(double.class)) { // double
+                                for (int i = 1; i <= arr.length; i++) {
+                                    arr[i] = table.rawget(i).checkDouble();
+                                }
+                            } else if (clatz.getComponentType().equals(long.class)) { // long
+                                for (int i = 1; i <= arr.length; i++) {
+                                    arr[i] = table.rawget(i).checkLong();
+                                }
+                            } else if (clatz.getComponentType().equals(boolean.class)) { // boolean
+                                for (int i = 1; i <= arr.length; i++) {
+                                    arr[i] = table.rawget(i).checkBoolean();
+                                }
+                            }
+                        } else if (clatz.getComponentType().equals(String.class)) { // string
+                            for (int i = 1; i <= arr.length; i++) {
+                                arr[i] = table.rawget(i).checkString();
+                            }
+                        } else { // Is the argument provided by user of the right type?
+                            for (int i = 1; i <= arr.length; i++) {
+                                arr[i] = table.rawget(i).checkUserdata(clatz.getComponentType());
+                            }
+                        }
+                        arguments[ind-2] = clatz.cast(arr);
+                        ind++;
+                    } else {
+                        if (clatz.isPrimitive()) {
+                            if (args.arg(ind).isInteger() && clatz.equals(int.class)) { // int
+                                arguments[ind-2] = args.arg(ind).toInteger();
+                                ind++;
+                            } else if (args.arg(ind).isNumber() && clatz.equals(double.class)) { // double
+                                arguments[ind-2] = args.arg(ind).toDouble();
+                                ind++;
+                            } else if (args.arg(ind).isLong() && clatz.equals(long.class)) { // long
+                                arguments[ind-2] = args.arg(ind).toLong();
+                                ind++;
+                            } else if (args.arg(ind).isBoolean() && clatz.equals(boolean.class)) { // boolean
+                                arguments[ind-2] = args.arg(ind).toBoolean();
+                                ind++;
+                            }
+                        } else if (args.arg(ind).isString() && clatz.equals(String.class)) { // string
+                            arguments[ind-2] = args.arg(ind).toString();
                             ind++;
-                        } else if (args.arg(ind).isNumber() && clatz.equals(double.class)) { // double
-                            arguments[ind-2] = args.arg(ind).toDouble();
-                            ind++;
-                        } else if (args.arg(ind).isLong() && clatz.equals(long.class)) { // long
-                            arguments[ind-2] = args.arg(ind).toLong();
-                            ind++;
-                        } else if (args.arg(ind).isBoolean() && clatz.equals(boolean.class)) { // boolean
-                            arguments[ind-2] = args.arg(ind).toBoolean();
+                        } else if (args.arg(ind).isUserdata(clatz)) { // Is the argument provided by user of the right type?
+                            arguments[ind-2] = args.arg(ind).checkUserdata(clatz);
                             ind++;
                         }
-                    } else if (args.arg(ind).isString() && clatz.equals(String.class)) { // string
-                        arguments[ind-2] = args.arg(ind).toString();
-                        ind++;
-                    } else if (args.arg(ind).isUserdata(clatz)) { // Is the argument provided by user of the right type?
-                        arguments[ind-2] = args.arg(ind).checkUserdata(clatz);
-                        ind++;
                     }
                     if (ind-1 == parameters.length) {
                         // Prepare for the worst by creating a string of
@@ -100,31 +141,78 @@ public class UserdataFactory<T> {
                     try { // Get the return type, invoke method, cast returned value, cry.
                         Class<?> ret = method.getReturnType();
                         Object out = method.invoke(instance, arguments);
-                        if (out != null && ret.isPrimitive()) {
-                            if (ret.equals(int.class)) { // int
-                                return ValueFactory.valueOf((int)out);
-                            } else if (ret.equals(double.class)) { // double
-                                return ValueFactory.valueOf((double)out);
-                            } else if (ret.equals(long.class)) { // long
-                                return ValueFactory.valueOf((long)out);
-                            } else if (ret.equals(boolean.class)) { // boolean
-                                return ValueFactory.valueOf((boolean)out);
-                            }
-                        } else if (out != null && ret.equals(String.class)) { // string
-                            return ValueFactory.valueOf((String)out);
-                        } else if (out != null && ret.isAssignableFrom(out.getClass()) && UserdataTypes.TYPES.containsKey(ret)) {
-                            return UserdataTypes.TYPES.get(ret).create(ret.cast(out));
-                        } else if (out != null) { // On the off chance this object can be cast to an unlocked class
-                            // Why would anyone let me have access to a computer
-                            for (Map.Entry<Class<?>, UserdataFactory<?>> udata : UserdataTypes.TYPES.entrySet()) {
-                                if (udata.getKey().isAssignableFrom(out.getClass())) {
-                                    return udata.getValue().create(out);
+                        if (out != null && ret.isArray()) {
+                            Object[] outArr = (Object[]) out;
+                            LuaValue[] luaArr = new LuaValue[outArr.length];
+                            if (ret.getComponentType().isPrimitive()) {
+                                if (ret.getComponentType().equals(int.class)) { // int
+                                    for (int i = 1; i <= outArr.length; i++) {
+                                        luaArr[i] = ValueFactory.valueOf((int)outArr[i]);
+                                    }
+                                } else if (ret.getComponentType().equals(double.class)) { // double
+                                    for (int i = 1; i <= outArr.length; i++) {
+                                        luaArr[i] = ValueFactory.valueOf((double)outArr[i]);
+                                    }
+                                } else if (ret.getComponentType().equals(long.class)) { // long
+                                    for (int i = 1; i <= outArr.length; i++) {
+                                        luaArr[i] = ValueFactory.valueOf((long)outArr[i]);
+                                    }
+                                } else if (ret.getComponentType().equals(boolean.class)) { // boolean
+                                    for (int i = 1; i <= outArr.length; i++) {
+                                        luaArr[i] = ValueFactory.valueOf((boolean)outArr[i]);
+                                    }
+                                }
+                            } else if (ret.getComponentType().equals(String.class)) { // string
+                                for (int i = 1; i <= outArr.length; i++) {
+                                    luaArr[i] = ValueFactory.valueOf((String)outArr[i]);
+                                }
+                            } else { // Is the argument provided by user of the right type?
+                                for (int i = 1; i <= outArr.length; i++) {
+                                    if (
+                                            ret.getComponentType().isAssignableFrom(outArr[i].getClass()) &&
+                                            UserdataTypes.TYPES.containsKey(ret.getComponentType())
+                                    ) {
+                                        luaArr[i] = UserdataTypes.TYPES.get(ret).create(ret.cast(out));
+                                    } else {
+                                        for (Map.Entry<Class<?>, UserdataFactory<?>> udata : UserdataTypes.TYPES.entrySet()) {
+                                            if (udata.getKey().isAssignableFrom(outArr[i].getClass())) {
+                                                luaArr[i] = udata.getValue().create(outArr[i]);
+                                            } else {
+                                                throw new LuaError("Could not find valid userdata return for table element " + outArr[i].getClass().getName());
+                                            }
+                                        }
+                                    }
                                 }
                             }
-                            // Admit defeat
-                            throw new LuaError("Could not find valid userdata return for " + ret.getName());
+                            // TODO: Does this return the array of values in Lua or an array of the array?
+                            return ValueFactory.listOf(luaArr);
                         } else {
-                            return Constants.NIL;
+                            if (out != null && ret.isPrimitive()) {
+                                if (ret.equals(int.class)) { // int
+                                    return ValueFactory.valueOf((int) out);
+                                } else if (ret.equals(double.class)) { // double
+                                    return ValueFactory.valueOf((double) out);
+                                } else if (ret.equals(long.class)) { // long
+                                    return ValueFactory.valueOf((long) out);
+                                } else if (ret.equals(boolean.class)) { // boolean
+                                    return ValueFactory.valueOf((boolean) out);
+                                }
+                            } else if (out != null && ret.equals(String.class)) { // string
+                                return ValueFactory.valueOf((String) out);
+                            } else if (out != null && ret.isAssignableFrom(out.getClass()) && UserdataTypes.TYPES.containsKey(ret)) {
+                                return UserdataTypes.TYPES.get(ret).create(ret.cast(out));
+                            } else if (out != null) { // On the off chance this object can be cast to an unlocked class
+                                // Why would anyone let me have access to a computer
+                                for (Map.Entry<Class<?>, UserdataFactory<?>> udata : UserdataTypes.TYPES.entrySet()) {
+                                    if (udata.getKey().isAssignableFrom(out.getClass())) {
+                                        return udata.getValue().create(out);
+                                    }
+                                }
+                                // Admit defeat
+                                throw new LuaError("Could not find valid userdata return for " + ret.getName());
+                            } else {
+                                return Constants.NIL;
+                            }
                         }
                     } catch (IllegalAccessException | InvocationTargetException e) {
                         throw new LuaError(e);

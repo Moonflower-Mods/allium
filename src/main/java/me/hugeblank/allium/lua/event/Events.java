@@ -8,6 +8,10 @@ import org.squiddev.cobalt.ValueFactory;
 public class Events {
     public static final Event CHAT_MESSAGE;
     public static final Event PLAYER_TICK;
+    public static final Event PLAYER_JOIN;
+    public static final Event PLAYER_QUIT;
+    public static final Event PLAYER_BLOCK_COLLISION;
+    public static final Event PLAYER_DEATH;
     static {
         CHAT_MESSAGE = new Event("chat_message", (objects) -> {
             // Expects: [ServerPlayerEntity player, String message]
@@ -21,9 +25,50 @@ public class Events {
             }
         });
         PLAYER_TICK = new Event("player_tick", (objects) -> {
+            // Expects: [ServerPlayerEntity player]
             try {
                 return ValueFactory.varargsOf(
                         UserdataTypes.PLAYER.create(objects[0])
+                );
+            } catch(ClassCastException e) {
+                return Constants.NIL;
+            }
+        });
+        PLAYER_JOIN = new Event("player_join", (objects) -> {
+            // Expects: [ServerPlayerEntity player]
+            try {
+                return ValueFactory.varargsOf(
+                        UserdataTypes.PLAYER.create(objects[0])
+                );
+            } catch(ClassCastException e) {
+                return Constants.NIL;
+            }
+        });
+        PLAYER_QUIT = new Event("player_quit", (objects) -> {
+            // Expects: [ServerPlayerEntity player]
+            try {
+                return ValueFactory.varargsOf(
+                        UserdataTypes.PLAYER.create(objects[0])
+                );
+            } catch(ClassCastException e) {
+                return Constants.NIL;
+            }
+        });
+        PLAYER_BLOCK_COLLISION = new Event("player_block_collision", (objects) -> {
+            try {
+                return ValueFactory.varargsOf(
+                        UserdataTypes.PLAYER.create(objects[0]),
+                        UserdataTypes.BLOCK_STATE.create(objects[1])
+                );
+            } catch(ClassCastException e) {
+                return Constants.NIL;
+            }
+        });
+        PLAYER_DEATH = new Event("player_death", (objects) -> {
+            try {
+                return ValueFactory.varargsOf(
+                        UserdataTypes.PLAYER.create(objects[0]),
+                        UserdataTypes.DAMAGE_SOURCE.create(objects[1])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;

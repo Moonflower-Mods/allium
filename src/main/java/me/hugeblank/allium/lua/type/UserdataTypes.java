@@ -2,8 +2,11 @@ package me.hugeblank.allium.lua.type;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.BlockState;
+import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.item.Item;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.util.Identifier;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 
@@ -18,6 +21,9 @@ public class UserdataTypes {
     public static final UserdataFactory<Item> ITEM;
     public static final UserdataFactory<World> WORLD;
     public static final UserdataFactory<BlockState> BLOCK_STATE;
+    public static final UserdataFactory<DamageSource> DAMAGE_SOURCE;
+    public static final UserdataFactory<Identifier> IDENTIFIER;
+    public static final UserdataFactory<Text> TEXT;
 
     static {
         PLAYER = register(ServerPlayerEntity.class);
@@ -26,6 +32,9 @@ public class UserdataTypes {
         ITEM = register(Item.class);
         WORLD = register(World.class);
         BLOCK_STATE = register(BlockState.class);
+        DAMAGE_SOURCE = register(DamageSource.class);
+        IDENTIFIER = register(Identifier.class);
+        TEXT = register(Text.class);
     }
 
     public static <T> UserdataFactory<T> register(Class<T> clazz) {

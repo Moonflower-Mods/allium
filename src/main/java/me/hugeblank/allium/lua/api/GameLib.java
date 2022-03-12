@@ -26,7 +26,10 @@ public class GameLib implements LuaLibrary {
                 "getBlockPos",
                 "getBlock",
                 "getItem",
-                "getWorld"
+                "getWorld",
+                "listBlocks",
+                "listItems",
+                "listPlayers"
         });
         state.loadedPackages.rawset("game", lib);
         return lib;
@@ -70,6 +73,22 @@ public class GameLib implements LuaLibrary {
                     }));
                     if (world[0] == null) throw new LuaError("World " + id + " does not exist");
                     return UserdataTypes.WORLD.create(world[0]);
+                case 5:
+                    LuaTable blocks = new LuaTable();
+                    Allium.BLOCKS.forEach((identifier, block) -> blocks.rawset(UserdataTypes.IDENTIFIER.create(identifier), UserdataTypes.BLOCK.create(identifier)));
+                    return blocks;
+                case 6:
+                    LuaTable items = new LuaTable();
+                    Allium.ITEMS.forEach((identifier, block) -> items.rawset(UserdataTypes.IDENTIFIER.create(identifier), UserdataTypes.ITEM.create(identifier)));
+                    return items;
+                case 7:
+                    LuaTable players = new LuaTable();
+                    final int[] pid = {0};
+                    Allium.SERVER.getPlayerManager().getPlayerList().forEach((p) -> {
+                        players.rawset(pid[0], UserdataTypes.PLAYER.create(p));
+                        pid[0]++;
+                    });
+                    return players;
             }
             return Constants.NIL;
         }

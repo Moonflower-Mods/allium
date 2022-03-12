@@ -4,9 +4,10 @@
   "package": "me.hugeblank.allium.mixin",
   "compatibilityLevel": "JAVA_17",
   "server": [
+    "MinecraftServerMixin",
+    "PlayerManagerMixin",
     "network.ServerPlayerEntityMixin",
-    "network.ServerPlayNetworkHandlerMixin",
-    "MinecraftServerMixin"
+    "network.ServerPlayNetworkHandlerMixin"
   ],
   "injectors": {
     "defaultRequire": 1

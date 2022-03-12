@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "id": "allium",
-  "version": "${version}",
+  "version": "${mod_version}",
 
   "name": "Allium",
   "description": "Lua Plugin loader for Minecraft",
