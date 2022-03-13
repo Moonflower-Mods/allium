@@ -3,15 +3,22 @@ package me.hugeblank.allium.lua.api;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.function.LibFunction;
+import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
+import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 
 public class JavaLib {
+    // TODO: Optionally provide userdata as the first argument for the class in most methods.
     public static LuaLibrary create() {
         return LibBuilder.create("java")
+                .add("import", JavaLib::importClass)
                 .add("create", JavaLib::createInstance)
                 .add("getRawClass", JavaLib::getClassObject)
                 .add("exists", JavaLib::checkIfExists)
@@ -20,6 +27,69 @@ public class JavaLib {
                 .add("fromYarn", JavaLib::fromYarn)
                 .add("split", JavaLib::split)
                 .build();
+    }
+
+    private static Varargs importClass(LuaState state, Varargs args) throws LuaError {
+        Class<?> clazz = getClassOf(args.arg(1).checkString());
+        List<Method> staticMethods = new ArrayList<>();
+        for (Method declaredMethod : clazz.getDeclaredMethods()) {
+            int mods = declaredMethod.getModifiers();
+            if (Modifier.isPublic(mods) && Modifier.isStatic(mods) && !Modifier.isAbstract(mods)) {
+                staticMethods.add(declaredMethod);
+            }
+        }
+
+        LuaTable mt = new LuaTable();
+        mt.rawset("__call", new VarArgFunction() {
+            @Override
+            public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+                return JavaLib.createInstance(
+                        state,
+                        ValueFactory.varargsOf( LuaString.valueOf(clazz.getName()), args.subargs(2))
+                );
+            }
+        });
+
+        LuaTable impord = new StaticMethods(clazz, staticMethods).create();
+        impord.setMetatable(mt);
+
+        return ValueFactory.varargsOf(impord);
+    }
+
+    private static Varargs invokeStatic(Class<?> clazz, Method method, LuaState state, Varargs args) throws LuaError {
+        List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
+        StringBuilder error = new StringBuilder("Could not find parameter match for called function \"" +
+                method.getName() + "\" for \"" + clazz.getName() + "\"" +
+                "\nThe following are correct argument types:\n"
+        );
+        for (String headers : paramList) {
+            error.append(headers).append("\n");
+        }
+
+        var parameters = method.getParameterTypes();
+        try {
+            var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
+            if (jargs.length == parameters.length) { // Found a match!
+                try { // Get the return type, invoke method, cast returned value, cry.
+                    Class<?> ret = method.getReturnType();
+                    method.setAccessible(true); // throws InaccessibleObjectException | SecurityException
+                    Object out = method.invoke(null, jargs);
+                    return UserdataFactory.toLuaValue(out, ret);
+                } catch (InaccessibleObjectException | SecurityException | IllegalAccessException | InvocationTargetException e) {
+                    throw new LuaError(e);
+                }
+            }
+        } catch (UserdataFactory.InvalidArgumentException e) {
+            var params = new StringBuilder();
+
+            for (var clatz : parameters) {
+                params.append(clatz.getName()).append(", ");
+            }
+
+            paramList.add(params.toString());
+        }
+
+        throw new LuaError(error.toString());
     }
 
     private static Varargs split(LuaState state, Varargs args) throws LuaError {
@@ -139,6 +209,33 @@ public class JavaLib {
                 return Class.forName(className);
             } catch (ClassNotFoundException e) {
                 throw new LuaError(e.toString());
+            }
+        }
+    }
+
+    private static class StaticMethods {
+        private final Class<?> clazz;
+        private final List<Method> methods;
+
+        public StaticMethods(Class<?> clazz, List<Method> methods) {
+            this.clazz = clazz;
+            this.methods = methods;
+        }
+
+        public LuaTable create() {
+            LuaTable tbl = new LuaTable();
+            List<String> names = new ArrayList<>();
+            String[] arr;
+            methods.forEach((method) -> names.add(Allium.MAPPINGS.getYarn(method.getName())));
+            arr = names.toArray(new String[0]);
+            LibFunction.bind(tbl, FunctionImpl::new, arr);
+            return tbl;
+        }
+
+        private final class FunctionImpl extends VarArgFunction {
+            @Override
+            public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+                return invokeStatic(clazz, methods.get(opcode), state, args);
             }
         }
     }

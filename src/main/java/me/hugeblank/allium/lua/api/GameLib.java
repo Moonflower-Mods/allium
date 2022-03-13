@@ -26,13 +26,13 @@ public class GameLib implements LuaLibrary {
         env.rawset("game", lib);
         LibFunction.bind(lib, GameLibFunctions::new, new String[]{
                 "getPlayer", // Takes in a players username, returns a ServerPlayerEntity
-                "getBlockPos", // Takes in 3 numbers, returns a BlockPos
                 "getBlock", // Takes in a block identifier *string*, returns a Block
                 "getItem", // Takes in an item identifier *string*, returns an Item
                 "getWorld", // Takes in a world identifier *string*, returns a ServerWorld
                 "listBlocks", // Lists all blocks provided by the game. Identifier key, Block value
                 "listItems", // Lists all items provided by the game. Identifier key, Item value
-                "listPlayers" // Lists all players currently online.
+                "listPlayers", // Lists all players currently online.
+                "listWorlds" // Lists all worlds provided by the game. Identifier key, World value
         });
         state.loadedPackages.rawset("game", lib);
         return lib;
@@ -51,25 +51,18 @@ public class GameLib implements LuaLibrary {
                     if (player == null) throw new LuaError("Player '" + username + "' does not exist");
                     return create(player);
                 case 1:
-                    return create(new BlockPos(
-                            args.arg(1).checkInteger(),
-                            args.arg(2).checkInteger(),
-                            args.arg(3).checkInteger()
-                            )
-                    );
-                case 2:
                     return create(
                             Objects.requireNonNull(Allium.SERVER.getRegistryManager()
                                     .get(Registry.BLOCK_KEY)
                                     .get(new Identifier(args.arg(1).checkString())))
                     );
-                case 3:
+                case 2:
                     return create(
                             Objects.requireNonNull(Allium.SERVER.getRegistryManager()
                                     .get(Registry.ITEM_KEY)
                                     .get(new Identifier(args.arg(1).checkString())))
                     );
-                case 4:
+                case 3:
                     Identifier id = new Identifier(args.arg(1).checkString());
                     final ServerWorld[] world = new ServerWorld[1];
                     Allium.SERVER.getWorlds().forEach((serverWorld -> {
@@ -78,21 +71,26 @@ public class GameLib implements LuaLibrary {
                     }));
                     if (world[0] == null) throw new LuaError("World " + id + " does not exist");
                     return create(world[0]);
-                case 5:
+                case 4:
                     LuaTable blocks = new LuaTable();
                     Allium.BLOCKS.forEach((identifier, block) -> blocks.rawset(create(identifier), create(block)));
                     return blocks;
-                case 6:
+                case 5:
                     LuaTable items = new LuaTable();
                     Allium.ITEMS.forEach((identifier, item) -> items.rawset(create(identifier), create(item)));
                     return items;
-                case 7:
+                case 6:
                     LuaTable players = new LuaTable();
                     List<ServerPlayerEntity> pl = Allium.SERVER.getPlayerManager().getPlayerList();
                     for (int i = 1; i <= pl.size(); i++) {
                         players.rawset(i, create(pl));
                     }
                     return players;
+                case 7:
+                    LuaTable worlds = new LuaTable();
+                    Allium.SERVER.getWorlds().forEach((serverWorld ->
+                            worlds.rawset(create(serverWorld.getRegistryKey().getValue()), create(serverWorld))));
+                    return worlds;
             }
             return Constants.NIL;
         }
