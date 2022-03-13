@@ -16,7 +16,7 @@ import java.util.Map;
 
 public class UserdataTypes {
     // Unlocked types! These are available in one way or another on the Lua side.
-    public static final Map<Class<?>, UserdataFactory<?>> TYPES = new HashMap<>();
+    private static final Map<Class<?>, UserdataFactory<?>> TYPES = new HashMap<>();
     public static final UserdataFactory<ServerPlayerEntity> PLAYER;
     public static final UserdataFactory<BlockPos> BLOCKPOS;
     public static final UserdataFactory<Block> BLOCK;
@@ -45,5 +45,12 @@ public class UserdataTypes {
         UserdataFactory<T> factory = new UserdataFactory<>(clazz);
         TYPES.put(clazz, factory);
         return factory;
+    }
+
+    public static UserdataFactory<?> get(Class<?> ret) {
+        if (TYPES.containsKey(ret)) {
+            return TYPES.get(ret);
+        }
+        return register(ret);
     }
 }
