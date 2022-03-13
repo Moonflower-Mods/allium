@@ -222,7 +222,7 @@ public class JavaLib {
             interfaces.add(luaValue.isUserdata(Class.class) ? args.arg(1).checkUserdata(Class.class) : getClassOf(luaValue.checkString()));
         }
 
-        return ClassBuilder.createLua(clazz, interfaces.toArray(new Class[0]));
+        return ClassBuilder.createLua(clazz, interfaces.toArray(new Class[0]), state);
     }
 
     public static Class<?> getClassOf(String className) throws LuaError {
