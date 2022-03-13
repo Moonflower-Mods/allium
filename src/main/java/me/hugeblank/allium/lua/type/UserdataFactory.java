@@ -169,7 +169,7 @@ public class UserdataFactory<T> {
             } else if (out != null && ret.equals(String.class)) { // string
                 return ValueFactory.valueOf((String) out);
             } else if (out != null && ret.isAssignableFrom(out.getClass())) {
-                return UserdataTypes.get(ret).create(ret.cast(out));
+                return new UserdataFactory<>(ret).create(ret.cast(out));
             } else {
                 return Constants.NIL;
             }
