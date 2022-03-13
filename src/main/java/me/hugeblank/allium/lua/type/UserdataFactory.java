@@ -15,6 +15,7 @@ import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.reflect.*;
 import java.util.*;
+import java.util.function.Consumer;
 
 public class UserdataFactory<T> {
     private final Map<Class<T>, Map<String, List<Method>>> CACHED_METHODS = new HashMap<>();
@@ -32,31 +33,7 @@ public class UserdataFactory<T> {
                 if (matches == null) {
                     var collectedMatches = new ArrayList<Method>();
 
-                    methods.forEach((method -> {
-                        if (Allium.DEVELOPMENT) {
-                            // Fun fact! Allium runs better in a dev environment!
-                            // See below for more information.
-                            if (method.getName().equals(name)) {
-                                collectedMatches.add(method);
-                            }
-                        } else {
-                            if (Allium.MAPPINGS.getYarn(Mappings.asMethod(UserdataFactory.this.clazz, method)).split("#")[1].equals(name)) {
-                                collectedMatches.add(method);
-                            }
-
-                            for (var clazz : ClassUtils.getAllSuperclasses(UserdataFactory.this.clazz)) {
-                                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
-                                    collectedMatches.add(method);
-                                }
-                            }
-
-                            for (var clazz : ClassUtils.getAllInterfaces(UserdataFactory.this.clazz)) {
-                                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
-                                    collectedMatches.add(method);
-                                }
-                            }
-                        }
-                    }));
+                    collectMethods(UserdataFactory.this.clazz, UserdataFactory.this.methods, name, collectedMatches::add);
 
                     CACHED_METHODS.get(clazz).put(name, collectedMatches);
 
@@ -68,6 +45,32 @@ public class UserdataFactory<T> {
                 return Constants.NIL;
             }
         });
+    }
+
+    public static void collectMethods(Class<?> sourceClass, List<Method> methods, String name, Consumer<Method> consumer) {
+        methods.forEach((method -> {
+            if (Allium.DEVELOPMENT) {
+                if (method.getName().equals(name)) {
+                    consumer.accept(method);
+                }
+            } else {
+                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1].equals(name)) {
+                    consumer.accept(method);
+                }
+
+                for (var clazz : ClassUtils.getAllSuperclasses(sourceClass)) {
+                    if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                        consumer.accept(method);
+                    }
+                }
+
+                for (var clazz : ClassUtils.getAllInterfaces(sourceClass)) {
+                    if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                        consumer.accept(method);
+                    }
+                }
+            }
+        }));
     }
 
     public UserdataFactory(Class<T> clazz) {

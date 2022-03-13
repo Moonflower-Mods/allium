@@ -41,6 +41,28 @@ public final class LibBuilder {
         return new LuaLibraryImpl(this.name, func, funcNames);
     }
 
+    public LuaTable buildTable() {
+        var func = new Function[this.functionMap.size()];
+        var funcNames = new String[this.functionMap.size()];
+
+        int i = 0;
+        for (var entry : this.functionMap.entrySet()) {
+            func[i] = entry.getValue();
+            funcNames[i] = entry.getKey();
+            i++;
+        }
+
+        LuaTable lib = new LuaTable();
+        LibFunction.bind(lib, () -> new VarArgFunction() {
+            @Override
+            public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+                return func[opcode].call(state, args);
+            }
+        }, funcNames);
+
+        return lib;
+    }
+
 
     public interface Function {
         Varargs call(LuaState state, Varargs args) throws LuaError;
