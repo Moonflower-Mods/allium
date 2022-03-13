@@ -14,8 +14,9 @@ package me.hugeblank.allium;
 import me.hugeblank.allium.loader.Plugin;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
+import me.hugeblank.allium.util.Mappings;
 import me.hugeblank.allium.util.YarnLoader;
-import net.fabricmc.api.DedicatedServerModInitializer;
+import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
@@ -30,7 +31,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class Allium implements DedicatedServerModInitializer {
+public class Allium implements ModInitializer {
     public static final String ID = "allium";
     public static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir().resolve(ID);
     public static final Logger LOGGER = LoggerFactory.getLogger(ID);
@@ -38,10 +39,10 @@ public class Allium implements DedicatedServerModInitializer {
     public static final Map<Identifier, Item> ITEMS = new HashMap<>();
     public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
     public static MinecraftServer SERVER;
-    public static Map<String, String> MAPPINGS;
+    public static Mappings MAPPINGS;
 
     @Override
-    public void onInitializeServer() {
+    public void onInitialize() {
 
         LOGGER.info("Loading NathanFudge's Yarn Remapper");
         MAPPINGS = YarnLoader.init();

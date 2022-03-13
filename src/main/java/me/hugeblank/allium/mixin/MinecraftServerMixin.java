@@ -43,6 +43,12 @@ public abstract class MinecraftServerMixin {
             }
         });
     }
+
+    @Inject(at = @At("TAIL"), method = "exit")
+    private void exit(CallbackInfo ci) {
+        Allium.SERVER = null;
+    }
+    
     @Inject(at = @At("TAIL"), method = "tick")
     private void tick(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
         Events.SERVER_TICK.queueEvent();

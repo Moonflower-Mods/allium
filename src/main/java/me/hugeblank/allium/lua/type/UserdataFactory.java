@@ -5,17 +5,19 @@
 // If someone wants to SCP this, please by all means do so.
 package me.hugeblank.allium.lua.type;
 
+import com.google.common.primitives.Primitives;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.util.Mappings;
+import org.apache.commons.lang3.ClassUtils;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.reflect.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class UserdataFactory<T> {
+    private final Map<Class<T>, Map<String, List<Method>>> CACHED_METHODS = new HashMap<>();
     private final Class<T> clazz;
     private final List<Method> methods;
     private final LuaTable metatable = new LuaTable();
@@ -26,25 +28,42 @@ public class UserdataFactory<T> {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
                 String name = arg2.checkString(); // mapped name
-                List<Method> matches = new ArrayList<>(); // intermediary method (in production [oh god.])
-                methods.forEach((method -> {
-                    if (Allium.DEVELOPMENT) {
-                        // Fun fact! Allium runs better in a dev environment!
-                        // See below for more information.
-                        if (method.getName().equals(name)) {
-                            matches.add(method);
-                        }
-                    } else {
-                        // This is tragic but a necessary evil
-                        // methods can have the same mapped name, but the intermediary value changes
-                        // O(n^(go f*ck yourself))
-                        Allium.MAPPINGS.forEach((key, value) -> {
-                            if (name.equals(value)) {
-                                matches.add(method);
+                List<Method> matches = CACHED_METHODS.computeIfAbsent(clazz, (c) -> new HashMap<>()).get(name);
+                if (matches == null) {
+                    var collectedMatches = new ArrayList<Method>();
+
+                    methods.forEach((method -> {
+                        if (Allium.DEVELOPMENT) {
+                            // Fun fact! Allium runs better in a dev environment!
+                            // See below for more information.
+                            if (method.getName().equals(name)) {
+                                collectedMatches.add(method);
                             }
-                        });
-                    }
-                }));
+                        } else {
+                            if (Allium.MAPPINGS.getYarn(Mappings.asMethod(UserdataFactory.this.clazz, method)).split("#")[1].equals(name)) {
+                                collectedMatches.add(method);
+                            }
+
+                            for (var clazz : ClassUtils.getAllSuperclasses(UserdataFactory.this.clazz)) {
+                                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                                    collectedMatches.add(method);
+                                }
+                            }
+
+                            for (var clazz : ClassUtils.getAllInterfaces(UserdataFactory.this.clazz)) {
+                                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                                    collectedMatches.add(method);
+                                }
+                            }
+                        }
+                    }));
+
+                    CACHED_METHODS.get(clazz).put(name, collectedMatches);
+
+                    matches = collectedMatches;
+                }
+
+
                 if (matches.size() > 0) return new UDFFunctions<>(clazz, matches);
                 return Constants.NIL;
             }
@@ -115,7 +134,7 @@ public class UserdataFactory<T> {
             }
 
             if (unimplemented == 1) {
-                return Proxy.newProxyInstance(clatz.getClassLoader(), new Class[]{ clatz },
+                return Proxy.newProxyInstance(clatz.getClassLoader(), new Class[]{clatz},
                         (p, m, params) -> {
                             if (m.isDefault()) {
                                 return InvocationHandler.invokeDefault(p, m, params);
@@ -123,7 +142,7 @@ public class UserdataFactory<T> {
 
                             var args = new LuaValue[params.length];
                             for (int i = 0; i < params.length; i++) {
-                                args[i] = toLuaValue(params[i], params[i].getClass());
+                                args[i] = toLuaValue(params[i]);
                             }
 
                             return toJava(state, func.invoke(state, ValueFactory.varargsOf(args)).first(), Object.class);
@@ -146,16 +165,23 @@ public class UserdataFactory<T> {
         throw new InvalidArgumentException();
     }
 
+    public static LuaValue toLuaValue(Object out) {
+        return toLuaValue(out, out != null ? out.getClass() : Object.class);
+    }
+
     public static LuaValue toLuaValue(Object out, Class<?> ret) {
+
         if (out != null && ret.isArray()) {
             Object[] outArr = (Object[]) out;
             var table = new LuaTable();
 
             for (int i = 1; i <= outArr.length; i++) {
-                table.rawset(i, toLuaValue(outArr[i], outArr[i].getClass()));
+                table.rawset(i, toLuaValue(outArr[i]));
             }
             return table;
         } else {
+            ret = Primitives.unwrap(ret);
+
             if (out != null && ret.isPrimitive()) {
                 if (ret.equals(int.class) || ret.equals(byte.class) || ret.equals(short.class)) { // int
                     return ValueFactory.valueOf((int) out);

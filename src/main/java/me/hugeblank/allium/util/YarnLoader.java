@@ -19,10 +19,7 @@ import java.net.URL;
 import java.net.URLConnection;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class YarnLoader {
 
@@ -33,7 +30,7 @@ public class YarnLoader {
     private static final String NAMESPACE_FROM = "intermediary";
     private static final String NAMESPACE_TO = "named";
 
-    public static Map<String, String> init() {
+    public static Mappings init() {
         try {
             return loadOrCreateMappings();
         } catch (Exception e) {
@@ -42,7 +39,7 @@ public class YarnLoader {
         }
     }
 
-    private static Map<String, String> loadOrCreateMappings() throws IOException {
+    private static Mappings loadOrCreateMappings() throws IOException {
         // Unlike NEC, it's imperative that allium has these mappings otherwise all methods
         // will be intermediary names. not good.
         if (!Files.exists(CACHED_MAPPINGS)) {
@@ -83,33 +80,40 @@ public class YarnLoader {
 
         try (BufferedReader mappingReader = Files.newBufferedReader(CACHED_MAPPINGS)) {
             TinyV2Factory.visit(mappingReader, new TinyVisitor() {
-                private final Map<String, Integer> namespaceStringToColumn = new HashMap<>();
-
-                private void addMappings(MappingGetter name) {
-                    mappings.put(name.get(namespaceStringToColumn.get(NAMESPACE_FROM)).replace('/', '.'),
-                            name.get(namespaceStringToColumn.get(NAMESPACE_TO)).replace('/', '.'));
-                }
+                private final Map<String, Integer> namespaceIndex = new HashMap<>();
+                private Map<String, String> currentClass = new HashMap<>();
 
                 @Override
                 public void start(TinyMetadata metadata) {
-                    namespaceStringToColumn.put(NAMESPACE_FROM, metadata.index(NAMESPACE_FROM));
-                    namespaceStringToColumn.put(NAMESPACE_TO, metadata.index(NAMESPACE_TO));
+                    namespaceIndex.put(NAMESPACE_FROM, metadata.index(NAMESPACE_FROM));
+                    namespaceIndex.put(NAMESPACE_TO, metadata.index(NAMESPACE_TO));
                 }
 
                 @Override
                 public void pushClass(MappingGetter name) {
-                    addMappings(name);
+                    mappings.put(
+                            Mappings.asClass(name.get(namespaceIndex.get(NAMESPACE_FROM))),
+                            Mappings.asClass(name.get(namespaceIndex.get(NAMESPACE_TO)))
+                    );
+
+                    currentClass.put(NAMESPACE_FROM, name.get(namespaceIndex.get(NAMESPACE_FROM)).replace('/', '.'));
+                    currentClass.put(NAMESPACE_TO, name.get(namespaceIndex.get(NAMESPACE_TO)).replace('/', '.'));
                 }
 
                 @Override
                 public void pushMethod(MappingGetter name, String descriptor) {
-                    addMappings(name);
+                    mappings.put(
+                            Mappings.asMethod(currentClass.get(NAMESPACE_FROM), name.get(namespaceIndex.get(NAMESPACE_FROM))),
+                            Mappings.asMethod(currentClass.get(NAMESPACE_TO), name.get(namespaceIndex.get(NAMESPACE_TO)))
+                    );
                 }
 
                 @Override
                 public void pushField(MappingGetter name, String descriptor) {
-                    // Allium doesn't use fields... yet... maybe.
-                    // addMappings(name);
+                    mappings.put(
+                            Mappings.asMethod(currentClass.get(NAMESPACE_FROM), name.get(namespaceIndex.get(NAMESPACE_FROM))),
+                            Mappings.asMethod(currentClass.get(NAMESPACE_TO), name.get(namespaceIndex.get(NAMESPACE_TO)))
+                    );
                 }
             });
 
@@ -118,7 +122,7 @@ public class YarnLoader {
             throw e;
         }
 
-        return mappings;
+        return Mappings.of(mappings);
     }
 
     private static class YarnVersion {
