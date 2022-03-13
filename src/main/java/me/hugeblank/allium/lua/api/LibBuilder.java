@@ -1,6 +1,5 @@
 package me.hugeblank.allium.lua.api;
 
-import me.hugeblank.allium.loader.Plugin;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
@@ -11,13 +10,13 @@ import java.util.Map;
 
 public final class LibBuilder {
     private final String name;
-    private Map<String, Function> functionMap = new HashMap<>();
+    private final Map<String, Function> functionMap = new HashMap<>();
 
     private LibBuilder(String name) {
         this.name = name;
     }
 
-    public static final LibBuilder create(String name) {
+    public static LibBuilder create(String name) {
         return new LibBuilder(name);
     }
 

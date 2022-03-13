@@ -5,6 +5,7 @@
 // If someone wants to SCP this, please by all means do so.
 package me.hugeblank.allium.lua.type;
 
+import com.google.common.primitives.Primitives;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.util.Mappings;
 import org.apache.commons.lang3.ClassUtils;
@@ -141,7 +142,7 @@ public class UserdataFactory<T> {
 
                             var args = new LuaValue[params.length];
                             for (int i = 0; i < params.length; i++) {
-                                args[i] = toLuaValue(params[i], params[i].getClass());
+                                args[i] = toLuaValue(params[i]);
                             }
 
                             return toJava(state, func.invoke(state, ValueFactory.varargsOf(args)).first(), Object.class);
@@ -164,16 +165,23 @@ public class UserdataFactory<T> {
         throw new InvalidArgumentException();
     }
 
+    public static LuaValue toLuaValue(Object out) {
+        return toLuaValue(out, out != null ? out.getClass() : Object.class);
+    }
+
     public static LuaValue toLuaValue(Object out, Class<?> ret) {
+
         if (out != null && ret.isArray()) {
             Object[] outArr = (Object[]) out;
             var table = new LuaTable();
 
             for (int i = 1; i <= outArr.length; i++) {
-                table.rawset(i, toLuaValue(outArr[i], outArr[i].getClass()));
+                table.rawset(i, toLuaValue(outArr[i]));
             }
             return table;
         } else {
+            ret = Primitives.unwrap(ret);
+
             if (out != null && ret.isPrimitive()) {
                 if (ret.equals(int.class) || ret.equals(byte.class) || ret.equals(short.class)) { // int
                     return ValueFactory.valueOf((int) out);
@@ -187,7 +195,7 @@ public class UserdataFactory<T> {
             } else if (out != null && ret.equals(String.class)) { // string
                 return ValueFactory.valueOf((String) out);
             } else if (out != null && ret.isAssignableFrom(out.getClass())) {
-                return UserdataTypes.get(ret).create(ret.cast(out));
+                return new UserdataFactory<>(ret).create(ret.cast(out));
             } else {
                 return Constants.NIL;
             }

@@ -64,7 +64,7 @@ public class JavaLib {
                     if (jargs.length == parameters.length) { // Found a match!
                         try { // Get the return type, invoke method, cast returned value, cry.
                             Object out = constructor.newInstance(jargs);
-                            return UserdataFactory.toLuaValue(out, clazz);
+                            return UserdataFactory.toLuaValue(out);
                         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
                             throw new LuaError(e);
                         }
@@ -95,7 +95,7 @@ public class JavaLib {
 
     private static Varargs cast(LuaState state, Varargs args) throws LuaError {
         try {
-            return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, args.arg(2), getClassOf(args.arg(1).checkString())), Object.class);
+            return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, args.arg(2), getClassOf(args.arg(1).checkString())));
         } catch (Exception e) {
             e.printStackTrace();
             return Constants.NIL;
@@ -103,7 +103,7 @@ public class JavaLib {
     }
 
     private static Varargs getClassObject(LuaState state, Varargs args) throws LuaError {
-        return UserdataFactory.toLuaValue(getClassOf(args.arg(1).checkString()), Class.class);
+        return UserdataFactory.toLuaValue(getClassOf(args.arg(1).checkString()));
     }
 
     private static Varargs checkIfExists(LuaState state, Varargs args) {
