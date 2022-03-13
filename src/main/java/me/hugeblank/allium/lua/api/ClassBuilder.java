@@ -223,7 +223,7 @@ public class ClassBuilder {
 
                         for (int i = 0; i < paramsTable.length(); i++) {
                             var val = paramsTable.rawget(i + 1);
-                            params[i] = val.isUserdata(Class.class) ? val.checkUserdata(Class.class) : JavaLib.getClassOf(val.checkString());
+                            params[i] = JavaLib.asClass(val);
                         }
 
                         builder.method(methodName, params, function);
