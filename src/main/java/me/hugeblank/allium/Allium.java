@@ -43,7 +43,6 @@ public class Allium implements ModInitializer {
 
     @Override
     public void onInitialize() {
-
         LOGGER.info("Loading NathanFudge's Yarn Remapper");
         MAPPINGS = YarnLoader.init();
 

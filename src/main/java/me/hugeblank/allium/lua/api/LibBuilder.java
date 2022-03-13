@@ -1,5 +1,6 @@
 package me.hugeblank.allium.lua.api;
 
+import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
@@ -26,7 +27,7 @@ public final class LibBuilder {
         return this;
     }
 
-    public LuaLibrary build() {
+    public LuaLibraryImpl build() {
         var func = new Function[this.functionMap.size()];
         var funcNames = new String[this.functionMap.size()];
 
@@ -47,6 +48,7 @@ public final class LibBuilder {
 
     private record LuaLibraryImpl(String name, Function[] func,
                                   String[] funcNames) implements LuaLibrary {
+
 
         @Override
         public LuaValue add(LuaState state, LuaTable env) {
