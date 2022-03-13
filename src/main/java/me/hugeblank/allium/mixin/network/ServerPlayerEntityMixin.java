@@ -31,5 +31,4 @@ public class ServerPlayerEntityMixin{
     private void onDeath(DamageSource source, CallbackInfo ci) {
         Events.PLAYER_DEATH.queueEvent(this, source);
     }
-
 }

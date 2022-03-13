@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.lua.event.Events;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.resource.ResourcePackManager;
@@ -21,6 +22,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.net.Proxy;
+import java.util.function.BooleanSupplier;
 
 @Mixin(MinecraftServer.class)
 public abstract class MinecraftServerMixin {
@@ -40,5 +42,9 @@ public abstract class MinecraftServerMixin {
                 Allium.ITEMS.put(entry.getKey().get().getValue(), entry.value());
             }
         });
+    }
+    @Inject(at = @At("TAIL"), method = "tick")
+    private void tick(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
+        Events.SERVER_TICK.queueEvent();
     }
 }
