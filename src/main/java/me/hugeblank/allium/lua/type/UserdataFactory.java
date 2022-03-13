@@ -6,16 +6,17 @@
 package me.hugeblank.allium.lua.type;
 
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.util.Mappings;
+import org.apache.commons.lang3.ClassUtils;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.reflect.*;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class UserdataFactory<T> {
+    private final Map<Class<T>, Map<String, List<Method>>> CACHED_METHODS = new HashMap<>();
     private final Class<T> clazz;
     private final List<Method> methods;
     private final LuaTable metatable = new LuaTable();
@@ -26,25 +27,42 @@ public class UserdataFactory<T> {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
                 String name = arg2.checkString(); // mapped name
-                List<Method> matches = new ArrayList<>(); // intermediary method (in production [oh god.])
-                methods.forEach((method -> {
-                    if (Allium.DEVELOPMENT) {
-                        // Fun fact! Allium runs better in a dev environment!
-                        // See below for more information.
-                        if (method.getName().equals(name)) {
-                            matches.add(method);
-                        }
-                    } else {
-                        // This is tragic but a necessary evil
-                        // methods can have the same mapped name, but the intermediary value changes
-                        // O(n^(go f*ck yourself))
-                        Allium.MAPPINGS.forEach((key, value) -> {
-                            if (name.equals(value)) {
-                                matches.add(method);
+                List<Method> matches = CACHED_METHODS.computeIfAbsent(clazz, (c) -> new HashMap<>()).get(name);
+                if (matches == null) {
+                    var collectedMatches = new ArrayList<Method>();
+
+                    methods.forEach((method -> {
+                        if (Allium.DEVELOPMENT) {
+                            // Fun fact! Allium runs better in a dev environment!
+                            // See below for more information.
+                            if (method.getName().equals(name)) {
+                                collectedMatches.add(method);
                             }
-                        });
-                    }
-                }));
+                        } else {
+                            if (Allium.MAPPINGS.getYarn(Mappings.asMethod(UserdataFactory.this.clazz, method)).split("#")[1].equals(name)) {
+                                collectedMatches.add(method);
+                            }
+
+                            for (var clazz : ClassUtils.getAllSuperclasses(UserdataFactory.this.clazz)) {
+                                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                                    collectedMatches.add(method);
+                                }
+                            }
+
+                            for (var clazz : ClassUtils.getAllInterfaces(UserdataFactory.this.clazz)) {
+                                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                                    collectedMatches.add(method);
+                                }
+                            }
+                        }
+                    }));
+
+                    CACHED_METHODS.get(clazz).put(name, collectedMatches);
+
+                    matches = collectedMatches;
+                }
+
+
                 if (matches.size() > 0) return new UDFFunctions<>(clazz, matches);
                 return Constants.NIL;
             }
@@ -115,7 +133,7 @@ public class UserdataFactory<T> {
             }
 
             if (unimplemented == 1) {
-                return Proxy.newProxyInstance(clatz.getClassLoader(), new Class[]{ clatz },
+                return Proxy.newProxyInstance(clatz.getClassLoader(), new Class[]{clatz},
                         (p, m, params) -> {
                             if (m.isDefault()) {
                                 return InvocationHandler.invokeDefault(p, m, params);
