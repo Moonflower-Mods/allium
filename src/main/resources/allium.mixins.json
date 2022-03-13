@@ -9,6 +9,7 @@
   "mixins": [
     "MinecraftServerMixin",
     "PlayerManagerMixin",
+    "block.AbstractBlockMixin",
     "network.ServerPlayerEntityMixin",
     "network.ServerPlayNetworkHandlerMixin"
   ]

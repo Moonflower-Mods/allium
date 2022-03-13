@@ -1,7 +1,7 @@
 package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.lua.type.UserdataTypes;
+import me.hugeblank.allium.lua.type.UserdataFactory;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Identifier;
@@ -13,6 +13,7 @@ import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
 import java.util.List;
+import java.util.Objects;
 
 public class GameLib implements LuaLibrary {
 
@@ -38,7 +39,9 @@ public class GameLib implements LuaLibrary {
     }
 
     private static final class GameLibFunctions extends VarArgFunction {
-
+        private static LuaUserdata create(Object instance) {
+            return new UserdataFactory<>(instance.getClass()).create(instance);
+        }
         @Override
         public Varargs invoke(LuaState state, Varargs args) throws LuaError {
             switch (opcode) {
@@ -46,25 +49,25 @@ public class GameLib implements LuaLibrary {
                     String username = args.arg(1).checkString();
                     ServerPlayerEntity player = Allium.SERVER.getPlayerManager().getPlayer(username);
                     if (player == null) throw new LuaError("Player '" + username + "' does not exist");
-                    return UserdataTypes.PLAYER.create(player);
+                    return create(player);
                 case 1:
-                    return UserdataTypes.BLOCKPOS.create(new BlockPos(
+                    return create(new BlockPos(
                             args.arg(1).checkInteger(),
                             args.arg(2).checkInteger(),
                             args.arg(3).checkInteger()
                             )
                     );
                 case 2:
-                    return UserdataTypes.BLOCK.create(
-                        Allium.SERVER.getRegistryManager()
-                                .get(Registry.BLOCK_KEY)
-                                .get(new Identifier(args.arg(1).checkString()))
+                    return create(
+                            Objects.requireNonNull(Allium.SERVER.getRegistryManager()
+                                    .get(Registry.BLOCK_KEY)
+                                    .get(new Identifier(args.arg(1).checkString())))
                     );
                 case 3:
-                    return UserdataTypes.ITEM.create(
-                            Allium.SERVER.getRegistryManager()
+                    return create(
+                            Objects.requireNonNull(Allium.SERVER.getRegistryManager()
                                     .get(Registry.ITEM_KEY)
-                                    .get(new Identifier(args.arg(1).checkString()))
+                                    .get(new Identifier(args.arg(1).checkString())))
                     );
                 case 4:
                     Identifier id = new Identifier(args.arg(1).checkString());
@@ -74,20 +77,20 @@ public class GameLib implements LuaLibrary {
                             world[0] = serverWorld;
                     }));
                     if (world[0] == null) throw new LuaError("World " + id + " does not exist");
-                    return UserdataTypes.WORLD.create(world[0]);
+                    return create(world[0]);
                 case 5:
                     LuaTable blocks = new LuaTable();
-                    Allium.BLOCKS.forEach((identifier, block) -> blocks.rawset(UserdataTypes.IDENTIFIER.create(identifier), UserdataTypes.BLOCK.create(identifier)));
+                    Allium.BLOCKS.forEach((identifier, block) -> blocks.rawset(create(identifier), create(block)));
                     return blocks;
                 case 6:
                     LuaTable items = new LuaTable();
-                    Allium.ITEMS.forEach((identifier, block) -> items.rawset(UserdataTypes.IDENTIFIER.create(identifier), UserdataTypes.ITEM.create(identifier)));
+                    Allium.ITEMS.forEach((identifier, item) -> items.rawset(create(identifier), create(item)));
                     return items;
                 case 7:
                     LuaTable players = new LuaTable();
                     List<ServerPlayerEntity> pl = Allium.SERVER.getPlayerManager().getPlayerList();
                     for (int i = 1; i <= pl.size(); i++) {
-                        players.rawset(i, UserdataTypes.PLAYER.create(pl));
+                        players.rawset(i, create(pl));
                     }
                     return players;
             }

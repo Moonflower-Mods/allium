@@ -40,7 +40,7 @@ public class  PluginExecutor {
         globals.load( state, new DebugLib() );
 
         // Custom globals
-        globals.load( state, new AlliumLib(plugin) );
+        globals.load( state, AlliumLib.create(plugin) );
         globals.load( state, new GameLib() );
         globals.load( state, JavaLib.create());
 
@@ -63,6 +63,7 @@ public class  PluginExecutor {
         try {
             LuaFunction loadValue = LoadState.load(state, new FileInputStream(main), "main.lua", this.globals);
             state.setupThread(new LuaTable());
+            // TODO: Does this allow for multiple plugins to run?
             LuaTable info = LuaThread.runMain(state, loadValue).checkValue(1).checkTable();
             try {
                 String id = info.rawget("id").checkLuaString().toString();
