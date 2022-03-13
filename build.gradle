@@ -37,7 +37,6 @@ dependencies {
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	embedAPI "org.squiddev:Cobalt:${project.cobalt_version}"
 	embedAPI "net.fabricmc:tiny-mappings-parser:${project.tiny_parser}"
-	embedAPI "net.bytebuddy:byte-buddy:1.12.8"
 
 
 	// Used for testing

@@ -1,28 +1,71 @@
 package me.hugeblank.allium.lua.api;
 
+import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.UserdataFactory;
-import net.bytebuddy.ByteBuddy;
-import net.bytebuddy.dynamic.DynamicType;
-import net.bytebuddy.dynamic.loading.ClassLoadingStrategy;
-import net.bytebuddy.dynamic.scaffold.subclass.ConstructorStrategy;
-import net.bytebuddy.implementation.InvocationHandlerAdapter;
+import me.hugeblank.allium.util.AsmUtil;
+import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.Type;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LuaFunction;
 
+import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.*;
+
+import static org.objectweb.asm.Opcodes.*;
 
 public class ClassBuilder {
     public static int id = 0;
 
     private final Class<?> superClass;
-    private DynamicType.Builder<?> builder;
-    private List<Method> methods = new ArrayList<>();
+    private final String className;
+    private final LuaState state;
+    private final ClassWriter c = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+    private final List<Method> methods = new ArrayList<>();
+    private final Map<String, LuaFunction> storedFunctions = new HashMap<>();
 
-    public ClassBuilder(Class<?> superClass, Class<?>[] interfaces) {
-        this.builder = new ByteBuddy().subclass(superClass, ConstructorStrategy.Default.IMITATE_SUPER_CLASS).implement(interfaces).name("allium.GeneratedClass_" + id);
+    public ClassBuilder(Class<?> superClass, Class<?>[] interfaces, LuaState state) {
+        this.state = state;
+        this.className = "allium/GeneratedClass_" + id;
+
+        this.c.visit(
+            V17,
+            ACC_PUBLIC,
+            className,
+            null,
+            superClass.getName().replace('.', '/'),
+            Arrays.stream(interfaces).map(x -> x.getName().replace('.', '/')).toArray(String[]::new)
+            );
+
+        this.c.visitField(ACC_PUBLIC | ACC_STATIC, "allium$luaState", Type.getDescriptor(LuaState.class), null, null);
+
+        for (Constructor<?> superCtor : superClass.getConstructors()) {
+            if (!Modifier.isPublic(superCtor.getModifiers())) continue;
+
+            var desc = Type.getConstructorDescriptor(superCtor);
+            var m = c.visitMethod(superCtor.getModifiers(), "<init>", desc, null, null);
+            var args = Type.getArgumentTypes(desc);
+
+            m.visitVarInsn(ALOAD, 0);
+
+            int argIndex = 1;
+
+            for (Type arg : args) {
+                m.visitVarInsn(arg.getOpcode(ILOAD), argIndex);
+
+                argIndex += arg.getSize();
+            }
+
+            m.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(superClass), "<init>", desc, false);
+            m.visitInsn(RETURN);
+
+            m.visitMaxs(0, 0);
+        }
+
         this.superClass = superClass;
         this.methods.addAll(List.of(this.superClass.getMethods()));
         for (var inrf : interfaces) {
@@ -31,8 +74,14 @@ public class ClassBuilder {
         id++;
     }
 
-    public void method(String methodName, Class<?>[] parameters, LuaState state, LuaFunction func) {
+    public void method(String methodName, Class<?>[] parameters, LuaFunction func) {
         var methods = new ArrayList<Method>();
+
+        var funcFieldName = "allium$func_" + methodName;
+
+        c.visitField(ACC_PUBLIC | ACC_STATIC, funcFieldName, Type.getDescriptor(LuaFunction.class), null, null);
+
+        storedFunctions.put(funcFieldName, func);
 
         UserdataFactory.collectMethods(this.superClass, this.methods, methodName, methods::add);
 
@@ -49,32 +98,122 @@ public class ClassBuilder {
                 }
 
                 if (match) {
-                    this.builder = this.builder.defineMethod(method.getName(), method.getReturnType(), method.getModifiers() ^ Modifier.ABSTRACT)
-                            .withParameters(methParams).intercept(InvocationHandlerAdapter.of((p, m, params) -> {
-                        var args = new LuaValue[params.length + 1];
-                        args[0] = UserdataFactory.toLuaValue(p);
-                        for (int i = 1; i < params.length; i++) {
-                            args[i] = UserdataFactory.toLuaValue(params[i]);
+                    var desc = Type.getMethodDescriptor(method);
+                    var isStatic = Modifier.isStatic(method.getModifiers());
+                    var m = c.visitMethod(method.getModifiers() & ~Modifier.ABSTRACT, method.getName(), desc, null, null);
+                    int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
+
+                    if (isStatic) varPrefix -= 1;
+
+                    m.visitLdcInsn(method.getParameterCount() + 1);
+                    m.visitTypeInsn(ANEWARRAY, Type.getInternalName(LuaValue.class));
+                    m.visitVarInsn(ASTORE, varPrefix);
+
+                    if (!isStatic) {
+                        m.visitVarInsn(ALOAD, varPrefix);
+                        m.visitLdcInsn(0);
+                        m.visitVarInsn(ALOAD, 0);
+                        m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toLuaValue", "(Ljava/lang/Object;)Lorg/squiddev/cobalt/LuaValue;", false);
+                        m.visitInsn(AASTORE);
+                    }
+
+                    int argIndex = 1;
+                    var args = Type.getArgumentTypes(desc);
+                    for (int i = 0; i < args.length; i++) {
+                        m.visitVarInsn(ALOAD, varPrefix);
+                        m.visitLdcInsn(i + 1);
+                        m.visitVarInsn(args[i].getOpcode(ILOAD), argIndex);
+
+                        if (args[i].getSort() != Type.OBJECT || args[i].getSort() != Type.ARRAY) {
+                            AsmUtil.wrapPrimitive(m, args[i]);
                         }
 
-                        return UserdataFactory.toJava(state, func.invoke(state, ValueFactory.varargsOf(args)).first(), method.getReturnType());
-                    }));
+                        m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toLuaValue", "(Ljava/lang/Object;)Lorg/squiddev/cobalt/LuaValue;", false);
+                        m.visitInsn(AASTORE);
+
+                        argIndex += args[i].getSize();
+                    }
+
+                    var ret = Type.getType(method.getReturnType());
+                    var isVoid = ret.getSort() == Type.VOID;
+
+                    m.visitFieldInsn(GETSTATIC, className, "allium$luaState", Type.getDescriptor(LuaState.class));
+                    if (!isVoid) m.visitInsn(DUP);
+                    m.visitFieldInsn(GETSTATIC, className, funcFieldName, Type.getDescriptor(LuaFunction.class));
+                    m.visitInsn(SWAP);
+                    m.visitVarInsn(ALOAD, varPrefix);
+                    m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(ValueFactory.class), "varargsOf", "([Lorg/squiddev/cobalt/LuaValue;)Lorg/squiddev/cobalt/Varargs;", false);
+                    m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(LuaFunction.class), "invoke", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/Varargs;)Lorg/squiddev/cobalt/Varargs;", false);
+
+                    if (!isVoid) {
+                        m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);
+                        m.visitLdcInsn(ret);
+                        m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Ljava/lang/Class;)Ljava/lang/Object;", false);
+
+                        if (ret.getSort() != Type.ARRAY && ret.getSort() != Type.OBJECT) {
+                            AsmUtil.unwrapPrimitive(m, ret);
+                        } else {
+                            m.visitTypeInsn(CHECKCAST, ret.getInternalName());
+                        }
+                    }
+
+                    m.visitInsn(ret.getOpcode(IRETURN));
+
+                    m.visitMaxs(0, 0);
+
                     return;
                 }
             }
         }
     }
 
-    public Class<?> build() {
-        return this.builder.make().load(getClass().getClassLoader(), ClassLoadingStrategy.Default.WRAPPER).getLoaded();
+    private static class DefiningClassLoader extends ClassLoader {
+        public static final DefiningClassLoader INSTANCE = new DefiningClassLoader(DefiningClassLoader.class.getClassLoader());
+
+        public DefiningClassLoader(ClassLoader parent) {
+            super(parent);
+        }
+
+        public Class<?> defineClass(String name, byte[] bytes) {
+            return defineClass(name, bytes, 0, bytes.length);
+        }
     }
 
-    public static LuaTable createLua(Class<?> superClass, Class<?>[] interfaces) {
-        var builder = new ClassBuilder(superClass, interfaces);
+    public Class<?> build() {
+        byte[] classBytes = c.toByteArray();
+
+        if (Allium.DEVELOPMENT) {
+            Path classPath = Path.of("allium-dump", className + ".class");
+
+            try {
+                Files.createDirectories(classPath.getParent());
+                Files.write(classPath, classBytes);
+            } catch (IOException e) {
+                throw new RuntimeException("Couldn't dump class", e);
+            }
+        }
+
+        Class<?> klass = DefiningClassLoader.INSTANCE.defineClass(className.replace('/', '.'), classBytes);
+
+        try {
+            klass.getField("allium$luaState").set(null, state);
+
+            for (Map.Entry<String, LuaFunction> funcField : storedFunctions.entrySet()) {
+                klass.getField(funcField.getKey()).set(null, funcField.getValue());
+            }
+        } catch (ReflectiveOperationException roe) {
+            throw new RuntimeException("Failed to initialize class", roe);
+        }
+
+        return klass;
+    }
+
+    public static LuaTable createLua(Class<?> superClass, Class<?>[] interfaces, LuaState state) {
+        var builder = new ClassBuilder(superClass, interfaces, state);
 
 
         return LibBuilder.create("javaclass")
-                .add("withMethod", (state, args) -> {
+                .add("withMethod", (unused, args) -> {
                     try {
                         var methodName =  args.arg(2).checkString();
                         var paramsTable = args.arg(3).checkTable().checkTable();
@@ -87,7 +226,7 @@ public class ClassBuilder {
                             params[i] = val.isUserdata(Class.class) ? val.checkUserdata(Class.class) : JavaLib.getClassOf(val.checkString());
                         }
 
-                        builder.method(methodName, params, state, function);
+                        builder.method(methodName, params, function);
                         return Constants.NIL;
                     } catch (Exception e) {
                         if (e instanceof LuaError le) {
@@ -97,7 +236,7 @@ public class ClassBuilder {
                         }
                     }
                 })
-                .add("build", (state, args) -> {
+                .add("build", (unused, args) -> {
                     try {
                         return UserdataFactory.toLuaValue(builder.build());
                     } catch (Exception e) {
