@@ -188,11 +188,11 @@ public class UserdataFactory<T> {
         if (clatz.isPrimitive()) {
             if (value.isInteger() && clatz.isAssignableFrom(int.class)) { // int
                 return value.toInteger();
-            } else if (value.isInteger() && clatz.isAssignableFrom(byte.class)) { // double
+            } else if (value.isInteger() && clatz.isAssignableFrom(byte.class)) { // byte
                 return (byte) value.toInteger();
-            } else if (value.isInteger() && clatz.isAssignableFrom(short.class)) { // double
+            } else if (value.isInteger() && clatz.isAssignableFrom(short.class)) { // short
                 return (short) value.toInteger();
-            } else if (value.isInteger() && clatz.isAssignableFrom(char.class)) { // double
+            } else if (value.isInteger() && clatz.isAssignableFrom(char.class)) { // char
                 return (char) value.toInteger();
             } else if (value.isNumber() && clatz.isAssignableFrom(double.class)) { // double
                 return value.toDouble();
@@ -270,17 +270,17 @@ public class UserdataFactory<T> {
                     return ValueFactory.valueOf((int) out);
                 } else if (ret.equals(double.class)) { // double
                     return ValueFactory.valueOf((double) out);
-                } else if (ret.equals(float.class)) { // double
+                } else if (ret.equals(float.class)) { // float
                     return ValueFactory.valueOf((float) out);
                 } else if (ret.equals(long.class)) { // long
                     return ValueFactory.valueOf((long) out);
                 } else if (ret.equals(boolean.class)) { // boolean
                     return ValueFactory.valueOf((boolean) out);
-                } else if (ret.equals(short.class)) { // boolean
+                } else if (ret.equals(short.class)) { // short
                     return ValueFactory.valueOf((short) out);
-                } else if (ret.equals(boolean.class)) { // boolean
-                    return ValueFactory.valueOf((boolean) out);
-                } else if (ret.equals(char.class)) { // boolean
+                } else if (ret.equals(byte.class)) { // byte
+                    return ValueFactory.valueOf((byte) out);
+                } else if (ret.equals(char.class)) { // char
                     return ValueFactory.valueOf((char) out);
                 }
             } else if (ret.equals(String.class)) { // string
