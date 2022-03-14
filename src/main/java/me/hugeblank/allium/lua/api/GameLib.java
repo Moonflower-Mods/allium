@@ -40,7 +40,7 @@ public class GameLib implements LuaLibrary {
 
     private static final class GameLibFunctions extends VarArgFunction {
         private static LuaUserdata create(Object instance) {
-            return new UserdataFactory<>(instance.getClass()).create(instance);
+            return UserdataFactory.getUserData(instance);
         }
         @Override
         public Varargs invoke(LuaState state, Varargs args) throws LuaError {

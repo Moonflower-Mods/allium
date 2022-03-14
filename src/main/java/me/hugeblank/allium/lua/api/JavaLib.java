@@ -214,12 +214,12 @@ public class JavaLib {
 
 
     private static Varargs classBuilder(LuaState state, Varargs args) throws LuaError {
-        var clazz = args.arg(1).isUserdata(Class.class) ? args.arg(1).checkUserdata(Class.class) : getClassOf(args.arg(1).checkString());
+        var clazz = asClass(args.arg(1));
         var table = args.arg(2).checkTable();
         var interfaces = new ArrayList<Class>();
         for (int i = 1; i <= table.length(); i++) {
             var luaValue = table.rawget(i);
-            interfaces.add(luaValue.isUserdata(Class.class) ? args.arg(1).checkUserdata(Class.class) : getClassOf(luaValue.checkString()));
+            interfaces.add(asClass(luaValue));
         }
 
         return ClassBuilder.createLua(clazz, interfaces.toArray(new Class[0]), state);
@@ -235,6 +235,20 @@ public class JavaLib {
                 throw new LuaError(e.toString());
             }
         }
+    }
+
+    public static Class<?> asClass(LuaValue value) throws LuaError {
+        if (value.isString()) {
+            return getClassOf(value.checkString());
+        } else if (value.isUserdata(Class.class)) {
+            return value.checkUserdata(Class.class);
+        } else if (value.isUserdata()) {
+            return value.checkUserdata().getClass();
+        } else if (value.isTable() && value.checkTable().rawget("allium_java_class") != Constants.NIL) {
+            return value.checkTable().rawget("allium_java_class").checkUserdata(Class.class);
+        }
+
+        throw new LuaError(new ClassNotFoundException());
     }
 
     private static class StaticMethods {
@@ -280,9 +294,16 @@ public class JavaLib {
 
             for (var field : fields) {
                 try {
-                    tbl.rawset(Mappings.asMethod(this.clazz.getName(), field.getName()).split("#")[1], UserdataFactory.toLuaValue(field.get(null)));
+                    var fieldName = Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.getName(), field.getName())).split("#")[1];
+                    if (tbl.rawget(fieldName) == Constants.NIL) {
+                        tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null)));
+                    } else {
+                        tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null)));
+                    }
                 } catch (Exception e) {}
             }
+
+            tbl.rawset("allium_java_class", UserdataFactory.toLuaValue(this.clazz));
             return tbl;
         }
 

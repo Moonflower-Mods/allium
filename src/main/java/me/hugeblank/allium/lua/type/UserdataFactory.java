@@ -10,6 +10,7 @@ import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.util.Mappings;
 import org.apache.commons.lang3.ClassUtils;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.function.ThreeArgFunction;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 
@@ -18,7 +19,9 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class UserdataFactory<T> {
-    private final Map<Class<T>, Map<String, List<Method>>> CACHED_METHODS = new HashMap<>();
+    private static final Map<Class<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
+    private final Map<String, List<Method>> cachedMethods = new HashMap<>();
+    private final Map<String, Field> cachedFields = new HashMap<>();
     private final Class<T> clazz;
     private final List<Method> methods;
     private final LuaTable metatable = new LuaTable();
@@ -29,22 +32,74 @@ public class UserdataFactory<T> {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
                 String name = arg2.checkString(); // mapped name
-                List<Method> matches = CACHED_METHODS.computeIfAbsent(clazz, (c) -> new HashMap<>()).get(name);
-                if (matches == null) {
+                List<Method> matchedMethods = cachedMethods.get(name);
+                if (matchedMethods == null) {
                     var collectedMatches = new ArrayList<Method>();
 
                     collectMethods(UserdataFactory.this.clazz, UserdataFactory.this.methods, name, collectedMatches::add);
 
-                    CACHED_METHODS.get(clazz).put(name, collectedMatches);
+                    cachedMethods.put(name, collectedMatches);
 
-                    matches = collectedMatches;
+                    matchedMethods = collectedMatches;
                 }
 
+                if (matchedMethods.size() > 0) return new UDFFunctions<>(clazz, matchedMethods);
 
-                if (matches.size() > 0) return new UDFFunctions<>(clazz, matches);
+                Field matchedField = cachedFields.get(name);
+                if (matchedField == null) {
+                    matchedField = findField(clazz, Arrays.stream(clazz.getFields()).filter(field -> !Modifier.isStatic(field.getModifiers())).toList(), name);
+                }
+
+                if (matchedField != null) {
+                    try {
+                        return toLuaValue(matchedField.get(toJava(state, arg1, clazz)));
+                    } catch (Exception e) {
+                        // Silend
+                    }
+                }
+
+                if (name.equals("allium_java_class")) {
+                    return UserdataFactory.toLuaValue(clazz);
+                }
+
                 return Constants.NIL;
             }
         });
+
+        metatable.rawset("__newindex", new ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
+                String name = arg2.checkString(); // mapped name
+
+                Field matchedField = cachedFields.get(name);
+                if (matchedField == null) {
+                    matchedField = findField(clazz, Arrays.stream(clazz.getFields()).filter(field -> !Modifier.isStatic(field.getModifiers()) && !Modifier.isFinal(field.getModifiers())).toList(), name);
+                }
+
+                if (matchedField != null) {
+                    try {
+                        matchedField.set(toJava(state, arg1, clazz), toJava(state, arg3, matchedField.getType()));
+                    } catch (Exception e) {
+                        // Silent
+                    }
+                }
+
+                return Constants.NIL;
+            }
+        });
+    }
+
+    protected UserdataFactory(Class<T> clazz) {
+        this.clazz = clazz;
+        this.methods = Arrays.asList(clazz.getMethods());
+    }
+
+    public static <T> UserdataFactory<T> of(Class<T> clazz) {
+        return (UserdataFactory<T>) FACTORIES.computeIfAbsent(clazz, UserdataFactory::new);
+    }
+
+    public static LuaUserdata getUserData(Object instance) {
+        return FACTORIES.computeIfAbsent(instance.getClass(), UserdataFactory::new).create(instance);
     }
 
     public static void collectMethods(Class<?> sourceClass, List<Method> methods, String name, Consumer<Method> consumer) {
@@ -73,9 +128,26 @@ public class UserdataFactory<T> {
         }));
     }
 
-    public UserdataFactory(Class<T> clazz) {
-        this.clazz = clazz;
-        this.methods = Arrays.asList(clazz.getMethods());
+    public static Field findField(Class<?> sourceClass, List<Field> fields, String name) {
+        for (var field : fields) {
+            if (Allium.DEVELOPMENT) {
+                if (field.getName().equals(name)) {
+                    return field;
+                }
+            } else {
+                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, field)).split("#")[1].equals(name)) {
+                    return field;
+                }
+
+                for (var clazz : ClassUtils.getAllSuperclasses(sourceClass)) {
+                    if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, field)).split("#")[1].equals(name)) {
+                        return field;
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     public static Object[] toJavaArguments(LuaState state, Varargs args, final int offset, Class<?>[] parameters) throws LuaError, InvalidArgumentException {
@@ -87,7 +159,8 @@ public class UserdataFactory<T> {
 
         int ind = offset;
         for (Class<?> clatz : parameters) { // For each parameter in the matched call
-            arguments[ind - offset] = toJava(state, args.arg(ind), clatz);
+            var arg = toJava(state, args.arg(ind), clatz);
+            arguments[ind - offset] = arg != null ? arg : clatz;
             ind++;
         }
 
@@ -104,9 +177,10 @@ public class UserdataFactory<T> {
                                 + value.typeName()
                 );
             LuaTable table = value.checkTable();
-            Object[] arr = (Object[]) Array.newInstance(clatz.getComponentType(), table.length());
-            for (int i = 0; i < arr.length; i++) {
-                arr[i] = toJava(state, table.rawget(i + 1), clatz.getComponentType());
+            int length = table.length();
+            Object arr = Array.newInstance(clatz.getComponentType(), table.length());
+            for (int i = 0; i < length; i++) {
+                Array.set(arr, i, toJava(state, table.rawget(i + 1), clatz.getComponentType()));
             }
             return clatz.cast(arr);
         }
@@ -173,13 +247,11 @@ public class UserdataFactory<T> {
     }
 
     public static LuaValue toLuaValue(Object out, Class<?> ret) {
-
         if (out != null && ret.isArray()) {
-            Object[] outArr = (Object[]) out;
             var table = new LuaTable();
-
-            for (int i = 1; i <= outArr.length; i++) {
-                table.rawset(i, toLuaValue(outArr[i]));
+            int length = Array.getLength(out);
+            for (int i = 1; i <= length; i++) {
+                table.rawset(i, toLuaValue(Array.get(out, i)));
             }
             return table;
         } else {

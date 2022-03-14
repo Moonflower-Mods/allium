@@ -2,6 +2,7 @@ package me.hugeblank.allium.util;
 
 import me.hugeblank.allium.Allium;
 
+import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
@@ -31,6 +32,10 @@ public record Mappings(Map<String, List<String>> yarn2intermediary, Map<String, 
 
     public static String asMethod(Class<?> clazz, Method method) {
         return asMethod(clazz.getName(), method.getName());
+    }
+
+    public static String asMethod(Class<?> clazz, Field field) {
+        return asMethod(clazz.getName(), field.getName());
     }
 
     public static String asClass(String className) {

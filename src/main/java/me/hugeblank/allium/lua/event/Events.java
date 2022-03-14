@@ -28,7 +28,7 @@ public class Events {
             // Expects: [ServerPlayerEntity player, String message]
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[0]),
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[0]),
                         LuaString.valueOf((String)objects[1])
                 );
             } catch(ClassCastException e) {
@@ -39,7 +39,7 @@ public class Events {
             // Expects: [ServerPlayerEntity player]
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[0])
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[0])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
@@ -49,7 +49,7 @@ public class Events {
             // Expects: [ServerPlayerEntity player]
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[0])
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[0])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
@@ -59,7 +59,7 @@ public class Events {
             // Expects: [ServerPlayerEntity player]
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[0])
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[0])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
@@ -68,8 +68,8 @@ public class Events {
         PLAYER_BLOCK_COLLISION = new Event("player_block_collision", (objects) -> {
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[0]),
-                        new UserdataFactory<>(BlockState.class).create(objects[1])
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[0]),
+                        UserdataFactory.of(BlockState.class).create(objects[1])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
@@ -78,8 +78,8 @@ public class Events {
         PLAYER_DEATH = new Event("player_death", (objects) -> {
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[0]),
-                        new UserdataFactory<>(DamageSource.class).create(objects[1])
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[0]),
+                        UserdataFactory.of(DamageSource.class).create(objects[1])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
@@ -88,12 +88,12 @@ public class Events {
         BLOCK_INTERACT = new Event("block_interact", (objects) -> {
             try {
                 return ValueFactory.varargsOf(
-                        new UserdataFactory<>(BlockState.class).create(objects[0]),
-                        new UserdataFactory<>(World.class).create(objects[1]),
-                        new UserdataFactory<>(BlockPos.class).create(objects[2]),
-                        new UserdataFactory<>(ServerPlayerEntity.class).create(objects[3]),
-                        new UserdataFactory<>(Hand.class).create(objects[4]),
-                        new UserdataFactory<>(BlockHitResult.class).create(objects[5])
+                        UserdataFactory.of(BlockState.class).create(objects[0]),
+                        UserdataFactory.of(World.class).create(objects[1]),
+                        UserdataFactory.of(BlockPos.class).create(objects[2]),
+                        UserdataFactory.of(ServerPlayerEntity.class).create(objects[3]),
+                        UserdataFactory.of(Hand.class).create(objects[4]),
+                        UserdataFactory.of(BlockHitResult.class).create(objects[5])
                 );
             } catch(ClassCastException e) {
                 return Constants.NIL;
