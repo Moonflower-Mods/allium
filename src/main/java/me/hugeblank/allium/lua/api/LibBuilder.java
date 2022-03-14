@@ -12,6 +12,7 @@ import java.util.Map;
 public final class LibBuilder {
     private final String name;
     private final Map<String, Function> functionMap = new HashMap<>();
+    private final Map<String, LuaValue> objectMap = new HashMap<>();
 
     private LibBuilder(String name) {
         this.name = name;
@@ -21,24 +22,18 @@ public final class LibBuilder {
         return new LibBuilder(name);
     }
 
-    public LibBuilder add(String functionName, Function function) {
+    public LibBuilder set(String functionName, Function function) {
         this.functionMap.put(functionName, function);
+        return this;
+    }
 
+    public LibBuilder set(String functionName, LuaValue value) {
+        this.objectMap.put(functionName, value);
         return this;
     }
 
     public LuaLibraryImpl build() {
-        var func = new Function[this.functionMap.size()];
-        var funcNames = new String[this.functionMap.size()];
-
-        int i = 0;
-        for (var entry : this.functionMap.entrySet()) {
-            func[i] = entry.getValue();
-            funcNames[i] = entry.getKey();
-            i++;
-        }
-
-        return new LuaLibraryImpl(this.name, func, funcNames);
+        return new LuaLibraryImpl(this.name, this.buildTable());
     }
 
     public LuaTable buildTable() {
@@ -53,12 +48,10 @@ public final class LibBuilder {
         }
 
         LuaTable lib = new LuaTable();
-        LibFunction.bind(lib, () -> new VarArgFunction() {
-            @Override
-            public Varargs invoke(LuaState state, Varargs args) throws LuaError {
-                return func[opcode].call(state, args);
-            }
-        }, funcNames);
+        for (var obj : this.objectMap.entrySet()) {
+            lib.rawset(obj.getKey(), obj.getValue());
+        }
+        LibFunction.bind(lib, () -> new FunctionImpl(func), funcNames);
 
         return lib;
     }
@@ -68,24 +61,25 @@ public final class LibBuilder {
         Varargs call(LuaState state, Varargs args) throws LuaError;
     }
 
-    private record LuaLibraryImpl(String name, Function[] func,
-                                  String[] funcNames) implements LuaLibrary {
-
+    private record LuaLibraryImpl(String name, LuaTable lib) implements LuaLibrary {
 
         @Override
         public LuaValue add(LuaState state, LuaTable env) {
-            LuaTable lib = new LuaTable();
-            LibFunction.bind(lib, FunctionImpl::new, funcNames);
             env.rawset(name, lib);
             state.loadedPackages.rawset(name, lib);
             return lib;
         }
+    }
 
-        private final class FunctionImpl extends VarArgFunction {
-            @Override
-            public Varargs invoke(LuaState state, Varargs args) throws LuaError {
-                return func[opcode].call(state, args);
-            }
+    private static final class FunctionImpl extends VarArgFunction {
+        private final Function[] func;
+
+        public FunctionImpl(Function[] functions) {
+            this.func = functions;
+        }
+        @Override
+        public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+            return func[opcode].call(state, args);
         }
     }
 }

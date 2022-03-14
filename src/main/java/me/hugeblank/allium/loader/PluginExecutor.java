@@ -1,10 +1,7 @@
 package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.lua.api.AlliumLib;
-import me.hugeblank.allium.lua.api.GameLib;
-import me.hugeblank.allium.lua.api.JavaLib;
-import me.hugeblank.allium.lua.api.LibBuilder;
+import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -43,6 +40,7 @@ public class  PluginExecutor {
         globals.load( state, AlliumLib.create(plugin) );
         globals.load( state, new GameLib() );
         globals.load( state, JavaLib.create());
+        globals.load( state, TextLib.create());
 
         // Remove globals we don't want to expose
         globals.rawset( "collectgarbage", Constants.NIL );

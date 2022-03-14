@@ -3,15 +3,13 @@ package me.hugeblank.allium.lua.api;
 import me.hugeblank.allium.loader.Plugin;
 import me.hugeblank.allium.lua.event.Event;
 import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.function.LibFunction;
-import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
 public record AlliumLib(Plugin plugin) {
 
     public static LuaLibrary create(Plugin plugin) {
         return LibBuilder.create("allium")
-                .add("onEvent", (state, args) -> onEvent(state, args, plugin))
+                .set("onEvent", (state, args) -> onEvent(state, args, plugin))
                 .build();
     }
 
