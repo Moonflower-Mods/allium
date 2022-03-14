@@ -12,20 +12,46 @@ import java.lang.reflect.*;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class JavaLib {
+    private static final String[] AUTO_COMPLETE = new String[]{
+            "",
+            "java.util.",
+            "java.lang.",
+            "net.minecraft.",
+            "net.minecraft.item.",
+            "net.minecraft.block.",
+            "net.minecraft.entity.",
+            "net.minecraft.entity.player.",
+            "net.minecraft.inventory.",
+            "net.minecraft.nbt.",
+            "net.minecraft.potion.",
+            "net.minecraft.text.",
+            "net.minecraft.tag.",
+            "net.minecraft.village.",
+            "net.minecraft.world.",
+            "net.minecraft.util.",
+            "net.minecraft.server.",
+            "net.minecraft.server.world.",
+            "net.minecraft.server.network.",
+            "com.mojang."
+    };
+
+    private static final Map<String, String> CACHED_AUTO_COMPLETE = new HashMap<>();
+
     // TODO: Optionally provide userdata as the first argument for the class in most methods.
     public static LuaLibrary create() {
         return LibBuilder.create("java")
-                .add("import", JavaLib::importClass)
-                .add("create", JavaLib::createInstance)
-                .add("getRawClass", JavaLib::getClassObject)
-                .add("exists", JavaLib::checkIfExists)
-                .add("cast", JavaLib::cast)
-                .add("toYarn", JavaLib::toYarn)
-                .add("fromYarn", JavaLib::fromYarn)
-                .add("split", JavaLib::split)
-                .add("classBuilder", JavaLib::classBuilder)
+                .set("import", JavaLib::importClass)
+                .set("create", JavaLib::createInstance)
+                .set("getRawClass", JavaLib::getClassObject)
+                .set("exists", JavaLib::checkIfExists)
+                .set("cast", JavaLib::cast)
+                .set("toYarn", JavaLib::toYarn)
+                .set("fromYarn", JavaLib::fromYarn)
+                .set("split", JavaLib::split)
+                .set("extendClass", JavaLib::extendClass)
                 .build();
     }
 
@@ -54,7 +80,7 @@ public class JavaLib {
             public Varargs invoke(LuaState state, Varargs args) throws LuaError {
                 return JavaLib.createInstance(
                         state,
-                        ValueFactory.varargsOf( LuaString.valueOf(clazz.getName()), args.subargs(2))
+                        ValueFactory.varargsOf(LuaString.valueOf(clazz.getName()), args.subargs(2))
                 );
             }
         });
@@ -213,7 +239,7 @@ public class JavaLib {
     }
 
 
-    private static Varargs classBuilder(LuaState state, Varargs args) throws LuaError {
+    private static Varargs extendClass(LuaState state, Varargs args) throws LuaError {
         var clazz = asClass(args.arg(1));
         var table = args.arg(2).checkTable();
         var interfaces = new ArrayList<Class>();
@@ -226,15 +252,38 @@ public class JavaLib {
     }
 
     public static Class<?> getClassOf(String className) throws LuaError {
-        try {
-            return Class.forName(Allium.MAPPINGS.getIntermediary(className).get(0));
-        } catch (ClassNotFoundException e1) {
+        var cachedClassName = CACHED_AUTO_COMPLETE.get(className);
+
+        if (cachedClassName != null) {
             try {
-                return Class.forName(className);
-            } catch (ClassNotFoundException e) {
-                throw new LuaError(e.toString());
+                return Class.forName(cachedClassName);
+            } catch (ClassNotFoundException e1) {
+
             }
         }
+
+        for (var auto : AUTO_COMPLETE) {
+            try {
+                cachedClassName = Allium.MAPPINGS.getIntermediary(auto + className).get(0);
+                var clazz = Class.forName(cachedClassName);
+                CACHED_AUTO_COMPLETE.put(className, cachedClassName);
+                return clazz;
+            } catch (ClassNotFoundException e1) {
+
+            }
+
+            try {
+                cachedClassName = auto + className;
+                var clazz = Class.forName(cachedClassName);
+                CACHED_AUTO_COMPLETE.put(className, cachedClassName);
+                return clazz;
+            } catch (ClassNotFoundException e) {
+
+            }
+        }
+
+        throw new LuaError("Could find class \"" + className + "\"");
+
     }
 
     public static Class<?> asClass(LuaValue value) throws LuaError {
@@ -246,6 +295,8 @@ public class JavaLib {
             return value.checkUserdata().getClass();
         } else if (value.isTable() && value.checkTable().rawget("allium_java_class") != Constants.NIL) {
             return value.checkTable().rawget("allium_java_class").checkUserdata(Class.class);
+        } else if (value.isNil()) {
+            return null;
         }
 
         throw new LuaError(new ClassNotFoundException());
@@ -300,7 +351,8 @@ public class JavaLib {
                     } else {
                         tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null)));
                     }
-                } catch (Exception e) {}
+                } catch (Exception e) {
+                }
             }
 
             tbl.rawset("allium_java_class", UserdataFactory.toLuaValue(this.clazz));

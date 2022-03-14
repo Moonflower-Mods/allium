@@ -160,7 +160,7 @@ public class UserdataFactory<T> {
         int ind = offset;
         for (Class<?> clatz : parameters) { // For each parameter in the matched call
             var arg = toJava(state, args.arg(ind), clatz);
-            arguments[ind - offset] = arg != null ? arg : clatz;
+            arguments[ind - offset] = arg;
             ind++;
         }
 
@@ -188,8 +188,16 @@ public class UserdataFactory<T> {
         if (clatz.isPrimitive()) {
             if (value.isInteger() && clatz.isAssignableFrom(int.class)) { // int
                 return value.toInteger();
+            } else if (value.isInteger() && clatz.isAssignableFrom(byte.class)) { // byte
+                return (byte) value.toInteger();
+            } else if (value.isInteger() && clatz.isAssignableFrom(short.class)) { // short
+                return (short) value.toInteger();
+            } else if (value.isInteger() && clatz.isAssignableFrom(char.class)) { // char
+                return (char) value.toInteger();
             } else if (value.isNumber() && clatz.isAssignableFrom(double.class)) { // double
                 return value.toDouble();
+            } else if (value.isNumber() && clatz.isAssignableFrom(float.class)) { // float
+                return (float) value.toDouble();
             } else if (value.isLong() && clatz.isAssignableFrom(long.class)) { // long
                 return value.toLong();
             } else if (value.isBoolean() && clatz.isAssignableFrom(boolean.class)) { // boolean
@@ -254,22 +262,30 @@ public class UserdataFactory<T> {
                 table.rawset(i, toLuaValue(Array.get(out, i)));
             }
             return table;
-        } else {
+        } else if (out != null) {
             ret = Primitives.unwrap(ret);
 
-            if (out != null && ret.isPrimitive()) {
-                if (ret.equals(int.class) || ret.equals(byte.class) || ret.equals(short.class)) { // int
+            if (ret.isPrimitive()) {
+                if (ret.equals(int.class)) { // int
                     return ValueFactory.valueOf((int) out);
-                } else if (ret.equals(double.class) || ret.equals(float.class)) { // double
+                } else if (ret.equals(double.class)) { // double
                     return ValueFactory.valueOf((double) out);
+                } else if (ret.equals(float.class)) { // float
+                    return ValueFactory.valueOf((float) out);
                 } else if (ret.equals(long.class)) { // long
                     return ValueFactory.valueOf((long) out);
                 } else if (ret.equals(boolean.class)) { // boolean
                     return ValueFactory.valueOf((boolean) out);
+                } else if (ret.equals(short.class)) { // short
+                    return ValueFactory.valueOf((short) out);
+                } else if (ret.equals(byte.class)) { // byte
+                    return ValueFactory.valueOf((byte) out);
+                } else if (ret.equals(char.class)) { // char
+                    return ValueFactory.valueOf((char) out);
                 }
-            } else if (out != null && ret.equals(String.class)) { // string
+            } else if (ret.equals(String.class)) { // string
                 return ValueFactory.valueOf((String) out);
-            } else if (out != null && ret.isAssignableFrom(out.getClass())) {
+            } else if (ret.isAssignableFrom(out.getClass())) {
                 return new UserdataFactory<>(ret).create(ret.cast(out));
             } else {
                 return Constants.NIL;
@@ -299,9 +315,6 @@ public class UserdataFactory<T> {
                     this.matches.get(0).getName() + "\" for \"" + clazz.getName() + "\"" +
                     "\nThe following are correct argument types:\n"
             );
-            for (String headers : paramList) {
-                error.append(headers).append("\n");
-            }
 
             try {
                 T instance = args.arg(1).checkUserdata(clazz);
@@ -319,7 +332,7 @@ public class UserdataFactory<T> {
                                 throw new LuaError(e);
                             }
                         }
-                    } catch (InvalidArgumentException e) {
+                    } catch (InvalidArgumentException | IllegalArgumentException e) {
                         var params = new StringBuilder();
 
                         for (var clazz : parameters) {
@@ -329,8 +342,6 @@ public class UserdataFactory<T> {
                         paramList.add(params.toString());
                     }
                 }
-
-
             } catch (Exception e) {
                 if (e instanceof LuaError) {
                     throw e;
@@ -338,6 +349,10 @@ public class UserdataFactory<T> {
                     e.printStackTrace();
                     error = new StringBuilder(e.toString());
                 }
+            }
+
+            for (String headers : paramList) {
+                error.append(headers).append("\n");
             }
 
             throw new LuaError(error.toString());
