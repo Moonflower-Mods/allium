@@ -1,5 +1,6 @@
 package me.hugeblank.allium.loader;
 
+import com.google.gson.Gson;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.event.Event;
 import me.hugeblank.allium.util.FileHelper;
@@ -9,6 +10,9 @@ import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -16,36 +20,21 @@ import java.util.Map;
 public class Plugin {
     private static final Map<String, Plugin> PLUGINS = new HashMap<>();
 
-    private String id;
-    private String version; // TODO: SemVer parser in java
-    private String name;
-    private Logger logger;
-    private PluginExecutor executor;
+    private final Manifest manifest;
+    private final Logger logger;
+    private final PluginExecutor executor;
 
-    public Plugin(String id, String version, String name, PluginExecutor executor) {
-        this.register(id, version, name, executor);
+
+    private Plugin(Manifest manifest) {
+        this.manifest = manifest;
+        this.executor = new PluginExecutor(this);
+        this.logger = LoggerFactory.getLogger('@' + manifest.id());
+        PLUGINS.put(manifest.id(), this);
     }
 
-    public Plugin() {}
-
-    public boolean register(String id, String version, String name, PluginExecutor executor) {
-        // There exists a duplicate, remove everything registered by this plugin
-        if (this.id == null && this.version == null && this.name == null && this.executor == null && !PLUGINS.containsKey(id)) {
-            this.id = id;
-            this.version = version;
-            this.name = name;
-            this.executor = executor;
-            this.logger = LoggerFactory.getLogger('@' + this.id);
-            PLUGINS.put(this.id, this);
-            return true;
-        } else {
-            this.cleanup();
-        }
-        return false;
-    }
-
-    protected void cleanup() {
-        PLUGINS.remove(this.id, this);
+    public void unload() {
+        PLUGINS.remove(getId(), this);
+        this.executor.getState().abandon();
         for (Event e : Event.getEvents().values()) {
             List<Pair<Plugin, LuaFunction>> listeners = e.getListeners();
             listeners.removeIf(pair -> pair.getLeft().equals(this));
@@ -53,42 +42,64 @@ public class Plugin {
     }
 
     public String getId() {
-        return this.id;
+        return manifest.id();
     }
 
     public String getVersion() {
-        return this.version;
+        return manifest.version();
     }
 
     public String getName() {
-        return this.name;
+        return manifest.name();
     }
 
     public Logger getLogger() {
-        // While loading plugin and on initial pass through main, plugin metadata is null
-        if (logger == null) return Allium.LOGGER;
         return logger;
     }
 
     @Override
     public String toString() {
-        return this.name;
+        return getName();
     }
 
     public PluginExecutor getExecutor() {
         return this.executor;
     }
 
-    public static Plugin loadFromDir(File dir) {
-        if (!FileHelper.isDirectoryPlugin(dir)) {
-            Allium.LOGGER.warn("Could not load plugin in directory " + dir.getPath());
-            return null;
+    private static boolean checkPath(Path pluginDir) {
+        String name = pluginDir.toFile().getPath();
+        if (!pluginDir.toFile().isDirectory()) {
+            Allium.LOGGER.warn("Attempted to load allium mod from a file: " + name);
+            return false;
+        } else if (!FileHelper.hasMainFile(pluginDir)) {
+            Allium.LOGGER.warn("Missing " + FileHelper.MAIN_FILE_NAME + " in directory " + name);
+            return false;
+        } else if (!FileHelper.hasManifestFile(pluginDir)) {
+            Allium.LOGGER.warn("Missing " + FileHelper.MANIFEST_FILE_NAME + " in directory " + name);
+            return false;
         }
-        Plugin plugin = new Plugin();
-        PluginExecutor executor = new PluginExecutor(plugin);
-        if (executor.initialize(plugin, FileHelper.getMainPath(dir.toPath()).toFile())) {
-            return plugin;
+        return true;
+    }
+
+    public static boolean loadFromDir(Path pluginDir) {
+        File dir = pluginDir.toFile();
+        if (!checkPath(pluginDir)) return false;
+        File manifestJson = FileHelper.getManifestPath(dir.toPath()).toFile();
+        try (FileReader reader = new FileReader(manifestJson)) {
+            Manifest manifest = new Gson().fromJson(reader, Manifest.class);
+            if (PLUGINS.containsKey(manifest.id())) {
+                Allium.LOGGER.error("could not load allium mod with duplicate ID '" + manifest.id() + "' in directory " + dir.getPath());
+            }
+            Plugin plugin = new Plugin(manifest);
+            try {
+                plugin.getExecutor().initialize(FileHelper.getMainPath(dir.toPath()).toFile());
+                return true;
+            } catch (Exception e) {
+                plugin.getLogger().error("Could not initialize allium mod " + plugin.getId(), e);
+            }
+        } catch (IOException e) {
+            Allium.LOGGER.warn("Could not ");
         }
-        return null;
+        return false;
     }
 }

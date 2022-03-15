@@ -1,13 +1,24 @@
 # Allium
-Lua Plugin loader for Java Minecraft.
+Lua mod loader for Java Minecraft.
 
-Currently, only functioning and in development in fabric, but should (in theory) be very easily portable to forge.
+Currently, only functioning and in development in fabric, but should (in theory) be portable to forge.
+
+Lua mods are stored in a directory named `allium` in the game directory root.  
 
 ## Demo
 This is the test script I'm using, if you'd like to play/develop with Allium for yourself. 
+Create a directory `test` in the `allium` directory.
 
-This should be pasted in your game directory, as plugins/test/main.lua
+This should be put in `manifest.json`
+```json
+{
+  "id": "test",
+  "version": "0.1.0",
+  "name": "Allium test plugin"
+}
+```
 
+And this should be pasted in your game directory, as `main.lua`
 ```lua
 -- Allium Test Plugin
 -- (c) hugeblank 2022
@@ -33,12 +44,6 @@ end)
 
 -- This doesn't get logged under the "test" namespace since Allium doesn't know what plugin is running until the return
 print("Loading test plugin!\n", "Test", 1, 2, 3)
-
-return {
-    id = "test",
-    version = "0.1.0",
-    name = "Allium Test Plugin"
-}
 ```
 
 ## But Allium is for ComputerCraft?

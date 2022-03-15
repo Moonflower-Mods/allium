@@ -51,9 +51,8 @@ public class Allium implements ModInitializer {
         LOGGER.info("Loading Plugins");
         File[] files = Objects.requireNonNull(FileHelper.getPluginsDirectory().listFiles());
         for (File pluginDir : files) {
-            Plugin plugin = Plugin.loadFromDir(pluginDir);
-            if (plugin != null) {
-                LOGGER.info(plugin + " loaded");
+            if (pluginDir.isDirectory()) {
+                Plugin.loadFromDir(pluginDir.toPath());
             }
         }
     }

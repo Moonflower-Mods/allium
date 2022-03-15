@@ -2,8 +2,9 @@ package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.*;
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.util.FileHelper;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
 import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
@@ -11,9 +12,8 @@ import org.squiddev.cobalt.lib.*;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.List;
+import java.io.FileNotFoundException;
+import java.io.IOException;
 
 public class  PluginExecutor {
     protected final LuaTable globals;
@@ -27,7 +27,7 @@ public class  PluginExecutor {
         globals = new LuaTable();
 
         // Base globals
-        globals.load( state, new BaseLib());
+        globals.load( state, new BaseLib() );
         globals.load( state, new TableLib() );
         globals.load( state, new StringLib() );
         globals.load( state, new MathLib() );
@@ -39,8 +39,8 @@ public class  PluginExecutor {
         // Custom globals
         globals.load( state, AlliumLib.create(plugin) );
         globals.load( state, new GameLib() );
-        globals.load( state, JavaLib.create());
-        globals.load( state, TextLib.create());
+        globals.load( state, JavaLib.create() );
+        globals.load( state, TextLib.create() );
 
         // Remove globals we don't want to expose
         globals.rawset( "collectgarbage", Constants.NIL );
@@ -50,32 +50,23 @@ public class  PluginExecutor {
 
 
         globals.rawset( "_VERSION", ValueFactory.valueOf( "Lua 5.1" ) );
-        globals.rawset( "_HOST", ValueFactory.valueOf("Allium 0.0.0" ) );
+        globals.rawset( "_HOST", ValueFactory.valueOf("Allium 0.1.0" ) );
     }
 
     public LuaState getState() {
         return state;
     }
 
-    public boolean initialize(Plugin plugin, File main) {
-        try {
-            LuaFunction loadValue = LoadState.load(state, new FileInputStream(main), "main.lua", this.globals);
-            state.setupThread(new LuaTable());
-            // TODO: Does this allow for multiple plugins to run?
-            LuaTable info = LuaThread.runMain(state, loadValue).checkValue(1).checkTable();
-            try {
-                String id = info.rawget("id").checkLuaString().toString();
-                String version = info.rawget("version").checkLuaString().toString();
-                String name = info.rawget("name").optString(id);
-                return plugin.register(id, version, name, this);
-            } catch (LuaError e) {
-                plugin.cleanup();
-                Allium.LOGGER.error("Plugin initialize error", e);
-            }
-        } catch (Exception e) {
-            Allium.LOGGER.error("Error loading main.lua for plugin", e);
-        }
-        return false;
+    public void initialize(File main) throws LuaError, InterruptedException, IOException, CompileException {
+        LuaFunction loadValue = LoadState.load(
+                state,
+                new FileInputStream(main),
+                FileHelper.MAIN_FILE_NAME,
+                this.globals
+        );
+        state.setupThread(new LuaTable());
+        // TODO: Does this allow for multiple plugins to run?
+        LuaThread.runMain(state, loadValue);
     }
 
     private static final class PrintMethod extends VarArgFunction {
