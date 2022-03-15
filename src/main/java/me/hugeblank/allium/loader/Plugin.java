@@ -66,6 +66,11 @@ public class Plugin {
         return this.executor;
     }
 
+    public static void unloadAll() {
+        // CME here. Does not crash, but still concerning. How to avoid?
+        PLUGINS.forEach((key, value) -> value.unload());
+    }
+
     private static boolean checkPath(Path pluginDir) {
         String name = pluginDir.toFile().getPath();
         if (!pluginDir.toFile().isDirectory()) {

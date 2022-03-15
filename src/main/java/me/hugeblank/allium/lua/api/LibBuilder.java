@@ -13,6 +13,7 @@ public final class LibBuilder {
     private final String name;
     private final Map<String, Function> functionMap = new HashMap<>();
     private final Map<String, LuaValue> objectMap = new HashMap<>();
+    private LuaTable metatable;
 
     private LibBuilder(String name) {
         this.name = name;
@@ -29,6 +30,11 @@ public final class LibBuilder {
 
     public LibBuilder set(String functionName, LuaValue value) {
         this.objectMap.put(functionName, value);
+        return this;
+    }
+
+    public LibBuilder addMetatable(LuaTable table) {
+        this.metatable = table;
         return this;
     }
 
@@ -52,7 +58,9 @@ public final class LibBuilder {
             lib.rawset(obj.getKey(), obj.getValue());
         }
         LibFunction.bind(lib, () -> new FunctionImpl(func), funcNames);
-
+        if (metatable != null) {
+            lib.setMetatable(this.metatable);
+        }
         return lib;
     }
 
