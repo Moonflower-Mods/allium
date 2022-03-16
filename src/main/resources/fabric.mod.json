@@ -4,7 +4,7 @@
   "version": "${mod_version}",
 
   "name": "Allium",
-  "description": "Lua Plugin loader for Minecraft",
+  "description": "Lua Script loader for Minecraft",
   "authors": [
     "hugeblank"
   ],

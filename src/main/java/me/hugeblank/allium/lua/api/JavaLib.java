@@ -43,14 +43,14 @@ public class JavaLib {
     // TODO: Optionally provide userdata as the first argument for the class in most methods.
     public static LuaLibrary create() {
         return LibBuilder.create("java")
-                .set("import", JavaLib::importClass)
-                .set("create", JavaLib::createInstance)
-                .set("getRawClass", JavaLib::getClassObject)
-                .set("exists", JavaLib::checkIfExists)
-                .set("cast", JavaLib::cast)
-                .set("toYarn", JavaLib::toYarn)
-                .set("fromYarn", JavaLib::fromYarn)
-                .set("split", JavaLib::split)
+                .set("import", JavaLib::importClass) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
+                .set("create", JavaLib::createInstance) // java.create([String classPath | Class class]) -> Object objectOfClass
+                .set("getRawClass", JavaLib::getClassObject) // java.getRawClass(String classPath) -> Class<?> class
+                .set("exists", JavaLib::checkIfExists) // java.checkIfExists(String classOrMethodPath) -> boolean exists
+                .set("cast", JavaLib::cast) // java.cast(String classPath, Userdata object) -> Userdata objectOfClassPath
+                .set("toYarn", JavaLib::toYarn) // java.toYarn(String intermediary) -> String named
+                .set("fromYarn", JavaLib::fromYarn) // java.fromYarn(String named) -> String intermediary
+                .set("split", JavaLib::split) // java.split(String strToSplit, String delimiter) -> LuaTable substrings
                 .set("extendClass", JavaLib::extendClass)
                 .build();
     }
@@ -97,7 +97,7 @@ public class JavaLib {
                 name + "\" for \"" + clazz.getName() + "\"" +
                 "\nThe following are correct argument types:\n"
         );
-        for (String headers : paramList) {
+        for (String headers : paramList) { // TODO: Why is this here?
             error.append(headers).append("\n");
         }
 
@@ -129,6 +129,7 @@ public class JavaLib {
         throw new LuaError(error.toString());
     }
 
+    // TODO: merge this with the Lua string library
     private static Varargs split(LuaState state, Varargs args) throws LuaError {
         var array = args.arg(1).checkString().split(args.arg(2).checkString());
 
@@ -159,7 +160,9 @@ public class JavaLib {
     }
 
     private static Varargs createInstance(LuaState state, Varargs args) throws LuaError {
-        Class<?> clazz = args.arg(1).isUserdata(Class.class) ? args.arg(1).checkUserdata(Class.class) : getClassOf(args.arg(1).checkString());
+        Class<?> clazz = args.arg(1).isUserdata(Class.class) ?
+                args.arg(1).checkUserdata(Class.class) :
+                getClassOf(args.arg(1).checkString());
 
         List<String> paramList = new ArrayList<>();
         for (var constructor : clazz.getConstructors()) {
@@ -203,7 +206,7 @@ public class JavaLib {
     private static Varargs cast(LuaState state, Varargs args) throws LuaError {
         try {
             return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, args.arg(2), getClassOf(args.arg(1).checkString())));
-        } catch (Exception e) {
+        } catch (UserdataFactory.InvalidArgumentException e) {
             e.printStackTrace();
             return Constants.NIL;
         }

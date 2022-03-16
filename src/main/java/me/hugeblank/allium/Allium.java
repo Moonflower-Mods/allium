@@ -49,7 +49,7 @@ public class Allium implements ModInitializer {
         LOGGER.info("Initializing events");
         Events.init();
 
-        Allium.LOGGER.info("Loading Plugins");
+        Allium.LOGGER.info("Loading Scripts");
         File[] files = Objects.requireNonNull(FileHelper.getPluginsDirectory().listFiles());
         for (File pluginDir : files) {
             if (pluginDir.isDirectory()) {

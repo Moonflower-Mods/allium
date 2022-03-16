@@ -16,10 +16,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 
 public class  PluginExecutor {
+    protected final Plugin plugin;
     protected final LuaTable globals;
     protected final LuaState state;
 
     public PluginExecutor(Plugin plugin) {
+        this.plugin = plugin;
         // Derived from CobaltMachine.java
         // https://github.com/cc-tweaked/cc-restitched/blob/79366bf2f5389b45c0db1ad0d37fbddc6d1151b3/src/main/java/dan200/computercraft/core/lua/CobaltLuaMachine.java
         state = LuaState.builder().build();
@@ -62,7 +64,7 @@ public class  PluginExecutor {
         LuaFunction loadValue = LoadState.load(
                 state,
                 new FileInputStream(main),
-                FileHelper.MAIN_FILE_NAME,
+                plugin.getId(),
                 this.globals
         );
         state.setupThread(new LuaTable());

@@ -74,10 +74,7 @@ public class Plugin {
     private static boolean checkPath(Path pluginDir) {
         String name = pluginDir.toFile().getPath();
         if (!pluginDir.toFile().isDirectory()) {
-            Allium.LOGGER.warn("Attempted to load allium mod from a file: " + name);
-            return false;
-        } else if (!FileHelper.hasMainFile(pluginDir)) {
-            Allium.LOGGER.warn("Missing " + FileHelper.MAIN_FILE_NAME + " in directory " + name);
+            Allium.LOGGER.warn("Attempted to load allium script from a file: " + name);
             return false;
         } else if (!FileHelper.hasManifestFile(pluginDir)) {
             Allium.LOGGER.warn("Missing " + FileHelper.MANIFEST_FILE_NAME + " in directory " + name);
@@ -93,17 +90,24 @@ public class Plugin {
         try (FileReader reader = new FileReader(manifestJson)) {
             Manifest manifest = new Gson().fromJson(reader, Manifest.class);
             if (PLUGINS.containsKey(manifest.id())) {
-                Allium.LOGGER.error("could not load allium mod with duplicate ID '" + manifest.id() + "' in directory " + dir.getPath());
+                Allium.LOGGER.error(
+                        "Could not load allium script with duplicate ID '" +
+                        manifest.id() +
+                        "' in directory " +
+                        dir.getPath()
+                );
             }
             Plugin plugin = new Plugin(manifest);
             try {
-                plugin.getExecutor().initialize(FileHelper.getMainPath(dir.toPath()).toFile());
+                File entrypoint = pluginDir.resolve(manifest.entrypoint()).toFile();
+                plugin.getExecutor().initialize(entrypoint);
                 return true;
             } catch (Exception e) {
-                plugin.getLogger().error("Could not initialize allium mod " + plugin.getId(), e);
+                plugin.getLogger().error("Could not initialize allium script " + plugin.getId(), e);
+                plugin.unload();
             }
         } catch (IOException e) {
-            Allium.LOGGER.warn("Could not ");
+            Allium.LOGGER.warn("Could not read " + manifestJson);
         }
         return false;
     }
