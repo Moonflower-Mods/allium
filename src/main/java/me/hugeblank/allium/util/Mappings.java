@@ -1,11 +1,13 @@
 package me.hugeblank.allium.util;
 
 import me.hugeblank.allium.Allium;
+import org.jetbrains.annotations.Debug;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
 import java.util.*;
 
+@Debug.Renderer(text = "\"Mappings { ... }\"", hasChildren = "false")
 public record Mappings(Map<String, List<String>> yarn2intermediary, Map<String, String> intermediary2yarn) {
     public static Mappings of(Map<String, String> intermediary2yarn) {
         var yarn2intermediary = new HashMap<String, List<String>>();
