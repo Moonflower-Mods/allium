@@ -32,6 +32,7 @@ public class JavaLib {
             "net.minecraft.village.",
             "net.minecraft.world.",
             "net.minecraft.util.",
+            "net.minecraft.util.registry.",
             "net.minecraft.server.",
             "net.minecraft.server.world.",
             "net.minecraft.server.network.",
@@ -44,7 +45,6 @@ public class JavaLib {
     public static LuaLibrary create() {
         return LibBuilder.create("java")
                 .set("import", JavaLib::importClass) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
-                .set("create", JavaLib::createInstance) // java.create([String classPath | Class class]) -> Object objectOfClass
                 .set("getRawClass", JavaLib::getClassObject) // java.getRawClass(String classPath) -> Class<?> class
                 .set("exists", JavaLib::checkIfExists) // java.checkIfExists(String classOrMethodPath) -> boolean exists
                 .set("cast", JavaLib::cast) // java.cast(String classPath, Userdata object) -> Userdata objectOfClassPath
@@ -285,7 +285,7 @@ public class JavaLib {
             }
         }
 
-        throw new LuaError("Could find class \"" + className + "\"");
+        throw new LuaError("Couldn't find class \"" + className + "\"");
 
     }
 
