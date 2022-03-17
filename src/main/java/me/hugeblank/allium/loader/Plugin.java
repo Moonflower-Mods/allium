@@ -2,6 +2,7 @@ package me.hugeblank.allium.loader;
 
 import com.google.gson.Gson;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Event;
 import me.hugeblank.allium.util.FileHelper;
 import net.minecraft.util.Pair;
@@ -17,19 +18,40 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import static me.hugeblank.allium.Allium.PACK;
+
 public class Plugin {
     private static final Map<String, Plugin> PLUGINS = new HashMap<>();
 
     private final Manifest manifest;
     private final Logger logger;
     private final PluginExecutor executor;
+    private final Path path;
+    private final boolean loaded;
 
 
-    private Plugin(Manifest manifest) {
+    private Plugin(Path dir, Manifest manifest) {
+        this.path = dir;
         this.manifest = manifest;
         this.executor = new PluginExecutor(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
         PLUGINS.put(manifest.id(), this);
+        PACK.register(path);
+        boolean loaded;
+        try {
+            File entrypoint = dir.resolve(manifest.entrypoint()).toFile();
+            executor.initialize(entrypoint);
+            loaded = true;
+        } catch (Exception e) {
+            logger.error("Could not initialize allium script " + manifest.id(), e);
+            unload();
+            loaded = false;
+        }
+        this.loaded = loaded;
+    }
+
+    public boolean isLoaded() {
+        return loaded;
     }
 
     public void unload() {
@@ -38,6 +60,7 @@ public class Plugin {
         for (Event e : Event.getEvents().values()) {
             List<Pair<Plugin, LuaFunction>> listeners = e.getListeners();
             listeners.removeIf(pair -> pair.getLeft().equals(this));
+            PACK.drop(path);
         }
     }
 
@@ -97,15 +120,8 @@ public class Plugin {
                         dir.getPath()
                 );
             }
-            Plugin plugin = new Plugin(manifest);
-            try {
-                File entrypoint = pluginDir.resolve(manifest.entrypoint()).toFile();
-                plugin.getExecutor().initialize(entrypoint);
-                return true;
-            } catch (Exception e) {
-                plugin.getLogger().error("Could not initialize allium script " + plugin.getId(), e);
-                plugin.unload();
-            }
+            Plugin plugin = new Plugin(pluginDir, manifest);
+            return plugin.isLoaded();
         } catch (IOException e) {
             Allium.LOGGER.warn("Could not read " + manifestJson);
         }

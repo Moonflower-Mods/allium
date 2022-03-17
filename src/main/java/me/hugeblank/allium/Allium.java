@@ -12,6 +12,7 @@
 package me.hugeblank.allium;
 
 import me.hugeblank.allium.loader.Plugin;
+import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
 import me.hugeblank.allium.util.Mappings;
@@ -40,6 +41,7 @@ public class Allium implements ModInitializer {
     public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
     public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
+    public static final AlliumResourcePack PACK = new AlliumResourcePack();
 
     @Override
     public void onInitialize() {

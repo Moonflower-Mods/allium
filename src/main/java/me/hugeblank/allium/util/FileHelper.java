@@ -33,6 +33,10 @@ public class FileHelper {
         return SCRIPT_DIR;
     }
 
+    public static File getResourcePackRoot(Path pluginPath) {
+        return pluginPath.resolve(RESOURCE_DIR_NAME).toFile();
+    }
+
     public static boolean hasManifestFile(Path pluginPath) {
         return pluginPath.resolve(MANIFEST_FILE_PATH).toFile().exists();
     }

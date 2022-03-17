@@ -11,6 +11,7 @@
     "PlayerManagerMixin",
     "block.AbstractBlockMixin",
     "network.ServerPlayerEntityMixin",
-    "network.ServerPlayNetworkHandlerMixin"
+    "network.ServerPlayNetworkHandlerMixin",
+    "resource.ResourcePackManagerMixin"
   ]
 }

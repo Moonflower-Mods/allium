@@ -44,6 +44,7 @@ public class  PluginExecutor {
         globals.load( state, JavaLib.create() );
         globals.load( state, TextLib.create() );
         globals.load( state, CommandLib.create(plugin) );
+        globals.load( state, ScriptLib.create(plugin) );
 
         // Remove globals we don't want to expose
         globals.rawset( "collectgarbage", Constants.NIL );

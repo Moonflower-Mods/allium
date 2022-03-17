@@ -9,9 +9,6 @@ public record AlliumLib(Plugin plugin) {
 
     public static LuaLibrary create(Plugin plugin) {
         return LibBuilder.create("allium")
-                .set("getModID", (state, args) -> LuaString.valueOf(plugin.getId()))
-                .set("getModVersion", (state, args) -> LuaString.valueOf(plugin.getVersion()))
-                .set("getModName", (state, args) -> LuaString.valueOf(plugin.getName()))
                 .set("onEvent", (state, args) -> onEvent(args, plugin))
                 .build();
     }
