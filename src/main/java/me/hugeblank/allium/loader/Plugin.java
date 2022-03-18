@@ -14,6 +14,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,8 +91,9 @@ public class Plugin {
     }
 
     public static void unloadAll() {
-        // CME here. Does not crash, but still concerning. How to avoid?
-        PLUGINS.forEach((key, value) -> value.unload());
+        // Unused. Let's think about script reload-ability in the future.
+        List<Plugin> plugins = new ArrayList<>(PLUGINS.values());
+        plugins.forEach(Plugin::unload);
     }
 
     private static boolean checkPath(Path pluginDir) {

@@ -51,7 +51,6 @@ public abstract class MinecraftServerMixin {
     @Inject(at = @At("TAIL"), method = "exit")
     private void exit(CallbackInfo ci) {
         Allium.SERVER = null;
-        Plugin.unloadAll();
     }
     
     @Inject(at = @At("TAIL"), method = "tick")
