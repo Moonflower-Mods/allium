@@ -50,8 +50,9 @@ public class  PluginExecutor {
         globals.rawset( "collectgarbage", Constants.NIL );
         globals.rawset( "dofile", Constants.NIL );
         globals.rawset( "loadfile", Constants.NIL );
-        globals.rawset( "print", new PrintMethod(plugin) );
+        
 
+        globals.rawset( "print", new PrintMethod(plugin) );
 
         globals.rawset( "_VERSION", ValueFactory.valueOf( "Lua 5.1" ) );
         globals.rawset( "_HOST", ValueFactory.valueOf("Allium 0.1.0" ) );
