@@ -115,6 +115,7 @@ public class YarnLoader {
                             Mappings.asMethod(currentClass.get(NAMESPACE_TO), name.get(namespaceIndex.get(NAMESPACE_TO)))
                     );
                 }
+
             });
 
         } catch (IOException e) {

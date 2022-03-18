@@ -10,6 +10,7 @@
     "MinecraftServerMixin",
     "PlayerManagerMixin",
     "block.AbstractBlockMixin",
+    "entity.EntityMixin",
     "network.ServerPlayerEntityMixin",
     "network.ServerPlayNetworkHandlerMixin",
     "resource.ResourcePackManagerMixin"

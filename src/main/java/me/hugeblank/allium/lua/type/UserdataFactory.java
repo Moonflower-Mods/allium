@@ -104,11 +104,17 @@ public class UserdataFactory<T> {
 
     public static void collectMethods(Class<?> sourceClass, List<Method> methods, String name, Consumer<Method> consumer) {
         methods.forEach((method -> {
-            if (Allium.DEVELOPMENT) {
-                if (method.getName().equals(name)) {
-                    consumer.accept(method);
-                }
-            } else {
+            var methodName = method.getName();
+
+            if (methodName.equals(name) || methodName.equals("allium$" + name)) {
+                consumer.accept(method);
+            }
+
+            if (methodName.startsWith("allium_private$")) {
+                return;
+            }
+
+            if (!Allium.DEVELOPMENT) {
                 if (Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1].equals(name)) {
                     consumer.accept(method);
                 }
@@ -168,6 +174,11 @@ public class UserdataFactory<T> {
     }
 
     public static Object toJava(LuaState state, LuaValue value, Class<?> clatz) throws LuaError, InvalidArgumentException {
+        if (clatz.isAssignableFrom(value.getClass()) && clatz != Object.class) {
+            return value;
+        }
+
+
         if (clatz.isArray()) {
             if (!value.isTable())
                 throw new LuaError(
@@ -255,6 +266,10 @@ public class UserdataFactory<T> {
     }
 
     public static LuaValue toLuaValue(Object out, Class<?> ret) {
+        if (out instanceof LuaValue) {
+            return (LuaValue) out;
+        }
+
         if (out != null && ret.isArray()) {
             var table = new LuaTable();
             int length = Array.getLength(out);
