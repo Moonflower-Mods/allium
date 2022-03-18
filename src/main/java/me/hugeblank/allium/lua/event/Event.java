@@ -1,6 +1,6 @@
 package me.hugeblank.allium.lua.event;
 
-import me.hugeblank.allium.loader.Plugin;
+import me.hugeblank.allium.loader.Script;
 import net.minecraft.util.Pair;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LuaFunction;
@@ -16,7 +16,7 @@ public class Event {
 
     private final String name;
     private final Function<Object[], Varargs> convert;
-    private final List<Pair<Plugin, LuaFunction>> listeners = new ArrayList<>();
+    private final List<Pair<Script, LuaFunction>> listeners = new ArrayList<>();
     public Event(String name, Function<Object[], Varargs> convert) {
         this.name = name;
         this.convert = convert;
@@ -30,7 +30,7 @@ public class Event {
         return null;
     }
 
-    public List<Pair<Plugin, LuaFunction>> getListeners() {
+    public List<Pair<Script, LuaFunction>> getListeners() {
         return listeners;
     }
 
@@ -38,13 +38,13 @@ public class Event {
         return EVENTS;
     }
 
-    public void addListener(Plugin source, LuaFunction func) {
+    public void addListener(Script source, LuaFunction func) {
         listeners.add(new Pair<>(source, func));
     }
 
     public void queueEvent(Object ... values) {
         Varargs args = this.evaluate(values);
-        for (Pair<Plugin, LuaFunction> pair : listeners) {
+        for (Pair<Script, LuaFunction> pair : listeners) {
             try {
                 pair.getRight().invoke(pair.getLeft().getExecutor().getState(), args.asImmutable());
             } catch (UnwindThrowable | LuaError e) {

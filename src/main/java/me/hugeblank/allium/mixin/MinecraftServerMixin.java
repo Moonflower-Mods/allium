@@ -4,9 +4,7 @@ import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.loader.Plugin;
 import me.hugeblank.allium.lua.event.Events;
-import me.hugeblank.allium.util.FileHelper;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.resource.ResourcePackManager;
@@ -23,9 +21,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.io.File;
 import java.net.Proxy;
-import java.util.Objects;
 import java.util.function.BooleanSupplier;
 
 @Mixin(MinecraftServer.class)

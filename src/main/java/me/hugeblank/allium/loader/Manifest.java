@@ -1,7 +1,5 @@
 package me.hugeblank.allium.loader;
 
-import me.hugeblank.allium.Allium;
-
 public class Manifest {
     private final String id;
     private final String version;
@@ -29,5 +27,9 @@ public class Manifest {
 
     public String entrypoint() {
         return entrypoint;
+    }
+
+    public boolean isComplete() {
+        return !(id == null || version == null || name == null || entrypoint == null);
     }
 }

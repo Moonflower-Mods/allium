@@ -11,7 +11,7 @@
 // See LICENSE for more information
 package me.hugeblank.allium;
 
-import me.hugeblank.allium.loader.Plugin;
+import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
@@ -56,8 +56,15 @@ public class Allium implements ModInitializer {
         File[] files = Objects.requireNonNull(FileHelper.getPluginsDirectory().listFiles());
         for (File pluginDir : files) {
             if (pluginDir.isDirectory()) {
-                Plugin.loadFromDir(pluginDir.toPath());
+                Script.fromDir(pluginDir.toPath());
             }
         }
+
+        // Load scripts periphery to mods. Scripts loaded through this route get +10 style points.
+        FabricLoader.getInstance().getAllMods().forEach((container) -> {
+            if (container.getMetadata().getCustomValue("allium") != null) {
+                Script.fromMod(container);
+            }
+        });
     }
 }

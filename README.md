@@ -15,7 +15,7 @@ This should be put in `manifest.json`
 {
   "id": "test",
   "version": "0.1.0",
-  "name": "Allium test plugin"
+  "name": "Allium test script"
 }
 ```
 
@@ -24,9 +24,9 @@ And this should be pasted in your game directory, as `main.lua`
 -- Allium Test Plugin
 -- (c) hugeblank 2022
 -- no rights reserved
--- Test plugin that demonstrates the capabilities of Allium.
+-- Test script that demonstrates the capabilities of Allium.
 allium.onEvent("chat_message", function(e, player, message)
-    -- this gets logged under the "test" namespace because the anonymous function gets called after the plugin returns
+    -- this gets logged under the "test" namespace because the anonymous function gets called after the script returns
     -- the information that registers it
     print(player:getName():asString().." said "..message)
 end)
@@ -43,8 +43,8 @@ allium.onEvent("player_tick", function(e, player)
     world:setBlockState(player:getBlockPos():down(), game.getBlock("minecraft:diorite"):getDefaultState())
 end)
 
--- This doesn't get logged under the "test" namespace since Allium doesn't know what plugin is running until the return
-print("Loading test plugin!\n", "Test", 1, 2, 3)
+-- This doesn't get logged under the "test" namespace since Allium doesn't know what script is running until the return
+print("Loading test script!\n", "Test", 1, 2, 3)
 ```
 
 ## But Allium is for ComputerCraft?
