@@ -41,6 +41,7 @@ public class ScriptExecutor {
         globals.load( state, new GameLib() );
         globals.load( state, JavaLib.create() );
         globals.load( state, TextLib.create() );
+        globals.load( state, NbtLib.create() );
         globals.load( state, CommandLib.create(script) );
         globals.load( state, ScriptLib.create(script) );
 
