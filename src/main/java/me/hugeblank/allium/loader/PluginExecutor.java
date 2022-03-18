@@ -50,7 +50,7 @@ public class  PluginExecutor {
         globals.rawset( "collectgarbage", Constants.NIL );
         globals.rawset( "dofile", Constants.NIL );
         globals.rawset( "loadfile", Constants.NIL );
-        
+
 
         globals.rawset( "print", new PrintMethod(plugin) );
 
