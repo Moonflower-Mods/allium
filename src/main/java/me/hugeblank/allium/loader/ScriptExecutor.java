@@ -1,6 +1,7 @@
 package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.lua.api.*;
+import me.hugeblank.allium.lua.api.PackageLib;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -45,6 +46,12 @@ public class ScriptExecutor {
         globals.load( state, CommandLib.create(script) );
         globals.load( state, ScriptLib.create(script) );
 
+        // Package library, kinda quirky.
+        PackageLib pkg = new PackageLib();
+        globals.rawset( "package" , pkg.create(script) );
+        globals.rawset( "require", new PackageLib.Require(pkg) );
+        globals.rawset( "module", Constants.NIL ); // TODO: module call
+
         // Remove globals we don't want to expose
         globals.rawset( "collectgarbage", Constants.NIL );
         globals.rawset( "dofile", Constants.NIL );
@@ -61,16 +68,19 @@ public class ScriptExecutor {
         return state;
     }
 
-    public void initialize(InputStream main) throws LuaError, InterruptedException, IOException, CompileException {
-        LuaFunction loadValue = LoadState.load(
+    public LuaValue initialize(InputStream main) throws LuaError, IOException, CompileException, UnwindThrowable {
+        LuaFunction loadValue = this.load(main, script.getManifest().id());
+        state.setupThread(new LuaTable());
+        return loadValue.call(state);
+    }
+
+    public LuaFunction load(InputStream stream, String name) throws CompileException, IOException {
+        return LoadState.load(
                 state,
-                main,
-                script.getManifest().id(),
+                stream,
+                name,
                 this.globals
         );
-        state.setupThread(new LuaTable());
-        // TODO: Does this allow for multiple plugins to run?
-        LuaThread.runMain(state, loadValue);
     }
 
     private static final class PrintMethod extends VarArgFunction {

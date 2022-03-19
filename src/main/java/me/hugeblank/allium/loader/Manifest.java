@@ -6,7 +6,7 @@ public class Manifest {
     private final String name;
     private final String entrypoint;
 
-    Manifest(String id, String version, String name, String entrypoint) {
+    public Manifest(String id, String version, String name, String entrypoint) {
         this.id = id;
         this.version = version;
         this.name = name;

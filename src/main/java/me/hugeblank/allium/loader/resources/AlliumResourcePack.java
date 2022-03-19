@@ -32,7 +32,7 @@ public class AlliumResourcePack extends DirectoryResourcePack {
     }
 
     public AlliumResourcePack() {
-        super(FileHelper.getPluginsDirectory()); // Just use the plugins directory as a base, idk.
+        super(FileHelper.getScriptsDirectory()); // Just use the plugins directory as a base, idk.
     }
 
     @Override
