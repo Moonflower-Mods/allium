@@ -48,7 +48,7 @@ public class JavaLib {
     // TODO: Optionally provide userdata as the first argument for the class in most methods.
     public static LuaLibrary create() {
         return LibBuilder.create("java")
-                .set("import", (state, args) -> importClass(state, getClassOf(args.arg(1).checkString()))) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
+                .set("import", (state, args) -> importClass(getClassOf(args.arg(1).checkString()))) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
                 .set("getRawClass", JavaLib::getClassObject) // java.getRawClass(String classPath) -> Class<?> class
                 .set("exists", JavaLib::checkIfExists) // java.checkIfExists(String classOrMethodPath) -> boolean exists
                 .set("cast", JavaLib::cast) // java.cast(String classPath, Userdata object) -> Userdata objectOfClassPath
@@ -59,7 +59,7 @@ public class JavaLib {
                 .build();
     }
 
-    private static LuaValue importClass(LuaState state, EClass<?> clazz) {
+    public static LuaValue importClass(EClass<?> clazz) {
         List<EMethod> staticMethods = new ArrayList<>();
         List<EField> staticFields = new ArrayList<>();
 
@@ -96,7 +96,7 @@ public class JavaLib {
                 }
 
                 try {
-                    return importClass(state, clazz.instantiateWith(List.of(typeArgs)));
+                    return importClass(clazz.instantiateWith(List.of(typeArgs)));
                 } catch (IllegalArgumentException e) {
                     throw new LuaError(e);
                 }

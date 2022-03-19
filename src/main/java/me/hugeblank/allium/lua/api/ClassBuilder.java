@@ -130,7 +130,7 @@ public class ClassBuilder {
                 })
                 .set("build", (unused, args) -> {
                     try {
-                        return UserdataFactory.toLuaValue(builder.build(), EClass.fromJava(EClass.class));
+                        return JavaLib.importClass(builder.build());
                     } catch (Exception e) {
                         throw new LuaError(e);
                     }
