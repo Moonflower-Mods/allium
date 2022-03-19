@@ -26,7 +26,6 @@ public class UserdataFactory<T> {
     private final LuaTable metatable = new LuaTable();
 
     {
-        // TODO: logical operators!!!
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
@@ -87,11 +86,20 @@ public class UserdataFactory<T> {
                 return Constants.NIL;
             }
         });
+
+        metatable.rawset("__eq", EqualsFunction.INSTANCE);
     }
 
     protected UserdataFactory(EClass<T> clazz) {
         this.clazz = clazz;
         this.methods = clazz.methods();
+
+        var comparableInst = clazz.allInterfaces().stream().filter(x -> x.raw() == Comparable.class).findFirst().orElse(null);
+        if (comparableInst != null) {
+            var bound = comparableInst.typeVariableValues().get(0).toClass();
+            metatable.rawset("__lt", new LessFunction(bound));
+            metatable.rawset("__le", new LessOrEqualFunction(bound));
+        }
     }
 
     @SuppressWarnings("unchecked")
@@ -107,7 +115,7 @@ public class UserdataFactory<T> {
         methods.forEach((method -> {
             var methodName = method.name();
 
-            if (methodName.equals(name) || methodName.equals("allium$" + name)) {
+            if (methodName.equals(name) || methodName.equals("allium$" + name) || name.equals("m_" + methodName)) {
                 consumer.accept(method);
             }
 
@@ -116,19 +124,21 @@ public class UserdataFactory<T> {
             }
 
             if (!Allium.DEVELOPMENT) {
-
-                if (Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1].equals(name)) {
+                var mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1];
+                if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
                     consumer.accept(method);
                 }
 
                 for (var clazz : sourceClass.allSuperclasses()) {
-                    if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                    mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1];
+                    if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
                         consumer.accept(method);
                     }
                 }
 
                 for (var clazz : sourceClass.allInterfaces()) {
-                    if (Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1].equals(name)) {
+                    mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1];
+                    if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
                         consumer.accept(method);
                     }
                 }
@@ -319,7 +329,7 @@ public class UserdataFactory<T> {
             } else if (ret.equals(CommonTypes.STRING)) { // string
                 return ValueFactory.valueOf((String) out);
             } else if (ret.raw().isAssignableFrom(out.getClass())) {
-                return new UserdataFactory<>(ret).create(ret.cast(out));
+                return UserdataFactory.of(ret).create(ret.cast(out));
             } else {
                 return Constants.NIL;
             }
@@ -409,6 +419,52 @@ public class UserdataFactory<T> {
 
         public InvalidArgumentException(Throwable cause) {
             super(cause);
+        }
+    }
+
+    private static final class EqualsFunction extends TwoArgFunction {
+        public static final EqualsFunction INSTANCE = new EqualsFunction();
+
+        @Override
+        public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) {
+            if (arg1.isNil() && arg2.isNil()) return Constants.TRUE;
+            if (!arg1.isUserdata() || !arg2.isUserdata()) return Constants.FALSE;
+
+            return ValueFactory.valueOf(arg1.toUserdata().equals(arg2.toUserdata()));
+        }
+    }
+
+    private static final class LessFunction extends TwoArgFunction {
+        private final EClass<?> bound;
+
+        public LessFunction(EClass<?> bound) {
+            this.bound = bound;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+            Comparable<Object> cmp = arg1.checkUserdata(Comparable.class);
+            Object cmp2 = arg2.checkUserdata(bound.raw());
+
+            return ValueFactory.valueOf(cmp.compareTo(cmp2) < 0);
+        }
+    }
+
+    private static final class LessOrEqualFunction extends TwoArgFunction {
+        private final EClass<?> bound;
+
+        public LessOrEqualFunction(EClass<?> bound) {
+            this.bound = bound;
+        }
+
+        @SuppressWarnings("unchecked")
+        @Override
+        public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+            Comparable<Object> cmp = arg1.checkUserdata(Comparable.class);
+            Object cmp2 = arg2.checkUserdata(bound.raw());
+
+            return ValueFactory.valueOf(cmp.compareTo(cmp2) < 0 || cmp.equals(cmp2));
         }
     }
 }
