@@ -77,7 +77,7 @@ public class UserdataFactory<T> {
 
                 if (matchedField != null) {
                     try {
-                        matchedField.set(toJava(state, arg1, clazz), toJava(state, arg3, matchedField.fieldType().toClass()));
+                        matchedField.set(toJava(state, arg1, clazz), toJava(state, arg3, matchedField.fieldType().lowerBound()));
                     } catch (Exception e) {
                         // Silent
                     }
@@ -86,8 +86,6 @@ public class UserdataFactory<T> {
                 return Constants.NIL;
             }
         });
-
-        metatable.rawset("__eq", EqualsFunction.INSTANCE);
     }
 
     protected UserdataFactory(EClass<T> clazz) {
@@ -96,7 +94,7 @@ public class UserdataFactory<T> {
 
         var comparableInst = clazz.allInterfaces().stream().filter(x -> x.raw() == Comparable.class).findFirst().orElse(null);
         if (comparableInst != null) {
-            var bound = comparableInst.typeVariableValues().get(0).toClass();
+            var bound = comparableInst.typeVariableValues().get(0).lowerBound();
             metatable.rawset("__lt", new LessFunction(bound));
             metatable.rawset("__le", new LessOrEqualFunction(bound));
         }
@@ -177,7 +175,7 @@ public class UserdataFactory<T> {
 
         int ind = offset;
         for (EParameter param : parameters) { // For each parameter in the matched call
-            var arg = toJava(state, args.arg(ind), param.parameterType().toClass());
+            var arg = toJava(state, args.arg(ind), param.parameterType().upperBound());
             arguments[ind - offset] = arg;
             ind++;
         }
@@ -194,6 +192,7 @@ public class UserdataFactory<T> {
             return value;
         }
 
+        clatz = clatz.unwrapPrimitive();
 
         if (clatz.type() == ClassType.ARRAY) {
             if (!value.isTable())
@@ -259,10 +258,10 @@ public class UserdataFactory<T> {
 
                             var args = new LuaValue[params.length];
                             for (int i = 0; i < params.length; i++) {
-                                args[i] = toLuaValue(params[i], finalIfaceMethod.parameters().get(i).parameterType().toClass());
+                                args[i] = toLuaValue(params[i], finalIfaceMethod.parameters().get(i).parameterType().lowerBound());
                             }
 
-                            return toJava(state, func.invoke(state, ValueFactory.varargsOf(args)).first(), finalIfaceMethod.returnType().toClass());
+                            return toJava(state, func.invoke(state, ValueFactory.varargsOf(args)).first(), finalIfaceMethod.returnType().upperBound());
                         });
             } else {
                 return value.checkUserdata(clatz.raw());
@@ -368,7 +367,7 @@ public class UserdataFactory<T> {
 
                         if (jargs.length == parameters.size()) { // Found a match!
                             try { // Get the return type, invoke method, cast returned value, cry.
-                                EClass<?> ret = method.returnType().toClass();
+                                EClass<?> ret = method.returnType().upperBound();
                                 Object out = method.invoke(instance, jargs);
                                 return toLuaValue(out, ret);
                             } catch (IllegalAccessException | InvocationTargetException e) {
@@ -419,18 +418,6 @@ public class UserdataFactory<T> {
 
         public InvalidArgumentException(Throwable cause) {
             super(cause);
-        }
-    }
-
-    private static final class EqualsFunction extends TwoArgFunction {
-        public static final EqualsFunction INSTANCE = new EqualsFunction();
-
-        @Override
-        public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) {
-            if (arg1.isNil() && arg2.isNil()) return Constants.TRUE;
-            if (!arg1.isUserdata() || !arg2.isUserdata()) return Constants.FALSE;
-
-            return ValueFactory.valueOf(arg1.toUserdata().equals(arg2.toUserdata()));
         }
     }
 

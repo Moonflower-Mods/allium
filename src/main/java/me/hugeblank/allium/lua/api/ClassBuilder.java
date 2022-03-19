@@ -198,7 +198,7 @@ public class ClassBuilder {
                         argIndex += args[i].getSize();
                     }
 
-                    var ret = Type.getType(method.returnType().toClass().raw());
+                    var ret = Type.getType(method.returnType().upperBound().raw());
                     var isVoid = ret.getSort() == Type.VOID;
 
                     m.visitFieldInsn(GETSTATIC, className, "allium$luaState", Type.getDescriptor(LuaState.class));
@@ -211,9 +211,9 @@ public class ClassBuilder {
 
                     if (!isVoid) {
                         m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);
-                        m.visitLdcInsn(Type.getType(method.returnType().toClass().wrapPrimitive().raw()));
+                        m.visitLdcInsn(Type.getType(method.returnType().upperBound().wrapPrimitive().raw()));
                         m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Ljava/lang/Class;)Ljava/lang/Object;", false);
-                        m.visitTypeInsn(CHECKCAST, Type.getInternalName(method.returnType().toClass().wrapPrimitive().raw()));
+                        m.visitTypeInsn(CHECKCAST, Type.getInternalName(method.returnType().upperBound().wrapPrimitive().raw()));
 
                         if (ret.getSort() != Type.ARRAY && ret.getSort() != Type.OBJECT) {
                             AsmUtil.unwrapPrimitive(m, ret);
@@ -233,15 +233,11 @@ public class ClassBuilder {
     }
 
     public void createMethod(String methodName, EClass<?>[] params, EClass<?> returnClass, boolean isStatic, LuaFunction func) {
-        var methods = new ArrayList<EMethod>();
-
         var funcFieldName = "allium$func_" + methodName;
 
         c.visitField(ACC_PUBLIC | ACC_STATIC, funcFieldName, Type.getDescriptor(LuaFunction.class), null, null);
 
         storedFunctions.put(funcFieldName, func);
-
-        UserdataFactory.collectMethods(this.superClass, this.methods, methodName, methods::add);
 
         var paramsType = Arrays.stream(params).map(EClass::raw).map(Type::getType).toArray(Type[]::new);
         var returnType = returnClass == null ? Type.getType(returnClass.raw()) : Type.VOID_TYPE;

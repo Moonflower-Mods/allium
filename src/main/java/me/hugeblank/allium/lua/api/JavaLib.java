@@ -8,6 +8,7 @@ import me.hugeblank.allium.lua.type.UserdataFactory;
 import me.hugeblank.allium.util.Mappings;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
+import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
@@ -47,7 +48,7 @@ public class JavaLib {
     // TODO: Optionally provide userdata as the first argument for the class in most methods.
     public static LuaLibrary create() {
         return LibBuilder.create("java")
-                .set("import", JavaLib::importClass) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
+                .set("import", (state, args) -> importClass(state, getClassOf(args.arg(1).checkString()))) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
                 .set("getRawClass", JavaLib::getClassObject) // java.getRawClass(String classPath) -> Class<?> class
                 .set("exists", JavaLib::checkIfExists) // java.checkIfExists(String classOrMethodPath) -> boolean exists
                 .set("cast", JavaLib::cast) // java.cast(String classPath, Userdata object) -> Userdata objectOfClassPath
@@ -58,8 +59,7 @@ public class JavaLib {
                 .build();
     }
 
-    private static Varargs importClass(LuaState state, Varargs args) throws LuaError {
-        EClass<?> clazz = getClassOf(args.arg(1).checkString());
+    private static LuaValue importClass(LuaState state, EClass<?> clazz) {
         List<EMethod> staticMethods = new ArrayList<>();
         List<EField> staticFields = new ArrayList<>();
 
@@ -81,15 +81,32 @@ public class JavaLib {
             public Varargs invoke(LuaState state, Varargs args) throws LuaError {
                 return JavaLib.createInstance(
                         state,
-                        ValueFactory.varargsOf(LuaString.valueOf(clazz.name()), args.subargs(2))
+                        ValueFactory.varargsOf(UserdataFactory.toLuaValue(clazz), args.subargs(2))
                 );
+            }
+        });
+        mt.rawset("__index", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+                LuaTable table = arg2.checkTable();
+                EClass<?>[] typeArgs = new EClass[table.getArrayLength()];
+
+                for (int i = 0; i < typeArgs.length; i++) {
+                    typeArgs[i] = asClass(table.rawget(i + 1));
+                }
+
+                try {
+                    return importClass(state, clazz.instantiateWith(List.of(typeArgs)));
+                } catch (IllegalArgumentException e) {
+                    throw new LuaError(e);
+                }
             }
         });
 
         LuaTable impord = new StaticMethods(clazz, staticMethods, staticFields).create();
         impord.setMetatable(mt);
 
-        return ValueFactory.varargsOf(impord);
+        return impord;
     }
 
     private static Varargs invokeStatic(EClass<?> clazz, String name, EMethod[] methods, LuaState state, Varargs args) throws LuaError {
@@ -98,9 +115,6 @@ public class JavaLib {
                 name + "\" for \"" + clazz.name() + "\"" +
                 "\nThe following are correct argument types:\n"
         );
-        for (String headers : paramList) { // TODO: Why is this here?
-            error.append(headers).append("\n");
-        }
 
         for (var method : methods) {
             var parameters = method.parameters();
@@ -108,7 +122,7 @@ public class JavaLib {
                 var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
                 if (jargs.length == parameters.size()) { // Found a match!
                     try { // Get the return type, invoke method, cast returned value, cry.
-                        EClass<?> ret = method.returnType().toClass();
+                        EClass<?> ret = method.returnType().upperBound();
 //                        method.setAccessible(true); // throws InaccessibleObjectException | SecurityException
                         Object out = method.invoke(null, jargs);
                         return UserdataFactory.toLuaValue(out, ret);
@@ -125,6 +139,10 @@ public class JavaLib {
 
                 paramList.add(params.toString());
             }
+        }
+
+        for (String headers : paramList) {
+            error.append(headers).append("\n");
         }
 
         throw new LuaError(error.toString());
@@ -353,9 +371,9 @@ public class JavaLib {
                 try {
                     var fieldName = Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.name(), field.name())).split("#")[1];
                     if (tbl.rawget(fieldName) == Constants.NIL) {
-                        tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().toClass()));
+                        tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
                     } else {
-                        tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().toClass()));
+                        tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
                     }
                 } catch (Exception e) {
                 }
