@@ -4,6 +4,7 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 
 import static org.objectweb.asm.Opcodes.INVOKESTATIC;
+import static org.objectweb.asm.Opcodes.INVOKEVIRTUAL;
 
 public class AsmUtil {
     public static void wrapPrimitive(MethodVisitor m, Type type) {
@@ -30,21 +31,21 @@ public class AsmUtil {
     public static void unwrapPrimitive(MethodVisitor m, Type type) {
         switch (type.getSort()) {
             case Type.BOOLEAN
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Boolean.class), "booleanValue", "(Ljava/lang/Boolean;)Z", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Boolean.class), "booleanValue", "(Ljava/lang/Boolean;)Z", false);
             case Type.CHAR
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Character.class), "charValue", "(Ljava/lang/Character;)C", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Character.class), "charValue", "(Ljava/lang/Character;)C", false);
             case Type.BYTE
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Byte.class), "byteValue", "(Ljava/lang/Byte;)B", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Byte.class), "byteValue", "(Ljava/lang/Byte;)B", false);
             case Type.SHORT
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Short.class), "shortValue", "(Ljava/lang/Short;)S", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Short.class), "shortValue", "(Ljava/lang/Short;)S", false);
             case Type.INT
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Integer.class), "intValue", "(Ljava/lang/Integer;)I", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Integer.class), "intValue", "(Ljava/lang/Integer;)I", false);
             case Type.FLOAT
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Float.class), "floatValue", "(Ljava/lang/Float;)F", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Float.class), "floatValue", "(Ljava/lang/Float;)F", false);
             case Type.LONG
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Long.class), "longValue", "(Ljava/lang/Long;)J", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Long.class), "longValue", "(Ljava/lang/Long;)J", false);
             case Type.DOUBLE
-                -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Double.class), "doubleValue", "(Ljava/lang/Double;)D", false);
+                -> m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Double.class), "doubleValue", "(Ljava/lang/Double;)D", false);
         }
     }
 }

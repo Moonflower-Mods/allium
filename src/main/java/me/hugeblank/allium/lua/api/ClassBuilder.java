@@ -1,6 +1,8 @@
 package me.hugeblank.allium.lua.api;
 
-import com.google.common.primitives.Primitives;
+import me.basiqueevangelist.enhancedreflection.api.EClass;
+import me.basiqueevangelist.enhancedreflection.api.EConstructor;
+import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import me.hugeblank.allium.util.AsmUtil;
@@ -10,8 +12,6 @@ import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.io.IOException;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,14 +22,14 @@ import static org.objectweb.asm.Opcodes.*;
 public class ClassBuilder {
     public static int id = 0;
 
-    protected final Class<?> superClass;
+    protected final EClass<?> superClass;
     protected final String className;
     protected final LuaState state;
     protected final ClassWriter c = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-    private final List<Method> methods = new ArrayList<>();
+    private final List<EMethod> methods = new ArrayList<>();
     private final Map<String, LuaFunction> storedFunctions = new HashMap<>();
 
-    public ClassBuilder(Class<?> superClass, Class<?>[] interfaces, LuaState state) {
+    public ClassBuilder(EClass<?> superClass, EClass<?>[] interfaces, LuaState state) {
         this.state = state;
         this.className = "allium/GeneratedClass_" + id;
 
@@ -38,17 +38,17 @@ public class ClassBuilder {
                 ACC_PUBLIC,
                 className,
                 null,
-                superClass.getName().replace('.', '/'),
-                Arrays.stream(interfaces).map(x -> x.getName().replace('.', '/')).toArray(String[]::new)
+                superClass.name().replace('.', '/'),
+                Arrays.stream(interfaces).map(x -> x.name().replace('.', '/')).toArray(String[]::new)
         );
 
         this.c.visitField(ACC_PUBLIC | ACC_STATIC, "allium$luaState", Type.getDescriptor(LuaState.class), null, null);
 
-        for (Constructor<?> superCtor : superClass.getConstructors()) {
-            if (!Modifier.isPublic(superCtor.getModifiers())) continue;
+        for (EConstructor<?> superCtor : superClass.constructors()) {
+            if (!superCtor.isPublic()) continue;
 
-            var desc = Type.getConstructorDescriptor(superCtor);
-            var m = c.visitMethod(superCtor.getModifiers(), "<init>", desc, null, null);
+            var desc = Type.getConstructorDescriptor(superCtor.raw());
+            var m = c.visitMethod(superCtor.modifiers(), "<init>", desc, null, null);
             var args = Type.getArgumentTypes(desc);
 
             m.visitVarInsn(ALOAD, 0);
@@ -61,21 +61,21 @@ public class ClassBuilder {
                 argIndex += arg.getSize();
             }
 
-            m.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(superClass), "<init>", desc, false);
+            m.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(superClass.raw()), "<init>", desc, false);
             m.visitInsn(RETURN);
 
             m.visitMaxs(0, 0);
         }
 
         this.superClass = superClass;
-        this.methods.addAll(List.of(this.superClass.getMethods()));
+        this.methods.addAll(this.superClass.methods());
         for (var inrf : interfaces) {
-            this.methods.addAll(List.of(inrf.getMethods()));
+            this.methods.addAll(inrf.methods());
         }
         id++;
     }
 
-    public static LuaTable createLua(Class<?> superClass, Class<?>[] interfaces, LuaState state) {
+    public static LuaTable createLua(EClass<?> superClass, EClass<?>[] interfaces, LuaState state) {
         var builder = new ClassBuilder(superClass, interfaces, state);
 
 
@@ -86,7 +86,7 @@ public class ClassBuilder {
                         var paramsTable = args.arg(3).checkTable().checkTable();
                         var function = args.arg(4).checkFunction();
 
-                        var params = new Class[paramsTable.length()];
+                        var params = new EClass[paramsTable.length()];
 
                         for (int i = 0; i < paramsTable.length(); i++) {
                             var val = paramsTable.rawget(i + 1);
@@ -111,7 +111,7 @@ public class ClassBuilder {
                         var isStatic = args.arg(5).checkBoolean();
                         var function = args.arg(6).checkFunction();
 
-                        var params = new Class[paramsTable.length()];
+                        var params = new EClass[paramsTable.length()];
 
                         for (int i = 0; i < paramsTable.length(); i++) {
                             var val = paramsTable.rawget(i + 1);
@@ -130,20 +130,16 @@ public class ClassBuilder {
                 })
                 .set("build", (unused, args) -> {
                     try {
-                        return UserdataFactory.toLuaValue(builder.build());
+                        return JavaLib.importClass(builder.build());
                     } catch (Exception e) {
-                        if (e instanceof LuaError le) {
-                            throw le;
-                        } else {
-                            throw new LuaError(e);
-                        }
+                        throw new LuaError(e);
                     }
                 })
                 .buildTable();
     }
 
-    public void overrideMethod(String methodName, Class<?>[] parameters, LuaFunction func) {
-        var methods = new ArrayList<Method>();
+    public void overrideMethod(String methodName, EClass<?>[] parameters, LuaFunction func) {
+        var methods = new ArrayList<EMethod>();
 
         var funcFieldName = "allium$func_" + methodName;
 
@@ -154,26 +150,26 @@ public class ClassBuilder {
         UserdataFactory.collectMethods(this.superClass, this.methods, methodName, methods::add);
 
         for (var method : methods) {
-            var methParams = method.getParameterTypes();
+            var methParams = method.parameters();
 
-            if (methParams.length == parameters.length) {
+            if (methParams.size() == parameters.length) {
                 boolean match = true;
                 for (int i = 0; i < parameters.length; i++) {
-                    if (methParams[i] != parameters[i]) {
+                    if (!methParams.get(i).parameterType().equals(parameters[i])) {
                         match = false;
                         break;
                     }
                 }
 
                 if (match) {
-                    var desc = Type.getMethodDescriptor(method);
-                    var isStatic = Modifier.isStatic(method.getModifiers());
-                    var m = c.visitMethod(method.getModifiers() & ~Modifier.ABSTRACT, method.getName(), desc, null, null);
+                    var desc = Type.getMethodDescriptor(method.raw());
+                    var isStatic = method.isStatic();
+                    var m = c.visitMethod(method.modifiers() & ~Modifier.ABSTRACT, method.name(), desc, null, null);
                     int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
 
                     if (isStatic) varPrefix -= 1;
 
-                    m.visitLdcInsn(method.getParameterCount() + 1);
+                    m.visitLdcInsn(methParams.size() + 1);
                     m.visitTypeInsn(ANEWARRAY, Type.getInternalName(LuaValue.class));
                     m.visitVarInsn(ASTORE, varPrefix);
 
@@ -202,7 +198,7 @@ public class ClassBuilder {
                         argIndex += args[i].getSize();
                     }
 
-                    var ret = Type.getType(method.getReturnType());
+                    var ret = Type.getType(method.returnType().upperBound().raw());
                     var isVoid = ret.getSort() == Type.VOID;
 
                     m.visitFieldInsn(GETSTATIC, className, "allium$luaState", Type.getDescriptor(LuaState.class));
@@ -215,9 +211,9 @@ public class ClassBuilder {
 
                     if (!isVoid) {
                         m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);
-                        m.visitLdcInsn(Type.getType(Primitives.wrap(method.getReturnType())));
+                        m.visitLdcInsn(Type.getType(method.returnType().upperBound().wrapPrimitive().raw()));
                         m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Ljava/lang/Class;)Ljava/lang/Object;", false);
-                        m.visitTypeInsn(CHECKCAST, Type.getInternalName(Primitives.wrap(method.getReturnType())));
+                        m.visitTypeInsn(CHECKCAST, Type.getInternalName(method.returnType().upperBound().wrapPrimitive().raw()));
 
                         if (ret.getSort() != Type.ARRAY && ret.getSort() != Type.OBJECT) {
                             AsmUtil.unwrapPrimitive(m, ret);
@@ -236,19 +232,15 @@ public class ClassBuilder {
         }
     }
 
-    public void createMethod(String methodName, Class[] params, Class<?> returnClass, boolean isStatic, LuaFunction func) {
-        var methods = new ArrayList<Method>();
-
+    public void createMethod(String methodName, EClass<?>[] params, EClass<?> returnClass, boolean isStatic, LuaFunction func) {
         var funcFieldName = "allium$func_" + methodName;
 
         c.visitField(ACC_PUBLIC | ACC_STATIC, funcFieldName, Type.getDescriptor(LuaFunction.class), null, null);
 
         storedFunctions.put(funcFieldName, func);
 
-        UserdataFactory.collectMethods(this.superClass, this.methods, methodName, methods::add);
-
-        var paramsType = Arrays.stream(params).map(Type::getType).toArray((i) -> new Type[i]);
-        var returnType = returnClass == null ? Type.getType(returnClass) : Type.VOID_TYPE;
+        var paramsType = Arrays.stream(params).map(EClass::raw).map(Type::getType).toArray(Type[]::new);
+        var returnType = returnClass == null ? Type.getType(returnClass.raw()) : Type.VOID_TYPE;
 
         var desc = Type.getMethodDescriptor(returnType, paramsType);
         var m = c.visitMethod((isStatic ? Modifier.STATIC : 0) | Modifier.PUBLIC, methodName, desc, null, null);
@@ -297,9 +289,9 @@ public class ClassBuilder {
 
         if (!isVoid) {
             m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);
-            m.visitLdcInsn(Type.getType(Primitives.wrap(returnClass)));
+            m.visitLdcInsn(Type.getType(returnClass.wrapPrimitive().raw()));
             m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Ljava/lang/Class;)Ljava/lang/Object;", false);
-            m.visitTypeInsn(CHECKCAST, Type.getInternalName(Primitives.wrap(returnClass)));
+            m.visitTypeInsn(CHECKCAST, Type.getInternalName(returnClass.wrapPrimitive().raw()));
 
             if (returnType.getSort() != Type.ARRAY && returnType.getSort() != Type.OBJECT) {
                 AsmUtil.unwrapPrimitive(m, returnType);
@@ -318,7 +310,7 @@ public class ClassBuilder {
         return c.toByteArray();
     }
 
-    public Class<?> build() {
+    public EClass<?> build() {
         byte[] classBytes = c.toByteArray();
 
         if (Allium.DEVELOPMENT) {
@@ -332,13 +324,13 @@ public class ClassBuilder {
             }
         }
 
-        Class<?> klass = DefiningClassLoader.INSTANCE.defineClass(className.replace('/', '.'), classBytes);
+        EClass<?> klass = EClass.fromJava(DefiningClassLoader.INSTANCE.defineClass(className.replace('/', '.'), classBytes));
 
         try {
-            klass.getField("allium$luaState").set(null, state);
+            klass.field("allium$luaState").set(null, state);
 
             for (Map.Entry<String, LuaFunction> funcField : storedFunctions.entrySet()) {
-                klass.getField(funcField.getKey()).set(null, funcField.getValue());
+                klass.field(funcField.getKey()).set(null, funcField.getValue());
             }
         } catch (ReflectiveOperationException roe) {
             throw new RuntimeException("Failed to initialize class", roe);

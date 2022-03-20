@@ -1,10 +1,14 @@
 package me.hugeblank.allium.lua.api;
 
+import me.basiqueevangelist.enhancedreflection.api.EClass;
+import me.basiqueevangelist.enhancedreflection.api.EField;
+import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import me.hugeblank.allium.util.Mappings;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
+import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
@@ -44,7 +48,7 @@ public class JavaLib {
     // TODO: Optionally provide userdata as the first argument for the class in most methods.
     public static LuaLibrary create() {
         return LibBuilder.create("java")
-                .set("import", JavaLib::importClass) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
+                .set("import", (state, args) -> importClass(getClassOf(args.arg(1).checkString()))) // java.import(String classPath) -> LuaTable class -- Static methods when indexed, Object construction when called
                 .set("getRawClass", JavaLib::getClassObject) // java.getRawClass(String classPath) -> Class<?> class
                 .set("exists", JavaLib::checkIfExists) // java.checkIfExists(String classOrMethodPath) -> boolean exists
                 .set("cast", JavaLib::cast) // java.cast(String classPath, Userdata object) -> Userdata objectOfClassPath
@@ -55,21 +59,18 @@ public class JavaLib {
                 .build();
     }
 
-    private static Varargs importClass(LuaState state, Varargs args) throws LuaError {
-        Class<?> clazz = getClassOf(args.arg(1).checkString());
-        List<Method> staticMethods = new ArrayList<>();
-        List<Field> staticFields = new ArrayList<>();
+    public static LuaValue importClass(EClass<?> clazz) {
+        List<EMethod> staticMethods = new ArrayList<>();
+        List<EField> staticFields = new ArrayList<>();
 
-        for (Method declaredMethod : clazz.getDeclaredMethods()) {
-            int mods = declaredMethod.getModifiers();
-            if (Modifier.isPublic(mods) && Modifier.isStatic(mods) && !Modifier.isAbstract(mods)) {
+        for (EMethod declaredMethod : clazz.declaredMethods()) {
+            if (declaredMethod.isPublic() && declaredMethod.isStatic() && !declaredMethod.isAbstract()) {
                 staticMethods.add(declaredMethod);
             }
         }
 
-        for (Field declaredField : clazz.getDeclaredFields()) {
-            int mods = declaredField.getModifiers();
-            if (Modifier.isPublic(mods) && Modifier.isStatic(mods) && !Modifier.isAbstract(mods)) {
+        for (EField declaredField : clazz.declaredFields()) {
+            if (declaredField.isPublic() && declaredField.isStatic() && !declaredField.isAbstract()) {
                 staticFields.add(declaredField);
             }
         }
@@ -80,35 +81,49 @@ public class JavaLib {
             public Varargs invoke(LuaState state, Varargs args) throws LuaError {
                 return JavaLib.createInstance(
                         state,
-                        ValueFactory.varargsOf(LuaString.valueOf(clazz.getName()), args.subargs(2))
+                        ValueFactory.varargsOf(UserdataFactory.toLuaValue(clazz), args.subargs(2))
                 );
+            }
+        });
+        mt.rawset("__index", new TwoArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+                LuaTable table = arg2.checkTable();
+                EClass<?>[] typeArgs = new EClass[table.getArrayLength()];
+
+                for (int i = 0; i < typeArgs.length; i++) {
+                    typeArgs[i] = asClass(table.rawget(i + 1));
+                }
+
+                try {
+                    return importClass(clazz.instantiateWith(List.of(typeArgs)));
+                } catch (IllegalArgumentException e) {
+                    throw new LuaError(e);
+                }
             }
         });
 
         LuaTable impord = new StaticMethods(clazz, staticMethods, staticFields).create();
         impord.setMetatable(mt);
 
-        return ValueFactory.varargsOf(impord);
+        return impord;
     }
 
-    private static Varargs invokeStatic(Class<?> clazz, String name, Method[] methods, LuaState state, Varargs args) throws LuaError {
+    private static Varargs invokeStatic(EClass<?> clazz, String name, EMethod[] methods, LuaState state, Varargs args) throws LuaError {
         List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
         StringBuilder error = new StringBuilder("Could not find parameter match for called function \"" +
-                name + "\" for \"" + clazz.getName() + "\"" +
+                name + "\" for \"" + clazz.name() + "\"" +
                 "\nThe following are correct argument types:\n"
         );
-        for (String headers : paramList) { // TODO: Why is this here?
-            error.append(headers).append("\n");
-        }
 
         for (var method : methods) {
-            var parameters = method.getParameterTypes();
+            var parameters = method.parameters();
             try {
                 var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
-                if (jargs.length == parameters.length) { // Found a match!
+                if (jargs.length == parameters.size()) { // Found a match!
                     try { // Get the return type, invoke method, cast returned value, cry.
-                        Class<?> ret = method.getReturnType();
-                        method.setAccessible(true); // throws InaccessibleObjectException | SecurityException
+                        EClass<?> ret = method.returnType().upperBound();
+//                        method.setAccessible(true); // throws InaccessibleObjectException | SecurityException
                         Object out = method.invoke(null, jargs);
                         return UserdataFactory.toLuaValue(out, ret);
                     } catch (InaccessibleObjectException | SecurityException | IllegalAccessException | InvocationTargetException e) {
@@ -119,11 +134,15 @@ public class JavaLib {
                 var params = new StringBuilder();
 
                 for (var clatz : parameters) {
-                    params.append(clatz.getName()).append(", ");
+                    params.append(clatz.name()).append(", ");
                 }
 
                 paramList.add(params.toString());
             }
+        }
+
+        for (String headers : paramList) {
+            error.append(headers).append("\n");
         }
 
         throw new LuaError(error.toString());
@@ -160,21 +179,19 @@ public class JavaLib {
     }
 
     private static Varargs createInstance(LuaState state, Varargs args) throws LuaError {
-        Class<?> clazz = args.arg(1).isUserdata(Class.class) ?
-                args.arg(1).checkUserdata(Class.class) :
-                getClassOf(args.arg(1).checkString());
+        EClass<?> clazz = asClass(args.arg(1));
 
         List<String> paramList = new ArrayList<>();
-        for (var constructor : clazz.getConstructors()) {
-            var parameters = constructor.getParameterTypes();
-            if (args.count() - 1 == parameters.length) {
+        for (var constructor : clazz.constructors()) {
+            var parameters = constructor.parameters();
+            if (args.count() - 1 == parameters.size()) {
                 try {
                     var jargs = UserdataFactory.toJavaArguments(state, args, 2, parameters);
 
-                    if (jargs.length == parameters.length) { // Found a match!
+                    if (jargs.length == parameters.size()) { // Found a match!
                         try { // Get the return type, invoke method, cast returned value, cry.
-                            Object out = constructor.newInstance(jargs);
-                            return UserdataFactory.toLuaValue(out);
+                            Object out = constructor.invoke(jargs);
+                            return UserdataFactory.toLuaValue(out, clazz);
                         } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
                             throw new LuaError(e);
                         }
@@ -183,7 +200,7 @@ public class JavaLib {
                     var params = new StringBuilder();
 
                     for (var clazzz : parameters) {
-                        params.append(clazzz.getName()).append(", ");
+                        params.append(clazzz.name()).append(", ");
                     }
 
                     paramList.add(params.toString());
@@ -192,7 +209,7 @@ public class JavaLib {
         }
 
         StringBuilder error = new StringBuilder("Could not find parameter match for called constructor " +
-                clazz.getName() +
+                clazz.name() +
                 "\nThe following are correct argument types:\n"
         );
 
@@ -223,15 +240,18 @@ public class JavaLib {
 
             if (string.length == 2) {
                 if (args.count() == 2) {
-                    clazz.getMethod(string[1], (Class[]) UserdataFactory.toJava(state, args.arg(2), Class[].class));
+                    if (clazz.method(string[1], (Class<?>[]) UserdataFactory.toJava(state, args.arg(2), EClass.fromJava(Class[].class))) != null)
+                        return Constants.FALSE;
                 } else {
-                    for (var method : clazz.getMethods()) {
-                        if (method.getName().equals(string[1])) {
+                    for (var method : clazz.methods()) {
+                        if (method.name().equals(string[1])) {
                             return Constants.TRUE;
                         }
                     }
 
-                    clazz.getField(string[1]);
+                    if (clazz.field(string[1]) != null) {
+                        return Constants.FALSE;
+                    }
                 }
             }
 
@@ -245,21 +265,21 @@ public class JavaLib {
     private static Varargs extendClass(LuaState state, Varargs args) throws LuaError {
         var clazz = asClass(args.arg(1));
         var table = args.arg(2).checkTable();
-        var interfaces = new ArrayList<Class>();
+        var interfaces = new ArrayList<EClass<?>>();
         for (int i = 1; i <= table.length(); i++) {
             var luaValue = table.rawget(i);
             interfaces.add(asClass(luaValue));
         }
 
-        return ClassBuilder.createLua(clazz, interfaces.toArray(new Class[0]), state);
+        return ClassBuilder.createLua(clazz, interfaces.toArray(new EClass[0]), state);
     }
 
-    public static Class<?> getClassOf(String className) throws LuaError {
+    public static EClass<?> getClassOf(String className) throws LuaError {
         var cachedClassName = CACHED_AUTO_COMPLETE.get(className);
 
         if (cachedClassName != null) {
             try {
-                return Class.forName(cachedClassName);
+                return EClass.fromJava(Class.forName(cachedClassName));
             } catch (ClassNotFoundException e1) {
 
             }
@@ -268,7 +288,7 @@ public class JavaLib {
         for (var auto : AUTO_COMPLETE) {
             try {
                 cachedClassName = Allium.MAPPINGS.getIntermediary(auto + className).get(0);
-                var clazz = Class.forName(cachedClassName);
+                var clazz = EClass.fromJava(Class.forName(cachedClassName));
                 CACHED_AUTO_COMPLETE.put(className, cachedClassName);
                 return clazz;
             } catch (ClassNotFoundException e1) {
@@ -277,7 +297,7 @@ public class JavaLib {
 
             try {
                 cachedClassName = auto + className;
-                var clazz = Class.forName(cachedClassName);
+                var clazz = EClass.fromJava(Class.forName(cachedClassName));
                 CACHED_AUTO_COMPLETE.put(className, cachedClassName);
                 return clazz;
             } catch (ClassNotFoundException e) {
@@ -289,15 +309,18 @@ public class JavaLib {
 
     }
 
-    public static Class<?> asClass(LuaValue value) throws LuaError {
+    @SuppressWarnings("unchecked")
+    public static EClass<?> asClass(LuaValue value) throws LuaError {
         if (value.isString()) {
             return getClassOf(value.checkString());
+        } else if (value.isUserdata(EClass.class)) {
+            return value.checkUserdata(EClass.class);
         } else if (value.isUserdata(Class.class)) {
-            return value.checkUserdata(Class.class);
+            return EClass.fromJava(value.checkUserdata(Class.class));
         } else if (value.isUserdata()) {
-            return value.checkUserdata().getClass();
+            return EClass.fromJava(value.checkUserdata().getClass());
         } else if (value.isTable() && value.checkTable().rawget("allium_java_class") != Constants.NIL) {
-            return value.checkTable().rawget("allium_java_class").checkUserdata(Class.class);
+            return value.checkTable().rawget("allium_java_class").checkUserdata(EClass.class);
         } else if (value.isNil()) {
             return null;
         }
@@ -306,41 +329,39 @@ public class JavaLib {
     }
 
     private static class StaticMethods {
-        private final Class<?> clazz;
-        private final Method[][] methods;
+        private final EClass<?> clazz;
+        private final EMethod[][] methods;
         private final String[] methodNames;
-        private final Field[] fields;
+        private final EField[] fields;
 
-        public StaticMethods(Class<?> clazz, List<Method> methods, List<Field> fields) {
+        public StaticMethods(EClass<?> clazz, List<EMethod> methods, List<EField> fields) {
             this.clazz = clazz;
-            var methodMap = new HashMap<String, List<Method>>();
+            var methodMap = new HashMap<String, List<EMethod>>();
 
             for (var method : methods) {
                 methodMap.computeIfAbsent(
-                        Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.getName(), method.getName())).split("#")[1],
+                        Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.name(), method.name())).split("#")[1],
                         (s) -> new ArrayList<>()
                 ).add(method);
             }
-            this.methods = new Method[methodMap.size()][];
+            this.methods = new EMethod[methodMap.size()][];
             this.methodNames = new String[methodMap.size()];
 
             int i = 0;
             for (var entry : methodMap.entrySet()) {
                 this.methodNames[i] = entry.getKey();
-                this.methods[i] = entry.getValue().toArray(new Method[0]);
+                this.methods[i] = entry.getValue().toArray(new EMethod[0]);
                 i++;
             }
 
-            this.fields = fields.toArray(new Field[0]);
+            this.fields = fields.toArray(new EField[0]);
         }
 
         public LuaTable create() {
             LuaTable tbl = new LuaTable();
             String[] arr = new String[this.methodNames.length + 1];
 
-            for (int i = 0; i < this.methodNames.length; i++) {
-                arr[i] = this.methodNames[i];
-            }
+            System.arraycopy(this.methodNames, 0, arr, 0, this.methodNames.length);
 
             arr[this.methods.length] = "getClass";
 
@@ -348,11 +369,11 @@ public class JavaLib {
 
             for (var field : fields) {
                 try {
-                    var fieldName = Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.getName(), field.getName())).split("#")[1];
+                    var fieldName = Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.name(), field.name())).split("#")[1];
                     if (tbl.rawget(fieldName) == Constants.NIL) {
-                        tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null)));
+                        tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
                     } else {
-                        tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null)));
+                        tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
                     }
                 } catch (Exception e) {
                 }

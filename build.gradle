@@ -23,6 +23,11 @@ repositories {
 		name "NucleMaven™"
 		url "https://maven.nucleoid.xyz"
 	}
+
+	maven {
+		name "Basique's Maven"
+		url "https://porez.ml/maven"
+	}
 }
 
 configurations {
@@ -38,6 +43,7 @@ dependencies {
 	embedAPI "org.squiddev:Cobalt:${project.cobalt_version}"
 	embedAPI "net.fabricmc:tiny-mappings-parser:${project.tiny_parser}"
 
+	embedAPI 'me.basiqueevangelist:enhanced-reflection:0.1.1'
 
 	// Used for testing
 	/*modImplementation "net.fabricmc.fabric-api:fabric-api:0.47.8+1.18.2"
