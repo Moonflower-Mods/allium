@@ -2,21 +2,20 @@ package me.hugeblank.allium.util;
 
 import com.google.gson.Gson;
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.loader.Manifest;
-import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.loader.*;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.api.metadata.ModMetadata;
+import org.apache.commons.io.input.ReaderInputStream;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipFile;
+import java.util.zip.ZipInputStream;
 
 public class FileHelper {
     /* Allium Script directory spec
@@ -40,15 +39,15 @@ public class FileHelper {
         return SCRIPT_DIR;
     }
 
-    public static Map<Manifest, Path> getScriptDirCandidates() {
-        Map<Manifest, Path> out = new HashMap<>();
+    public static Set<ScriptCandidate<Path>> getScriptDirCandidates() {
+        Set<ScriptCandidate<Path>> out = new HashSet<>();
         File[] files = Objects.requireNonNull(FileHelper.getScriptsDirectory().listFiles());
         for (File pluginDir : files) {
             if (pluginDir.isDirectory() && FileHelper.hasManifestFile(pluginDir.toPath())) {
                 File manifestJson = FileHelper.getManifestPath(pluginDir.toPath()).toFile();
                 try (FileReader reader = new FileReader(manifestJson)) {
                     Manifest manifest = new Gson().fromJson(reader, Manifest.class);
-                    out.put(manifest, pluginDir.toPath());
+                    out.add(new ScriptCandidate<>(manifest, pluginDir.toPath(), DirectoryScript::new));
                 } catch (IOException e) {
                     Allium.LOGGER.error("Could not read " + manifestJson, e);
                 }
@@ -57,8 +56,28 @@ public class FileHelper {
         return out;
     }
 
-    public static Map<Manifest, ModContainer> getModContainerCandidates() { // I have no idea if this works in production.
-        Map<Manifest, ModContainer> out = new HashMap<>();
+    public static Set<ScriptCandidate<ZipFile>> getZipDirCandidates() {
+        Set<ScriptCandidate<ZipFile>> out = new HashSet<>();
+        File[] files = Objects.requireNonNull(FileHelper.getScriptsDirectory().listFiles());
+        for (File pluginDir : files) {
+            if (pluginDir.isFile()) {
+                try {
+                    ZipFile zip = new ZipFile(pluginDir);
+                    InputStreamReader reader = new InputStreamReader(
+                            zip.getInputStream(zip.getEntry(MANIFEST_FILE_NAME))
+                    );
+                    Manifest manifest = new Gson().fromJson(reader, Manifest.class);
+                    out.add(new ScriptCandidate<>(manifest, zip, ZipFileScript::new));
+                } catch (IOException e) {
+                    // hush
+                }
+            }
+        }
+        return out;
+    }
+
+    public static Set<ScriptCandidate<ModContainer>> getModContainerCandidates() { // I have no idea if this works in production.
+        Set<ScriptCandidate<ModContainer>> out = new HashSet<>();
         FabricLoader.getInstance().getAllMods().forEach((container) -> {
             if (container.getMetadata().getCustomValue("allium") != null) {
                 ModMetadata metadata = container.getMetadata();
@@ -74,7 +93,7 @@ public class FileHelper {
                     if (man == null || man.entrypoint() == null) { // Make sure the manifest exists and has an entrypoint
                         Allium.LOGGER.error("Could not read entrypoint from mod with ID " + metadata.getId());
                     } else {
-                        out.put(man, container);
+                        out.add(new ScriptCandidate<>(man, container, ModContainerScript::new));
                     }
                 } catch (ClassCastException e) { // Not an object...
                     try { // Maybe the value is an array?
@@ -85,7 +104,7 @@ public class FileHelper {
                                 CustomValue.CvObject obj = v.getAsObject();
                                 Manifest man = makeManifest(obj); // No optional arguments here.
                                 if (man.isComplete()) {
-                                    out.put(man, container);
+                                    out.add(new ScriptCandidate<>(man, container, ModContainerScript::new));
                                 } else { // a value was missing. Be forgiving, and continue parsing
                                     Allium.LOGGER.warn("Malformed manifest at index " + i + " of allium array block in " +
                                             "fabric.mod.json of mod '" + metadata.getId() + "'");

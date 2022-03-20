@@ -1,7 +1,6 @@
-// Eldritch horrors, sponsored by hugeblank!
+// Eldritch horrors, sponsored by allium!
 // This class converts all public methods from any class from Java -> Lua.
-// It's one saving grace is that I've restricted it from chewing through *every* class.
-// The fact that it could though... *shivers* euhh. I'm so sorry.
+// Completely unrestrained, interprets everything. I'm sorry.
 // If someone wants to SCP this, please by all means do so.
 package me.hugeblank.allium.lua.type;
 
@@ -53,7 +52,7 @@ public class UserdataFactory<T> {
                     try {
                         return toLuaValue(matchedField.get(toJava(state, arg1, clazz)));
                     } catch (Exception e) {
-                        // Silend
+                        // Silent
                     }
                 }
 

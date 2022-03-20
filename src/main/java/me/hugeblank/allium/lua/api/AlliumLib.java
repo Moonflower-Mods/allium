@@ -10,7 +10,7 @@ public record AlliumLib(Script script) {
     public static LuaLibrary create(Script script) {
         return LibBuilder.create("allium")
                 .set("onEvent", (state, args) -> onEvent(args, script))
-                .set("getRunningScripts", (state, args) -> Script.getScriptList())
+                .set("getRunningScripts", (state, args) -> Script.getScriptTable())
                 .build();
     }
 

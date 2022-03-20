@@ -1,15 +1,13 @@
 package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.loader.Manifest;
 import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.loader.ScriptCandidate;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.OneArgFunction;
 
 import java.io.File;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.BiFunction;
 
 public class PackageLib {
     private final LuaTable loaders = new LuaTable();
@@ -35,7 +33,7 @@ public class PackageLib {
         String[] paths = pathString.split(";");
         File entrypoint = new File(script.getRootPath().toFile(), script.getManifest().entrypoint());
         for (String pathStr : paths) {
-            File module = new File(script.getRootPath().toFile(), pathStr.replace("?", modStr.replace(".", "/")));
+            File module = new File(pathStr.replace("?", modStr.replace(".", "/")).replace("./", script.getRootPath().toString() + '/'));
             if (entrypoint.compareTo(module) == 0) {
                 Allium.LOGGER.warn(
                         "Attempted to require entrypoint of script '" + script.getManifest().id() +
@@ -60,11 +58,10 @@ public class PackageLib {
         public LuaValue call(LuaState state, LuaValue arg) throws LuaError, UnwindThrowable {
             LuaString mod = arg.checkLuaString();
             if (!pkg.loaded.rawget(mod).isNil()) return pkg.loaded.rawget(mod);
-            LuaValue contents;
             for (int i = 1; i <= pkg.loaders.length(); i++) {
                 LuaValue loader = pkg.loaders.rawget(i);
                 if (loader.isFunction()) {
-                    contents = loader.checkFunction().call(state, mod);
+                    LuaValue contents = loader.checkFunction().call(state, mod);
                     if (contents != null) {
                         pkg.loaded.rawset(mod, contents);
                         return contents;
@@ -88,31 +85,33 @@ public class PackageLib {
             String[] path = arg.checkString().split("\\.");
             Script candidate = Script.getFromID(path[0]);
             if (candidate != null) {
+                if (!candidate.isInitialized()) {
+                    candidate.initialize();
+                }
                 if (path.length == 1) {
                     return candidate.getModule();
                 } else {
                     return loadFromPaths(state, candidate, toPath(path));
                 }
             }
-            LuaValue out = getModuleFromMap(state, Allium.SCRIPT_DIR_CANDIDATES.entrySet(), path[0], toPath(path), Script::createSafe);
-            if (out == null || out.equals(Constants.NIL)) {
-                out = getModuleFromMap(state, Allium.MOD_CONTAINER_CANDIDATES.entrySet(), path[0], toPath(path), Script::fromContainerSafe);
-            }
-            return out;
+            // return getModuleCandidate(state, Allium.CANDIDATES, path[0], toPath(path));
+            return null;
         }
 
-        private <T> LuaValue getModuleFromMap(LuaState state, Set<Map.Entry<Manifest, T>> entrySet, String id, String modStr, BiFunction<Manifest, T, Script> constructor) throws UnwindThrowable, LuaError {
-            for (Map.Entry<Manifest, T> entry : entrySet) {
-                if (entry.getKey().id().equals(id)) {
-                    Script candidate = constructor.apply(entry.getKey(), entry.getValue());
-                    if (candidate != null) {
+        private LuaValue getModuleCandidate(LuaState state, Set<ScriptCandidate<?>> entrySet, String id, String modStr) throws UnwindThrowable, LuaError {
+            Allium.LOGGER.info(id + " | " + modStr);
+            for (ScriptCandidate<?> entry : entrySet) {
+                if (entry.manifest().id().equals(id)) {
+                    Script candidate = (Script) entry.load();
+                    candidate.initialize();
+                    if (candidate.isInitialized()) {
                         if (modStr.isBlank()) return candidate.getModule();
                         return loadFromPaths(state, candidate, modStr);
                     } else {
                         throw new LuaError(
                                 "Cyclic dependency found between '" +
                                 script.getManifest().id() + "' and '" +
-                                entry.getKey().id() + "'."
+                                entry.manifest().id() + "'."
                         );
                     }
                 }

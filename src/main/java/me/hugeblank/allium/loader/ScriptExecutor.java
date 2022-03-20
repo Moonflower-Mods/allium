@@ -2,6 +2,7 @@ package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.PackageLib;
+import net.minecraft.resource.DirectoryResourcePack;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -9,10 +10,7 @@ import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.*;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 public class ScriptExecutor {
     protected final Script script;
@@ -21,6 +19,7 @@ public class ScriptExecutor {
 
     public ScriptExecutor(Script script) {
         this.script = script;
+
         // Derived from CobaltMachine.java
         // https://github.com/cc-tweaked/cc-restitched/blob/79366bf2f5389b45c0db1ad0d37fbddc6d1151b3/src/main/java/dan200/computercraft/core/lua/CobaltLuaMachine.java
         state = LuaState.builder().build();
@@ -68,7 +67,7 @@ public class ScriptExecutor {
         return state;
     }
 
-    public LuaValue initialize(InputStream main) throws LuaError, IOException, CompileException, UnwindThrowable {
+    public LuaValue initialize(InputStream main) throws Throwable {
         LuaFunction loadValue = this.load(main, script.getManifest().id());
         state.setupThread(new LuaTable());
         return loadValue.call(state);

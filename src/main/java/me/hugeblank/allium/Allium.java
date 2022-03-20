@@ -11,8 +11,8 @@
 // See LICENSE for more information
 package me.hugeblank.allium;
 
-import me.hugeblank.allium.loader.Manifest;
 import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.loader.ScriptCandidate;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
@@ -20,7 +20,6 @@ import me.hugeblank.allium.util.Mappings;
 import me.hugeblank.allium.util.YarnLoader;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.server.MinecraftServer;
@@ -29,8 +28,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Allium implements ModInitializer {
 
@@ -43,8 +41,7 @@ public class Allium implements ModInitializer {
     public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
     public static final AlliumResourcePack PACK = new AlliumResourcePack();
-    public static final Map<Manifest, ModContainer> MOD_CONTAINER_CANDIDATES = FileHelper.getModContainerCandidates();
-    public static final Map<Manifest, Path> SCRIPT_DIR_CANDIDATES = FileHelper.getScriptDirCandidates();
+    public static Set<ScriptCandidate<?>> CANDIDATES = new HashSet<>();
 
     @Override
     public void onInitialize() {
@@ -55,7 +52,10 @@ public class Allium implements ModInitializer {
         Events.init();
 
         Allium.LOGGER.info("Loading Scripts");
-        SCRIPT_DIR_CANDIDATES.forEach(Script::createSafe);
-        MOD_CONTAINER_CANDIDATES.forEach(Script::fromContainerSafe);
+        CANDIDATES.addAll(FileHelper.getScriptDirCandidates());
+        CANDIDATES.addAll(FileHelper.getModContainerCandidates());
+        CANDIDATES.addAll(FileHelper.getZipDirCandidates());
+        CANDIDATES.forEach(ScriptCandidate::load);
+        Script.initializeAll();
     }
 }

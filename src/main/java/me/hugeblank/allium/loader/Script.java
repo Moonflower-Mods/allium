@@ -1,19 +1,14 @@
 package me.hugeblank.allium.loader;
 
-import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.event.Event;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.function.LuaFunction;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -22,36 +17,39 @@ import java.util.Map;
 
 import static me.hugeblank.allium.Allium.PACK;
 
-public class Script {
+public abstract class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
 
+    // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
     private final ScriptExecutor executor;
     private final boolean loaded;
-    private final Path path;
-    private LuaValue module;
+    private boolean initialized = false;
+    protected LuaValue module;
 
-    public Script(Manifest manifest, Path path) {
-        this.path = path;
+    public Script(Manifest manifest) {
         this.manifest = manifest;
         this.executor = new ScriptExecutor(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
         boolean loaded;
         try {
             if (SCRIPTS.containsKey(manifest.id()))
-                throw new Exception("Could not load allium script on path " + path + " with duplicate ID");
+                throw new Exception("Script with ID is already loaded!");
             SCRIPTS.put(manifest.id(), this);
-            this.module = getExecutor().initialize(new FileInputStream(path.resolve(manifest.entrypoint()).toFile()));
+                PACK.register(this);
             loaded = true;
-            PACK.register(path);
-        } catch (UnwindThrowable | Exception e) {
-            getLogger().error("Could not initialize allium script " + getManifest().id(), e);
+        } catch (Exception e) {
+            getLogger().error("Could not load allium script " + getManifest().id(), e);
             unload();
             loaded = false;
         }
         this.loaded = loaded;
     }
+
+    public abstract Path getRootPath();
+
+    protected abstract InputStream loadEntrypoint() throws Throwable;
 
     public boolean isLoaded() {
         return loaded;
@@ -64,10 +62,54 @@ public class Script {
             List<Pair<Script, LuaFunction>> listeners = e.getListeners();
             listeners.removeIf(pair -> pair.getLeft().equals(this));
         }
-        if (path != null) PACK.drop(path);
+        PACK.drop(this);
     }
 
-    public static LuaTable getScriptList() {
+    public void initialize() {
+        if (isInitialized()) return;
+        try {
+            this.module = getExecutor().initialize(loadEntrypoint());
+            this.initialized = true;
+        } catch (Throwable e) {
+            getLogger().error("Could not initialize allium script " + getManifest().id(), e);
+            unload();
+        }
+    }
+
+    public boolean isInitialized() {
+        return initialized;
+    }
+
+    public static void initializeAll() {
+        SCRIPTS.forEach((id, script) -> {
+            if (!script.isInitialized()) script.initialize();
+        });
+    }
+
+    // return null if file isn't contained within Scripts path, or if it doesn't exist.
+    public abstract LuaValue loadLibrary(LuaState state, File mod) throws UnwindThrowable, LuaError;
+
+    public LuaValue getModule() {
+        return module;
+    }
+
+    public Manifest getManifest() {
+        return manifest;
+    }
+
+    public Logger getLogger() {
+        return logger;
+    }
+
+    public ScriptExecutor getExecutor() {
+        return this.executor;
+    }
+
+    public static Script getFromID(String id) {
+        return SCRIPTS.get(id);
+    }
+
+    public static LuaTable getScriptTable() {
         LuaTable out = new LuaTable();
         SCRIPTS.forEach((key, value) -> {
             Manifest man = value.getManifest();
@@ -80,24 +122,10 @@ public class Script {
         return out;
     }
 
-    public static Script getFromID(String id) {
-        return SCRIPTS.get(id);
-    }
-
-    public Manifest getManifest() {
-        return manifest;
-    }
-
-    public Logger getLogger() {
-        return logger;
-    }
-
-    public Path getRootPath() {
-        return path;
-    }
-
-    public LuaValue getModule() {
-        return module;
+    public static void unloadAll() {
+        // Unused. Let's think about script reload-ability in the future.
+        List<Script> scripts = new ArrayList<>(SCRIPTS.values());
+        scripts.forEach(Script::unload);
     }
 
     @Override
@@ -105,42 +133,5 @@ public class Script {
         return manifest.name();
     }
 
-    public ScriptExecutor getExecutor() {
-        return this.executor;
-    }
-
-    public LuaValue loadLibrary(LuaState state, File module) throws UnwindThrowable, LuaError {
-        // Ensure the modules parent path is the root path, and that the module exists before loading
-        if (!(module.toPath().startsWith(getRootPath()) && module.exists())) return null;
-        try {
-            LuaFunction loadValue = getExecutor().load(new FileInputStream(module), module.getName());
-            return loadValue.call(state);
-        } catch (FileNotFoundException e) {
-            // This should never happen, but if it does, boy do I want to know.
-            Allium.LOGGER.warn("File claimed to exist but threw a not found exception...", e);
-            return null;
-        } catch (CompileException | IOException e) {
-            throw new LuaError(e);
-        }
-    }
-
-    public static void unloadAll() {
-        // Unused. Let's think about script reload-ability in the future.
-        List<Script> scripts = new ArrayList<>(SCRIPTS.values());
-        scripts.forEach(Script::unload);
-    }
-
-    public static Script fromContainerSafe(Manifest man, ModContainer container) {
-        for (Path path : container.getRootPaths()) { // Search on all root paths in the mod for this file
-            if (path.resolve(man.entrypoint()).toFile().exists()) {
-                return createSafe(man, path);
-            }
-        }
-        return null;
-    }
-
-    public static Script createSafe(Manifest man, Path path) {
-        if (SCRIPTS.containsKey(man.id())) return null;
-        return new Script(man, path);
-    }
+    //  if ( i % 2 == 0) break;
 }
