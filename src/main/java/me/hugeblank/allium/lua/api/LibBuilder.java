@@ -1,6 +1,5 @@
 package me.hugeblank.allium.lua.api;
 
-import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.VarArgFunction;

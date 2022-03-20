@@ -38,7 +38,7 @@ public class ScriptExecutor {
 
         // Custom globals
         globals.load( state, AlliumLib.create(script) );
-        globals.load( state, new GameLib() );
+        globals.load( state, GameLib.create() );
         globals.load( state, JavaLib.create() );
         globals.load( state, TextLib.create() );
         globals.load( state, NbtLib.create() );
