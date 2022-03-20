@@ -1,5 +1,7 @@
 package me.hugeblank.allium.lua.api;
 
+import me.basiqueevangelist.enhancedreflection.api.EClass;
+import me.hugeblank.allium.lua.type.HideFromLua;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import net.minecraft.nbt.*;
 import org.jetbrains.annotations.Nullable;
@@ -8,11 +10,16 @@ import org.squiddev.cobalt.lib.LuaLibrary;
 
 public class NbtLib {
 
+    @HideFromLua
     public static LuaLibrary create() {
-        return LibBuilder.create("nbt")
-                .set("toNbt", (state, args) -> UserdataFactory.toLuaValue(toNbt(args.arg(1))))
-                .set("fromNbt", (state, args) -> fromNbt(args.arg(1).checkUserdata(NbtElement.class)))
-                .build();
+        return (state, env) -> {
+            LuaValue lib = JavaLib.importClass(EClass.fromJava(NbtLib.class));
+
+            env.rawset("nbt", lib);
+            state.loadedPackages.rawset("nbt", lib);
+
+            return lib;
+        };
     }
 
 
