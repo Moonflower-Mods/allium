@@ -17,7 +17,6 @@
 // Heavily stripped/modified version of FabricAPI's AlliumResourcePack
 package me.hugeblank.allium.loader.resources;
 
-import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.Script;
 import net.minecraft.resource.AbstractFileResourcePack;
 import net.minecraft.resource.ResourceType;
@@ -56,7 +55,7 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
     public static AlliumResourcePack create(String name) {
         Map<Script, Path> paths = new HashMap<>();
 
-        BASES.forEach((script) -> script.getFs().getRootDirectories().forEach((path) -> paths.put(script, path)));
+        BASES.forEach((script) -> paths.put(script, script.getPath()));
 
         return new AlliumResourcePack(name, paths, null);
     }
@@ -111,7 +110,7 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
         if (hasAbsentNs(filename)) return null;
 
         for (Map.Entry<Script, Path> entry : basePaths.entrySet()) {
-            Path childPath = entry.getKey().getFs().getPath(filename.replace("/", entry.getValue().getFileSystem().getSeparator()));
+            Path childPath = entry.getKey().getPath().resolve(filename.replace("/", entry.getValue().getFileSystem().getSeparator()));
             if (Files.exists(childPath)) {
                 // This is bad, YUCK! Don't do this! I get to because I'm running on no sleep. I'm suffering from a
                 // crippling addiction to working on this project. You are not.

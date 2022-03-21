@@ -26,13 +26,14 @@ import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.nio.file.Path;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class Allium implements ModInitializer {
 
     public static final String ID = "allium";
-    public static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir().resolve(ID);
     public static final Logger LOGGER = LoggerFactory.getLogger(ID);
     public static final Map<Identifier, Block> BLOCKS = new HashMap<>();
     public static final Map<Identifier, Item> ITEMS = new HashMap<>();
@@ -50,11 +51,10 @@ public class Allium implements ModInitializer {
         LOGGER.info("Initializing events");
         Events.init();
 
-        Allium.LOGGER.info("Loading Scripts");
+        LOGGER.info("Loading Scripts");
         CANDIDATES.addAll(FileHelper.getValidDirScripts());
         CANDIDATES.addAll(FileHelper.getValidModScripts());
         CANDIDATES.forEach(Script::initialize);
         PACK = AlliumResourcePack.create("allium_generated");
-        //Script.initializeAll();
     }
 }

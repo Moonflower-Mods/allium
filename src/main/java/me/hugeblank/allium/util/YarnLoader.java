@@ -24,8 +24,8 @@ import java.util.*;
 public class YarnLoader {
 
     private static final String MAPPINGS_JAR_LOCATION = "mappings/mappings.tiny";
-    private static final Path CACHED_MAPPINGS = Allium.CONFIG_DIR.resolve("mappings-" +  MinecraftVersion.create().getName() + ".tiny");
-    private static final Path VERSION_FILE = Allium.CONFIG_DIR.resolve("yarn-version.txt");
+    private static final Path CACHED_MAPPINGS = FileHelper.MAPPINGS_CFG_DIR.resolve("mappings-" +  MinecraftVersion.create().getName() + ".tiny");
+    private static final Path VERSION_FILE = FileHelper.MAPPINGS_CFG_DIR.resolve("yarn-version.txt");
 
     private static final String NAMESPACE_FROM = "intermediary";
     private static final String NAMESPACE_TO = "named";
@@ -52,13 +52,13 @@ public class YarnLoader {
             String artifactUrl = "https://maven.fabricmc.net/net/fabricmc/yarn/" + encodedYarnVersion + "/yarn-" + encodedYarnVersion + "-v2.jar";
 
             try {
-                Files.createDirectories(Allium.CONFIG_DIR);
+                Files.createDirectories(FileHelper.MAPPINGS_CFG_DIR);
             } catch (IOException e) {
                 Allium.LOGGER.error("Could not create " + Allium.ID + " directory!");
                 throw e;
             }
 
-            File jarFile = Allium.CONFIG_DIR.resolve("yarn-mappings.jar").toFile();
+            File jarFile = FileHelper.MAPPINGS_CFG_DIR.resolve("yarn-mappings.jar").toFile();
             jarFile.deleteOnExit();
             try {
                 FileUtils.copyURLToFile(new URL(artifactUrl), jarFile);
@@ -163,7 +163,7 @@ public class YarnLoader {
     }
 
     private static void ensureDirectoryExists() throws FileSystemException {
-        if (!Allium.CONFIG_DIR.toFile().exists() && !Allium.CONFIG_DIR.toFile().mkdir())
+        if (!FileHelper.MAPPINGS_CFG_DIR.toFile().exists() && !FileHelper.MAPPINGS_CFG_DIR.toFile().mkdir())
             throw new FileSystemException("Could not create allium config directory");
     }
 }

@@ -3,7 +3,6 @@ package me.hugeblank.allium.loader;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Event;
-import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,17 +10,15 @@ import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.function.LuaFunction;
 
-import java.io.*;
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-
-import static me.hugeblank.allium.Allium.PACK;
 
 public class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
@@ -33,11 +30,11 @@ public class Script {
     private final boolean loaded;
     private boolean initialized = false;
     protected LuaValue module;
-    private final FileSystem fs;
+    private final Path path;
 
-    public Script(Manifest manifest, FileSystem fs) {
+    public Script(Manifest manifest, Path path, boolean registerResources) {
         this.manifest = manifest;
-        this.fs = fs;
+        this.path = path;
         this.executor = new ScriptExecutor(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
         boolean loaded;
@@ -45,7 +42,7 @@ public class Script {
             if (SCRIPTS.containsKey(manifest.id()))
                 throw new Exception("Script with ID is already loaded!");
             SCRIPTS.put(manifest.id(), this);
-            AlliumResourcePack.register(this);
+            if (registerResources) AlliumResourcePack.register(this);
             loaded = true;
         } catch (Exception e) {
             getLogger().error("Could not load allium script " + getManifest().id(), e);
@@ -55,8 +52,12 @@ public class Script {
         this.loaded = loaded;
     }
 
+    public Script (Manifest manifest, Path path) {
+        this(manifest, path, true);
+    }
+
     protected InputStream loadEntrypoint() throws Throwable {
-        return Files.newInputStream(fs.getPath(manifest.entrypoint()));
+        return Files.newInputStream(path.resolve(manifest.entrypoint()));
     }
 
     public boolean isLoaded() {
@@ -88,12 +89,6 @@ public class Script {
         return initialized;
     }
 
-    public static void initializeAll() {
-        SCRIPTS.forEach((id, script) -> {
-            if (!script.isInitialized()) script.initialize();
-        });
-    }
-
     // return null if file isn't contained within Scripts path, or if it doesn't exist.
     public LuaValue loadLibrary(LuaState state, Path mod) throws UnwindThrowable, LuaError {
         // Ensure the modules parent path is the root path, and that the module exists before loading
@@ -113,8 +108,8 @@ public class Script {
         return module;
     }
 
-    public FileSystem getFs() {
-        return fs;
+    public Path getPath() {
+        return path;
     }
 
     public Manifest getManifest() {

@@ -2,17 +2,19 @@ package me.hugeblank.allium.util;
 
 import com.google.gson.Gson;
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.loader.*;
+import me.hugeblank.allium.loader.Manifest;
+import me.hugeblank.allium.loader.Script;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.api.metadata.ModMetadata;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.*;
-import java.util.*;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Stream;
-import java.util.zip.ZipFile;
 
 public class FileHelper {
     /* Allium Script directory spec
@@ -23,6 +25,8 @@ public class FileHelper {
     */
 
     public static final Path SCRIPT_DIR = FabricLoader.getInstance().getGameDir().resolve(Allium.ID);
+    public static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir().resolve(Allium.ID);
+    public static final Path MAPPINGS_CFG_DIR = FabricLoader.getInstance().getConfigDir().resolve(Allium.ID + "_mappings");
     public static final String MANIFEST_FILE_NAME = "manifest.json";
 
     public static Path getScriptsDirectory() {
@@ -42,27 +46,25 @@ public class FileHelper {
         try {
             Stream<Path> files = Files.list(FileHelper.getScriptsDirectory());
             files.forEach((scriptDir) -> {
+                Path path;
+                if (Files.isDirectory(scriptDir)) {
+                    path = scriptDir;
+                } else {
                     try {
-                        FileSystem fs;
-                        try {
-                            if (Files.isDirectory(scriptDir)) {
-                                fs = new PathFileSystem(FileSystems.getDefault(), scriptDir);
-                            } else {
-                                fs = FileSystems.newFileSystem(scriptDir);
-                            }
-                            if (Files.exists(fs.getPath(MANIFEST_FILE_NAME))) {
-                                BufferedReader reader = Files.newBufferedReader(fs.getPath(MANIFEST_FILE_NAME));
-                                Manifest manifest = new Gson().fromJson(reader, Manifest.class);
-                                out.add(new Script(manifest, fs));
-                            } else {
-                                Allium.LOGGER.error("Could not find " + MANIFEST_FILE_NAME  + " file on path " + scriptDir);
-                            }
-                        } catch (ProviderNotFoundException e) {
-                            // probably just .DS_Store or some dumb OS specific equivalent.
-                        }
+                        FileSystem fs = FileSystems.newFileSystem(scriptDir); // zip, tarball, whatever has a provider.
+                        path = fs.getPath("/");
                     } catch (IOException e) {
-                        Allium.LOGGER.error("Could not read " + MANIFEST_FILE_NAME + " on path " + scriptDir, e);
+                        Allium.LOGGER.warn("Could not read file on path " + scriptDir, e);
+                        return;
                     }
+                }
+                try {
+                    BufferedReader reader = Files.newBufferedReader(path.resolve(MANIFEST_FILE_NAME));
+                    Manifest manifest = new Gson().fromJson(reader, Manifest.class);
+                    out.add(new Script(manifest, path));
+                } catch (IOException e) {
+                    Allium.LOGGER.error("Could not find " + MANIFEST_FILE_NAME  + " file on path " + scriptDir);
+                }
             });
         } catch (IOException e) {
             // silencio.
@@ -85,11 +87,13 @@ public class FileHelper {
                     );
 
                     if (man == null || man.entrypoint() == null) { // Make sure the manifest exists and has an entrypoint
-                        Allium.LOGGER.error("Could not read entrypoint from mod with ID " + metadata.getId());
+                        Allium.LOGGER.error("Could not read entrypoint from script with ID " + metadata.getId());
                     } else {
                         Script script = scriptFromContainer(man, container);
                         if (script != null) {
                             out.add(script);
+                        } else {
+                            Allium.LOGGER.error("Could not read entrypoint from script with ID " + metadata.getId());
                         }
                     }
                 } catch (ClassCastException e) { // Not an object...
@@ -127,15 +131,10 @@ public class FileHelper {
     private static Script scriptFromContainer( Manifest man, ModContainer container) {
         final Script[] out = new Script[1];
         container.getRootPaths().forEach((path) -> {
-            try {
-                FileSystem fs = FileSystems.newFileSystem(path);
-                if (Files.exists(fs.getPath(man.entrypoint()))) {
-                    // This has an incidental safeguard in the event that multiple plugins with the same
-                    // ID, the most recent script loaded will just *overwrite* previous ones.
-                    out[0] = new Script(man, fs);
-                }
-            } catch (IOException e) {
-                // hush
+            if (path.resolve(man.entrypoint()).toFile().exists()) {
+                // This has an incidental safeguard in the event that multiple plugins with the same
+                // ID, the most recent script loaded will just *overwrite* previous ones.
+                out[0] = new Script(man, path, false);
             }
         });
         return out[0];
@@ -154,10 +153,6 @@ public class FileHelper {
         entrypoint = value.get("entrypoint") == null ? null : value.get("entrypoint").getAsString();
 
         return entrypoint == null ? null : new Manifest(id, version, name, entrypoint);
-    }
-
-    public static Path getResourcePackRoot(Path pluginPath) {
-        return pluginPath;
     }
 
     public static boolean hasManifestFile(Path pluginPath) {

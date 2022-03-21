@@ -32,10 +32,10 @@ public class PackageLib {
     private LuaValue loadFromPaths(LuaState state, Script script, String modStr) throws UnwindThrowable, LuaError {
         String[] paths = pathString.split(";");
         for (String pathStr : paths) {
-            Path path = script.getFs().getPath(pathStr.replace("?", modStr.replace(".", "/")));
+            Path path = script.getPath().resolve(pathStr.replace("?", modStr.replace(".", "/")));
             if (!Files.exists(path)) return null;
             try {
-                if (Files.isSameFile(path, script.getFs().getPath(script.getManifest().entrypoint()))) {
+                if (Files.isSameFile(path, script.getPath().resolve(script.getManifest().entrypoint()))) {
                     Allium.LOGGER.warn(
                         "Attempted to require entrypoint of script '" + script.getManifest().id() +
                                 "'. Use require(\"" + script.getManifest().id() + "\") if you'd like to get" +
