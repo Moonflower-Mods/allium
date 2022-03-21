@@ -2,12 +2,12 @@ package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.Script;
-import me.hugeblank.allium.loader.ScriptCandidate;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.OneArgFunction;
 
-import java.io.File;
-import java.util.Set;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 public class PackageLib {
     private final LuaTable loaders = new LuaTable();
@@ -31,18 +31,22 @@ public class PackageLib {
 
     private LuaValue loadFromPaths(LuaState state, Script script, String modStr) throws UnwindThrowable, LuaError {
         String[] paths = pathString.split(";");
-        File entrypoint = new File(script.getRootPath().toFile(), script.getManifest().entrypoint());
         for (String pathStr : paths) {
-            File module = new File(pathStr.replace("?", modStr.replace(".", "/")).replace("./", script.getRootPath().toString() + '/'));
-            if (entrypoint.compareTo(module) == 0) {
-                Allium.LOGGER.warn(
+            Path path = script.getFs().getPath(pathStr.replace("?", modStr.replace(".", "/")));
+            if (!Files.exists(path)) return null;
+            try {
+                if (Files.isSameFile(path, script.getFs().getPath(script.getManifest().entrypoint()))) {
+                    Allium.LOGGER.warn(
                         "Attempted to require entrypoint of script '" + script.getManifest().id() +
-                        "'. Use require(\"" + script.getManifest().id() + "\") if you'd like to get" +
-                        " the value loaded by the entrypoint script."
-                ); // Slap on the wrist. Allium has already handled loading of the script.
-                return null;
+                                "'. Use require(\"" + script.getManifest().id() + "\") if you'd like to get" +
+                                " the value loaded by the entrypoint script."
+                    ); // Slap on the wrist. Allium has already handled loading of the script.
+                    return null;
+                }
+            } catch (IOException e) {
+                // hush
             }
-            return script.loadLibrary(state, module);
+            return script.loadLibrary(state, path);
         }
         return null;
     }
@@ -92,28 +96,6 @@ public class PackageLib {
                     return candidate.getModule();
                 } else {
                     return loadFromPaths(state, candidate, toPath(path));
-                }
-            }
-            // return getModuleCandidate(state, Allium.CANDIDATES, path[0], toPath(path));
-            return null;
-        }
-
-        private LuaValue getModuleCandidate(LuaState state, Set<ScriptCandidate<?>> entrySet, String id, String modStr) throws UnwindThrowable, LuaError {
-            Allium.LOGGER.info(id + " | " + modStr);
-            for (ScriptCandidate<?> entry : entrySet) {
-                if (entry.manifest().id().equals(id)) {
-                    Script candidate = (Script) entry.load();
-                    candidate.initialize();
-                    if (candidate.isInitialized()) {
-                        if (modStr.isBlank()) return candidate.getModule();
-                        return loadFromPaths(state, candidate, modStr);
-                    } else {
-                        throw new LuaError(
-                                "Cyclic dependency found between '" +
-                                script.getManifest().id() + "' and '" +
-                                entry.manifest().id() + "'."
-                        );
-                    }
                 }
             }
             return null;

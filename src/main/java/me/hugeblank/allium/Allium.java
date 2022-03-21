@@ -12,7 +12,6 @@
 package me.hugeblank.allium;
 
 import me.hugeblank.allium.loader.Script;
-import me.hugeblank.allium.loader.ScriptCandidate;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
@@ -40,8 +39,8 @@ public class Allium implements ModInitializer {
     public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
     public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
-    public static final AlliumResourcePack PACK = new AlliumResourcePack();
-    public static Set<ScriptCandidate<?>> CANDIDATES = new HashSet<>();
+    public static AlliumResourcePack PACK;
+    public static Set<Script> CANDIDATES = new HashSet<>();
 
     @Override
     public void onInitialize() {
@@ -52,10 +51,10 @@ public class Allium implements ModInitializer {
         Events.init();
 
         Allium.LOGGER.info("Loading Scripts");
-        CANDIDATES.addAll(FileHelper.getScriptDirCandidates());
-        CANDIDATES.addAll(FileHelper.getModContainerCandidates());
-        CANDIDATES.addAll(FileHelper.getZipDirCandidates());
-        CANDIDATES.forEach(ScriptCandidate::load);
-        Script.initializeAll();
+        CANDIDATES.addAll(FileHelper.getValidDirScripts());
+        CANDIDATES.addAll(FileHelper.getValidModScripts());
+        CANDIDATES.forEach(Script::initialize);
+        PACK = AlliumResourcePack.create("allium_generated");
+        //Script.initializeAll();
     }
 }

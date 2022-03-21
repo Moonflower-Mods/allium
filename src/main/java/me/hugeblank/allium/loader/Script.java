@@ -1,14 +1,20 @@
 package me.hugeblank.allium.loader;
 
+import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Event;
 import net.fabricmc.loader.api.ModContainer;
 import net.minecraft.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.io.*;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -17,7 +23,7 @@ import java.util.Map;
 
 import static me.hugeblank.allium.Allium.PACK;
 
-public abstract class Script {
+public class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
 
     // The Man(ifest) who can't be moved
@@ -27,9 +33,11 @@ public abstract class Script {
     private final boolean loaded;
     private boolean initialized = false;
     protected LuaValue module;
+    private final FileSystem fs;
 
-    public Script(Manifest manifest) {
+    public Script(Manifest manifest, FileSystem fs) {
         this.manifest = manifest;
+        this.fs = fs;
         this.executor = new ScriptExecutor(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
         boolean loaded;
@@ -37,7 +45,7 @@ public abstract class Script {
             if (SCRIPTS.containsKey(manifest.id()))
                 throw new Exception("Script with ID is already loaded!");
             SCRIPTS.put(manifest.id(), this);
-                PACK.register(this);
+            AlliumResourcePack.register(this);
             loaded = true;
         } catch (Exception e) {
             getLogger().error("Could not load allium script " + getManifest().id(), e);
@@ -47,9 +55,9 @@ public abstract class Script {
         this.loaded = loaded;
     }
 
-    public abstract Path getRootPath();
-
-    protected abstract InputStream loadEntrypoint() throws Throwable;
+    protected InputStream loadEntrypoint() throws Throwable {
+        return Files.newInputStream(fs.getPath(manifest.entrypoint()));
+    }
 
     public boolean isLoaded() {
         return loaded;
@@ -62,7 +70,7 @@ public abstract class Script {
             List<Pair<Script, LuaFunction>> listeners = e.getListeners();
             listeners.removeIf(pair -> pair.getLeft().equals(this));
         }
-        PACK.drop(this);
+        AlliumResourcePack.drop(this);
     }
 
     public void initialize() {
@@ -87,10 +95,26 @@ public abstract class Script {
     }
 
     // return null if file isn't contained within Scripts path, or if it doesn't exist.
-    public abstract LuaValue loadLibrary(LuaState state, File mod) throws UnwindThrowable, LuaError;
+    public LuaValue loadLibrary(LuaState state, Path mod) throws UnwindThrowable, LuaError {
+        // Ensure the modules parent path is the root path, and that the module exists before loading
+        try {
+            LuaFunction loadValue = getExecutor().load(Files.newInputStream(mod), mod.getFileName().toString());
+            return loadValue.call(state);
+        } catch (FileNotFoundException e) {
+            // This should never happen, but if it does, boy do I want to know.
+            Allium.LOGGER.warn("File claimed to exist but threw a not found exception...", e);
+            return null;
+        } catch (CompileException | IOException e) {
+            throw new LuaError(e);
+        }
+    }
 
     public LuaValue getModule() {
         return module;
+    }
+
+    public FileSystem getFs() {
+        return fs;
     }
 
     public Manifest getManifest() {
@@ -102,7 +126,7 @@ public abstract class Script {
     }
 
     public ScriptExecutor getExecutor() {
-        return this.executor;
+        return executor;
     }
 
     public static Script getFromID(String id) {

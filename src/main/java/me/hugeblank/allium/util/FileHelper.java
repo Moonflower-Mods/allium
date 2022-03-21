@@ -7,15 +7,12 @@ import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 import net.fabricmc.loader.api.metadata.CustomValue;
 import net.fabricmc.loader.api.metadata.ModMetadata;
-import org.apache.commons.io.input.ReaderInputStream;
 
 import java.io.*;
-import java.nio.file.FileSystemException;
-import java.nio.file.Path;
+import java.nio.file.*;
 import java.util.*;
-import java.util.zip.ZipEntry;
+import java.util.stream.Stream;
 import java.util.zip.ZipFile;
-import java.util.zip.ZipInputStream;
 
 public class FileHelper {
     /* Allium Script directory spec
@@ -25,59 +22,56 @@ public class FileHelper {
           manifest.json |  File containing key information about the script. ID, Name, Version, Entrypoint file
     */
 
-    public static final File SCRIPT_DIR = FabricLoader.getInstance().getGameDir().resolve(Allium.ID).toFile();
+    public static final Path SCRIPT_DIR = FabricLoader.getInstance().getGameDir().resolve(Allium.ID);
     public static final String MANIFEST_FILE_NAME = "manifest.json";
 
-    public static File getScriptsDirectory() {
-        if (!SCRIPT_DIR.exists()) {
+    public static Path getScriptsDirectory() {
+        if (!Files.exists(SCRIPT_DIR)) {
             Allium.LOGGER.warn("Missing allium directory, creating one for you");
-            if (!SCRIPT_DIR.mkdir()) {
-                Allium.LOGGER.error("Could not create allium directory, something is seriously wrong!");
-                throw new RuntimeException("Failed to create allium directory", new FileSystemException(SCRIPT_DIR.toPath().toAbsolutePath().toString()));
+            try {
+                Files.createDirectory(SCRIPT_DIR);
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to create allium directory", new FileSystemException(SCRIPT_DIR.toAbsolutePath().toString()));
             }
         }
         return SCRIPT_DIR;
     }
 
-    public static Set<ScriptCandidate<Path>> getScriptDirCandidates() {
-        Set<ScriptCandidate<Path>> out = new HashSet<>();
-        File[] files = Objects.requireNonNull(FileHelper.getScriptsDirectory().listFiles());
-        for (File pluginDir : files) {
-            if (pluginDir.isDirectory() && FileHelper.hasManifestFile(pluginDir.toPath())) {
-                File manifestJson = FileHelper.getManifestPath(pluginDir.toPath()).toFile();
-                try (FileReader reader = new FileReader(manifestJson)) {
-                    Manifest manifest = new Gson().fromJson(reader, Manifest.class);
-                    out.add(new ScriptCandidate<>(manifest, pluginDir.toPath(), DirectoryScript::new));
-                } catch (IOException e) {
-                    Allium.LOGGER.error("Could not read " + manifestJson, e);
-                }
-            }
+    public static Set<Script> getValidDirScripts() {
+        Set<Script> out = new HashSet<>();
+        try {
+            Stream<Path> files = Files.list(FileHelper.getScriptsDirectory());
+            files.forEach((scriptDir) -> {
+                    try {
+                        FileSystem fs;
+                        try {
+                            if (Files.isDirectory(scriptDir)) {
+                                fs = new PathFileSystem(FileSystems.getDefault(), scriptDir);
+                            } else {
+                                fs = FileSystems.newFileSystem(scriptDir);
+                            }
+                            if (Files.exists(fs.getPath(MANIFEST_FILE_NAME))) {
+                                BufferedReader reader = Files.newBufferedReader(fs.getPath(MANIFEST_FILE_NAME));
+                                Manifest manifest = new Gson().fromJson(reader, Manifest.class);
+                                out.add(new Script(manifest, fs));
+                            } else {
+                                Allium.LOGGER.error("Could not find " + MANIFEST_FILE_NAME  + " file on path " + scriptDir);
+                            }
+                        } catch (ProviderNotFoundException e) {
+                            // probably just .DS_Store or some dumb OS specific equivalent.
+                        }
+                    } catch (IOException e) {
+                        Allium.LOGGER.error("Could not read " + MANIFEST_FILE_NAME + " on path " + scriptDir, e);
+                    }
+            });
+        } catch (IOException e) {
+            // silencio.
         }
         return out;
     }
 
-    public static Set<ScriptCandidate<ZipFile>> getZipDirCandidates() {
-        Set<ScriptCandidate<ZipFile>> out = new HashSet<>();
-        File[] files = Objects.requireNonNull(FileHelper.getScriptsDirectory().listFiles());
-        for (File pluginDir : files) {
-            if (pluginDir.isFile()) {
-                try {
-                    ZipFile zip = new ZipFile(pluginDir);
-                    InputStreamReader reader = new InputStreamReader(
-                            zip.getInputStream(zip.getEntry(MANIFEST_FILE_NAME))
-                    );
-                    Manifest manifest = new Gson().fromJson(reader, Manifest.class);
-                    out.add(new ScriptCandidate<>(manifest, zip, ZipFileScript::new));
-                } catch (IOException e) {
-                    // hush
-                }
-            }
-        }
-        return out;
-    }
-
-    public static Set<ScriptCandidate<ModContainer>> getModContainerCandidates() { // I have no idea if this works in production.
-        Set<ScriptCandidate<ModContainer>> out = new HashSet<>();
+    public static Set<Script> getValidModScripts() { // I have no idea if this works in production.
+        Set<Script> out = new HashSet<>();
         FabricLoader.getInstance().getAllMods().forEach((container) -> {
             if (container.getMetadata().getCustomValue("allium") != null) {
                 ModMetadata metadata = container.getMetadata();
@@ -93,7 +87,10 @@ public class FileHelper {
                     if (man == null || man.entrypoint() == null) { // Make sure the manifest exists and has an entrypoint
                         Allium.LOGGER.error("Could not read entrypoint from mod with ID " + metadata.getId());
                     } else {
-                        out.add(new ScriptCandidate<>(man, container, ModContainerScript::new));
+                        Script script = scriptFromContainer(man, container);
+                        if (script != null) {
+                            out.add(script);
+                        }
                     }
                 } catch (ClassCastException e) { // Not an object...
                     try { // Maybe the value is an array?
@@ -104,7 +101,10 @@ public class FileHelper {
                                 CustomValue.CvObject obj = v.getAsObject();
                                 Manifest man = makeManifest(obj); // No optional arguments here.
                                 if (man.isComplete()) {
-                                    out.add(new ScriptCandidate<>(man, container, ModContainerScript::new));
+                                    Script script = scriptFromContainer(man, container);
+                                    if (script != null) {
+                                        out.add(script);
+                                    }
                                 } else { // a value was missing. Be forgiving, and continue parsing
                                     Allium.LOGGER.warn("Malformed manifest at index " + i + " of allium array block in " +
                                             "fabric.mod.json of mod '" + metadata.getId() + "'");
@@ -124,6 +124,23 @@ public class FileHelper {
         return out;
     }
 
+    private static Script scriptFromContainer( Manifest man, ModContainer container) {
+        final Script[] out = new Script[1];
+        container.getRootPaths().forEach((path) -> {
+            try {
+                FileSystem fs = FileSystems.newFileSystem(path);
+                if (Files.exists(fs.getPath(man.entrypoint()))) {
+                    // This has an incidental safeguard in the event that multiple plugins with the same
+                    // ID, the most recent script loaded will just *overwrite* previous ones.
+                    out[0] = new Script(man, fs);
+                }
+            } catch (IOException e) {
+                // hush
+            }
+        });
+        return out[0];
+    }
+
     private static Manifest makeManifest(CustomValue.CvObject value) {
         return makeManifest(value, null, null, null);
     }
@@ -139,13 +156,11 @@ public class FileHelper {
         return entrypoint == null ? null : new Manifest(id, version, name, entrypoint);
     }
 
-    public static File getResourcePackRoot(Path pluginPath) {
-        return pluginPath.toFile();
+    public static Path getResourcePackRoot(Path pluginPath) {
+        return pluginPath;
     }
 
     public static boolean hasManifestFile(Path pluginPath) {
-        return pluginPath.resolve(MANIFEST_FILE_NAME).toFile().exists();
+        return Files.exists(pluginPath.resolve(MANIFEST_FILE_NAME));
     }
-
-    public static Path getManifestPath(Path pluginPath) { return pluginPath.resolve(MANIFEST_FILE_NAME); }
 }

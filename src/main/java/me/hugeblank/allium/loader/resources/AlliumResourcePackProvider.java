@@ -10,12 +10,17 @@ import java.util.function.Consumer;
 public class AlliumResourcePackProvider implements ResourcePackProvider {
     @Override
     public void register(Consumer<ResourcePackProfile> profileAdder, ResourcePackProfile.Factory factory) {
-        profileAdder.accept(ResourcePackProfile.of(
-                Allium.PACK.getName(),
-                true,
-                () -> Allium.PACK, factory,
-                ResourcePackProfile.InsertionPosition.TOP,
-                ResourcePackSource.PACK_SOURCE_BUILTIN
-        ));
+        if (Allium.PACK != null) {
+            profileAdder.accept(ResourcePackProfile.of(
+                    Allium.PACK.getName(),
+                    true,
+                    () -> Allium.PACK, factory,
+                    ResourcePackProfile.InsertionPosition.TOP,
+                    ResourcePackSource.PACK_SOURCE_BUILTIN
+            ));
+        } else {
+            Allium.LOGGER.error("Could not load Allium Generated resource pack. " +
+                    "Items added by scripts will not display correctly!");
+        }
     }
 }
