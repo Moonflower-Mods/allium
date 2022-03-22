@@ -12,3 +12,4 @@ vscode:
   extensions:
     - richardwillis.vscode-gradle
     - vscjava.vscode-java-pack
+    - zerodind.familiar-java-themes
