@@ -15,7 +15,7 @@ public class ServerPlayNetworkHandlerMixin {
     @Shadow
     public ServerPlayerEntity player;
 
-    @Inject(at = @At(value = "INVOKE", target = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Lnet/minecraft/network/MessageType;Ljava/util/UUID;)V"), method = "handleMessage(Lnet/minecraft/server/filter/TextStream$Message;)V")
+    @Inject(at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Lnet/minecraft/network/MessageType;Ljava/util/UUID;)V"), method = "handleMessage(Lnet/minecraft/server/filter/TextStream$Message;)V")
     private void onChatMessage(TextStream.Message message, CallbackInfo ci) {
         String msg = message.getFiltered();
         Events.CHAT_MESSAGE.queueEvent(player, msg);

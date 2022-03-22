@@ -1,0 +1,6 @@
+{
+  "id": "hangman",
+  "version": "1.0.0",
+  "name": "Hangman",
+  "entrypoint": "main.lua"
+}

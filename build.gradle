@@ -6,6 +6,13 @@ plugins {
 sourceCompatibility = JavaVersion.VERSION_17
 targetCompatibility = JavaVersion.VERSION_17
 
+// Following by example, using semantic versioning
+String v = 'v' + project.mod_version
+if ("0" != project.release_candidate) {
+	v += "-rc" + project.release_candidate
+}
+version = v + '+mc' + project.minecraft_version
+
 repositories {
 	// Add repositories to retrieve artifacts from in here.
 	// You should only use this when depending on other mods because
@@ -31,7 +38,7 @@ repositories {
 }
 
 configurations {
-	embedAPI
+	embedAPI // Things we depend on that we want *in* the built allium JAR
 	api.extendsFrom embedAPI
 }
 
@@ -40,15 +47,14 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	embedAPI "org.squiddev:Cobalt:${project.cobalt_version}"
+	embedAPI "org.squiddev:Cobalt:${project.cobalt}"
 	embedAPI "net.fabricmc:tiny-mappings-parser:${project.tiny_parser}"
+	embedAPI "me.basiqueevangelist:enhanced-reflection:${project.enhanced_reflections}"
 
-	embedAPI 'me.basiqueevangelist:enhanced-reflection:0.1.1'
-
-	// Used for testing
-	modImplementation "net.fabricmc.fabric-api:fabric-api:0.47.8+1.18.2"
-	/*modImplementation include("eu.pb4:placeholder-api:1.1.3+1.17.1")
-	modImplementation include("eu.pb4:polymer:0.2.0-beta.29+1.18.2")*/
+	// Used for testing Scripts. No code in the repo should depend on these
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api}"
+	modImplementation include("eu.pb4:placeholder-api:${project.placeholder_api}")
+	modImplementation include("eu.pb4:polymer:${project.polymer}+${project.minecraft_version}")
 }
 
 processResources {

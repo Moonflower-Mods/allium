@@ -66,6 +66,7 @@ public class Events {
             }
         });
         PLAYER_BLOCK_COLLISION = new Event("player_block_collision", (objects) -> {
+            // Expects: [ServerPlayerEntity player, BlockState state]
             try {
                 return ValueFactory.varargsOf(
                         UserdataFactory.of(EClass.fromJava(ServerPlayerEntity.class)).create(objects[0]),
@@ -76,6 +77,7 @@ public class Events {
             }
         });
         PLAYER_DEATH = new Event("player_death", (objects) -> {
+            // Expects: [ServerPlayerEntity player, DamageSource source]
             try {
                 return ValueFactory.varargsOf(
                         UserdataFactory.of(EClass.fromJava(ServerPlayerEntity.class)).create(objects[0]),
@@ -86,6 +88,7 @@ public class Events {
             }
         });
         BLOCK_INTERACT = new Event("block_interact", (objects) -> {
+            // Expects: [BlockState state, World world, BlockPos pos, ServerPlayerEntity player, Hand hand, BlockHitResult hitResult]
             try {
                 return ValueFactory.varargsOf(
                         UserdataFactory.of(EClass.fromJava(BlockState.class)).create(objects[0]),
@@ -100,10 +103,9 @@ public class Events {
             }
         });
         SERVER_TICK = new Event("server_tick", (objects) -> {
+            // Expects: nothing
             try {
-                return ValueFactory.varargsOf(
-
-                );
+                return ValueFactory.varargsOf();
             } catch(ClassCastException e) {
                 return Constants.NIL;
             }

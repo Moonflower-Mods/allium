@@ -54,8 +54,7 @@ public class FileHelper {
                         FileSystem fs = FileSystems.newFileSystem(scriptDir); // zip, tarball, whatever has a provider.
                         path = fs.getPath("/");
                     } catch (IOException e) {
-                        Allium.LOGGER.warn("Could not read file on path " + scriptDir, e);
-                        return;
+                        return; // Just a file we can't read, ignore it and move on.
                     }
                 }
                 try {
@@ -63,11 +62,11 @@ public class FileHelper {
                     Manifest manifest = new Gson().fromJson(reader, Manifest.class);
                     out.add(new Script(manifest, path));
                 } catch (IOException e) {
-                    Allium.LOGGER.error("Could not find " + MANIFEST_FILE_NAME  + " file on path " + scriptDir);
+                    Allium.LOGGER.error("Could not find " + MANIFEST_FILE_NAME  + " file on path " + scriptDir, e);
                 }
             });
         } catch (IOException e) {
-            // silencio.
+            Allium.LOGGER.error("Could not read from scripts directory", e);
         }
         return out;
     }
@@ -153,9 +152,5 @@ public class FileHelper {
         entrypoint = value.get("entrypoint") == null ? null : value.get("entrypoint").getAsString();
 
         return entrypoint == null ? null : new Manifest(id, version, name, entrypoint);
-    }
-
-    public static boolean hasManifestFile(Path pluginPath) {
-        return Files.exists(pluginPath.resolve(MANIFEST_FILE_NAME));
     }
 }
