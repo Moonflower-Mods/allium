@@ -6,19 +6,21 @@ import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.*;
 import me.hugeblank.allium.util.Mappings;
+import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
-import org.squiddev.cobalt.lib.LuaLibrary;
 
-import java.lang.reflect.*;
+import java.lang.reflect.InaccessibleObjectException;
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class JavaLib {
+@LuaWrapped
+public class JavaLib implements WrappedLuaLibrary {
     private static final String[] AUTO_COMPLETE = new String[]{
             "",
             "java.util.",
@@ -46,68 +48,28 @@ public class JavaLib {
 
     private static final Map<String, String> CACHED_AUTO_COMPLETE = new HashMap<>();
 
-    // TODO: Optionally provide userdata as the first argument for the class in most methods.
-    @HideFromLua
-    public static LuaLibrary create() {
-        return (state, env) -> {
-            LuaValue lib = JavaLib.importClass(EClass.fromJava(JavaLib.class));
-
-            env.rawset("java", lib);
-            state.loadedPackages.rawset("java", lib);
-
-            return lib;
-        };
-    }
-
-    @LuaName("import")
+    @LuaWrapped(name = "import")
     public static LuaValue importClass(EClass<?> clazz) {
         List<EMethod> staticMethods = new ArrayList<>();
         List<EField> staticFields = new ArrayList<>();
 
         for (EMethod declaredMethod : clazz.declaredMethods()) {
-            if (declaredMethod.isPublic() && declaredMethod.isStatic() && !declaredMethod.isAbstract() && !declaredMethod.hasAnnotation(HideFromLua.class)) {
+            if (declaredMethod.isPublic() && declaredMethod.isStatic() && !declaredMethod.isAbstract() && !AnnotationUtils.isHiddenFromLua(clazz, declaredMethod)) {
                 staticMethods.add(declaredMethod);
             }
         }
 
         for (EField declaredField : clazz.declaredFields()) {
-            if (declaredField.isPublic() && declaredField.isStatic() && !declaredField.isAbstract() && !declaredField.hasAnnotation(HideFromLua.class)) {
+            if (declaredField.isPublic() && declaredField.isStatic() && !declaredField.isAbstract() && !AnnotationUtils.isHiddenFromLua(clazz, declaredField)) {
                 staticFields.add(declaredField);
             }
         }
 
-        LuaTable mt = new LuaTable();
-        mt.rawset("__call", new VarArgFunction() {
-            @Override
-            public Varargs invoke(LuaState state, Varargs args) throws LuaError {
-                return JavaLib.createInstance(
-                        state,
-                        ValueFactory.varargsOf(UserdataFactory.toLuaValue(clazz), args.subargs(2))
-                );
-            }
-        });
-        mt.rawset("__index", new TwoArgFunction() {
-            @Override
-            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-                LuaTable table = arg2.checkTable();
-                EClass<?>[] typeArgs = new EClass[table.getArrayLength()];
+        var inst = new StaticMethods(clazz, staticMethods, staticFields);
+        LuaTable table = inst.create();
+        table.setMetatable(inst.createMetaTable());
 
-                for (int i = 0; i < typeArgs.length; i++) {
-                    typeArgs[i] = asClass(table.rawget(i + 1));
-                }
-
-                try {
-                    return importClass(clazz.instantiateWith(List.of(typeArgs)));
-                } catch (IllegalArgumentException e) {
-                    throw new LuaError(e);
-                }
-            }
-        });
-
-        LuaTable impord = new StaticMethods(clazz, staticMethods, staticFields).create();
-        impord.setMetatable(mt);
-
-        return impord;
+        return table;
     }
 
     private static Varargs invokeStatic(EClass<?> clazz, String name, EMethod[] methods, LuaState state, Varargs args) throws LuaError {
@@ -149,14 +111,17 @@ public class JavaLib {
     }
 
     // TODO: merge this with the Lua string library
+    @LuaWrapped
     public static String[] split(String strToSplit, String delimiter) throws LuaError {
         return strToSplit.split(delimiter);
     }
 
+    @LuaWrapped
     public static String toYarn(String string) {
         return Allium.MAPPINGS.getYarn(string);
     }
 
+    @LuaWrapped
     public static List<String> fromYarn(String string) {
         return Allium.MAPPINGS.getIntermediary(string);
     }
@@ -166,7 +131,7 @@ public class JavaLib {
 
         List<String> paramList = new ArrayList<>();
         for (var constructor : clazz.constructors()) {
-            if (constructor.hasAnnotation(HideFromLua.class)) continue;
+            if (AnnotationUtils.isHiddenFromLua(clazz, constructor)) continue;
 
             var parameters = constructor.parameters();
             if (args.count() - 1 == parameters.size()) {
@@ -199,6 +164,7 @@ public class JavaLib {
         throw new LuaError(error.toString());
     }
 
+    @LuaWrapped
     public static LuaValue cast(@LuaStateArg LuaState state, EClass<?> klass, LuaUserdata object) throws LuaError {
         try {
             return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, object, klass));
@@ -208,6 +174,7 @@ public class JavaLib {
         }
     }
 
+    @LuaWrapped
     public static boolean exists(String string, @OptionalArg Class<?>[] value) {
         try {
             var parts = string.split("#");
@@ -233,10 +200,12 @@ public class JavaLib {
         }
     }
 
-    public static LuaTable extendClass(@LuaStateArg LuaState state, EClass<?> superclass, List<EClass<?>> interfaces) {
-        return ClassBuilder.createLua(superclass, interfaces.toArray(new EClass[0]), state);
+    @LuaWrapped
+    public static ClassBuilder extendClass(@LuaStateArg LuaState state, EClass<?> superclass, List<EClass<?>> interfaces) {
+        return new ClassBuilder(superclass, interfaces, state);
     }
 
+    @LuaWrapped
     public static EClass<?> getRawClass(String className) throws LuaError {
         var cachedClassName = CACHED_AUTO_COMPLETE.get(className);
 
@@ -273,7 +242,6 @@ public class JavaLib {
     }
 
     @SuppressWarnings("unchecked")
-    @HideFromLua
     public static EClass<?> asClass(LuaValue value) throws LuaError {
         if (value.isString()) {
             return getRawClass(value.checkString());
@@ -292,28 +260,36 @@ public class JavaLib {
         throw new LuaError(new ClassNotFoundException());
     }
 
+    @Override
+    public String getLibraryName() {
+        return "java";
+    }
+
     private static class StaticMethods {
         private final EClass<?> clazz;
         private final EMethod[][] methods;
         private final String[] methodNames;
         private final EField[] fields;
+        private final @Nullable EMethod indexImpl;
 
         public StaticMethods(EClass<?> clazz, List<EMethod> methods, List<EField> fields) {
             this.clazz = clazz;
             var methodMap = new HashMap<String, List<EMethod>>();
 
             for (var method : methods) {
+                String[] altNames = AnnotationUtils.findNames(method);
+                if (altNames != null) {
+                    for (String altName : altNames) {
+                        methodMap.computeIfAbsent(altName, unused -> new ArrayList<>()).add(method);
+                    }
+
+                    continue;
+                }
+
                 methodMap.computeIfAbsent(
                         Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.name(), method.name())).split("#")[1],
                         (s) -> new ArrayList<>()
                 ).add(method);
-
-                LuaName luaName = method.annotation(LuaName.class);
-                if (luaName != null) {
-                    for (String altName : luaName.value()) {
-                        methodMap.computeIfAbsent(altName, unused -> new ArrayList<>()).add(method);
-                    }
-                }
             }
             this.methods = new EMethod[methodMap.size()][];
             this.methodNames = new String[methodMap.size()];
@@ -326,6 +302,66 @@ public class JavaLib {
             }
 
             this.fields = fields.toArray(new EField[0]);
+            this.indexImpl = clazz.methods().stream().filter(x -> x.isStatic() && x.hasAnnotation(LuaIndex.class)).findAny().orElse(null);
+        }
+
+        public LuaTable createMetaTable() {
+            LuaTable mt = new LuaTable();
+
+            mt.rawset("__call", new VarArgFunction() {
+                @Override
+                public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+                    return JavaLib.createInstance(
+                        state,
+                        ValueFactory.varargsOf(UserdataFactory.toLuaValue(clazz), args.subargs(2))
+                    );
+                }
+            });
+
+            mt.rawset("__index", new TwoArgFunction() {
+                @Override
+                public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+                    if (indexImpl != null) {
+                        var parameters = indexImpl.parameters();
+                        try {
+                            var jargs = UserdataFactory.toJavaArguments(state, arg2, 1, parameters);
+
+                            if (jargs.length == parameters.size()) {
+                                try {
+                                    EClass<?> ret = indexImpl.returnType().upperBound();
+                                    Object out = indexImpl.invoke(null, jargs);
+                                    return UserdataFactory.toLuaValue(out, ret);
+                                } catch (IllegalAccessException e) {
+                                    throw new LuaError(e);
+                                } catch (InvocationTargetException e) {
+                                    if (e.getTargetException() instanceof LuaError err)
+                                        throw err;
+
+                                    throw new LuaError(e);
+                                }
+                            }
+                        } catch (UserdataFactory.InvalidArgumentException | IllegalArgumentException e) {
+                            // Continue.
+                        }
+                    }
+
+                    if (!arg2.isTable()) return Constants.NIL;
+                    LuaTable table = arg2.checkTable();
+                    EClass<?>[] typeArgs = new EClass[table.getArrayLength()];
+
+                    for (int i = 0; i < typeArgs.length; i++) {
+                        typeArgs[i] = asClass(table.rawget(i + 1));
+                    }
+
+                    try {
+                        return importClass(clazz.instantiateWith(List.of(typeArgs)));
+                    } catch (IllegalArgumentException e) {
+                        throw new LuaError(e);
+                    }
+                }
+            });
+
+            return mt;
         }
 
         public LuaTable create() {
@@ -340,9 +376,9 @@ public class JavaLib {
 
             for (var field : fields) {
                 try {
-                    LuaName luaName = field.annotation(LuaName.class);
-                    if (luaName != null) {
-                        for (String altName : luaName.value()) {
+                    String[] altNames = AnnotationUtils.findNames(field);
+                    if (altNames != null) {
+                        for (String altName : altNames) {
                             if (tbl.rawget(altName) == Constants.NIL) {
                                 tbl.rawset(altName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
                             } else {
