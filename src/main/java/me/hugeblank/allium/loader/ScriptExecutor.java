@@ -1,8 +1,7 @@
 package me.hugeblank.allium.loader;
 
-import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.PackageLib;
-import net.minecraft.resource.DirectoryResourcePack;
+import me.hugeblank.allium.lua.api.*;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -10,7 +9,8 @@ import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.*;
 
-import java.io.*;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class ScriptExecutor {
     protected final Script script;
@@ -37,13 +37,13 @@ public class ScriptExecutor {
         globals.load( state, new DebugLib() );
 
         // Custom globals
-        globals.load( state, AlliumLib.create(script) );
-        globals.load( state, GameLib.create() );
-        globals.load( state, JavaLib.create() );
-        globals.load( state, TextLib.create() );
-        globals.load( state, NbtLib.create() );
-        globals.load( state, CommandLib.create(script) );
-        globals.load( state, ScriptLib.create(script) );
+        globals.load( state, new AlliumLib(script) );
+        globals.load( state, new GameLib() );
+        globals.load( state, new JavaLib() );
+        globals.load( state, new TextLib() );
+        globals.load( state, new NbtLib() );
+        globals.load( state, new CommandLib(script) );
+        globals.load( state, new ScriptLib(script) );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib();

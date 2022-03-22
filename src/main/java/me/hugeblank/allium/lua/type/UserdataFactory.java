@@ -8,12 +8,16 @@ import me.basiqueevangelist.enhancedreflection.api.*;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.JavaLib;
 import me.hugeblank.allium.util.Mappings;
+import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.ThreeArgFunction;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 
-import java.lang.reflect.*;
+import java.lang.reflect.Array;
+import java.lang.reflect.InvocationHandler;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -23,12 +27,48 @@ public class UserdataFactory<T> {
     private final Map<String, EField> cachedFields = new HashMap<>();
     private final EClass<T> clazz;
     private final List<EMethod> methods;
-    private final LuaTable metatable = new LuaTable();
+    private final LuaTable metatable;
+    private @Nullable LuaTable boundMetatable;
+    private final @Nullable EMethod indexImpl;
 
-    {
+    protected UserdataFactory(EClass<T> clazz) {
+        this.clazz = clazz;
+        this.methods = clazz.methods();
+        this.indexImpl = clazz.methods().stream().filter(x -> !x.isStatic() && x.hasAnnotation(LuaIndex.class)).findAny().orElse(null);
+        this.metatable = createMetatable(false);
+    }
+
+    private LuaTable createMetatable(boolean isBound) {
+        LuaTable metatable = new LuaTable();
+
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+                if (indexImpl != null) {
+                    var parameters = indexImpl.parameters();
+                    try {
+                        var jargs = toJavaArguments(state, arg2, 1, parameters);
+
+                        if (jargs.length == parameters.size()) {
+                            try {
+                                var instance = toJava(state, arg1, clazz);
+                                EClass<?> ret = indexImpl.returnType().upperBound();
+                                Object out = indexImpl.invoke(instance, jargs);
+                                return toLuaValue(out, ret);
+                            } catch (IllegalAccessException e) {
+                                throw new LuaError(e);
+                            } catch (InvocationTargetException e) {
+                                if (e.getTargetException() instanceof LuaError err)
+                                    throw err;
+
+                                throw new LuaError(e);
+                            }
+                        }
+                    } catch (InvalidArgumentException | IllegalArgumentException e) {
+                        // Continue.
+                    }
+                }
+
                 String name = arg2.checkString(); // mapped name
                 List<EMethod> matchedMethods = cachedMethods.get(name);
                 if (matchedMethods == null) {
@@ -41,7 +81,7 @@ public class UserdataFactory<T> {
                     matchedMethods = collectedMatches;
                 }
 
-                if (matchedMethods.size() > 0) return new UDFFunctions<>(clazz, matchedMethods);
+                if (matchedMethods.size() > 0) return new UDFFunctions<>(clazz, matchedMethods, name, isBound ? arg1.checkUserdata(clazz.raw()) : null);
 
                 EField matchedField = cachedFields.get(name);
                 if (matchedField == null) {
@@ -51,7 +91,7 @@ public class UserdataFactory<T> {
 
                 if (matchedField != null) {
                     try {
-                        return toLuaValue(matchedField.get(toJava(state, arg1, clazz)));
+                        return toLuaValue(matchedField.get(arg1.checkUserdata(clazz.raw())));
                     } catch (Exception e) {
                         // Silent
                     }
@@ -77,7 +117,7 @@ public class UserdataFactory<T> {
 
                 if (matchedField != null) {
                     try {
-                        matchedField.set(toJava(state, arg1, clazz), toJava(state, arg3, matchedField.fieldType().lowerBound()));
+                        matchedField.set(arg1.checkUserdata(clazz.raw()), toJava(state, arg3, matchedField.fieldType().lowerBound()));
                     } catch (Exception e) {
                         // Silent
                     }
@@ -86,11 +126,6 @@ public class UserdataFactory<T> {
                 return Constants.NIL;
             }
         });
-    }
-
-    protected UserdataFactory(EClass<T> clazz) {
-        this.clazz = clazz;
-        this.methods = clazz.methods();
 
         var comparableInst = clazz.allInterfaces().stream().filter(x -> x.raw() == Comparable.class).findFirst().orElse(null);
         if (comparableInst != null) {
@@ -98,6 +133,8 @@ public class UserdataFactory<T> {
             metatable.rawset("__lt", new LessFunction(bound));
             metatable.rawset("__le", new LessOrEqualFunction(bound));
         }
+
+        return metatable;
     }
 
     @SuppressWarnings("unchecked")
@@ -111,14 +148,14 @@ public class UserdataFactory<T> {
 
     public static void collectMethods(EClass<?> sourceClass, List<EMethod> methods, String name, Consumer<EMethod> consumer) {
         methods.forEach((method -> {
-            if (method.hasAnnotation(HideFromLua.class)) return;
+            if (AnnotationUtils.isHiddenFromLua(sourceClass, method)) return;
 
-            LuaName luaName = method.annotation(LuaName.class);
-
-            if (luaName != null) {
-                for (String altName : luaName.value()) {
-                    if (altName.equals(name))
+            String[] altNames = AnnotationUtils.findNames(method);
+            if (altNames != null) {
+                for (String altName : altNames) {
+                    if (altName.equals(name)) {
                         consumer.accept(method);
+                    }
                 }
 
                 return;
@@ -159,14 +196,14 @@ public class UserdataFactory<T> {
 
     public static EField findField(EClass<?> sourceClass, List<EField> fields, String name) {
         for (var field : fields) {
-            if (field.hasAnnotation(HideFromLua.class)) continue;
+            if (AnnotationUtils.isHiddenFromLua(sourceClass, field)) continue;
 
-            LuaName luaName = field.annotation(LuaName.class);
-
-            if (luaName != null) {
-                for (String altName : luaName.value()) {
-                    if (altName.equals(name))
+            String[] altNames = AnnotationUtils.findNames(field);
+            if (altNames != null) {
+                for (String altName : altNames) {
+                    if (altName.equals(name)) {
                         return field;
+                    }
                 }
 
                 continue;
@@ -443,7 +480,7 @@ public class UserdataFactory<T> {
         return toLuaValue(out, EClass.fromJava(ret));
     }
 
-    @SuppressWarnings("unchecked")
+    @SuppressWarnings({"unchecked", "rawtypes"})
     public static LuaValue toLuaValue(Object out, EClass<?> ret) {
         ret = ret.unwrapPrimitive();
 
@@ -466,7 +503,7 @@ public class UserdataFactory<T> {
             int length = list.size();
 
             for (int i = 0; i < length; i++) {
-                table.rawset(i, toLuaValue(list.get(i), componentType));
+                table.rawset(i + 1, toLuaValue(list.get(i), componentType));
             }
 
             return table;
@@ -504,6 +541,22 @@ public class UserdataFactory<T> {
             throw new IllegalStateException("Unknown primitive type" + ret);
         } else if (ret.equals(CommonTypes.STRING)) { // string
             return ValueFactory.valueOf((String) out);
+        } else if (ret.type() == ClassType.INTERFACE && ret.hasAnnotation(FunctionalInterface.class)) {
+            EMethod ifaceMethod = null;
+
+            int unimplemented = 0;
+            for (var meth : ret.methods()) {
+                if (meth.isAbstract()) {
+                    unimplemented++;
+                    ifaceMethod = meth;
+
+                    if (unimplemented > 1) {
+                        break;
+                    }
+                }
+            }
+
+            return new UDFFunctions(ret, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
         } else if (ret.raw().isAssignableFrom(out.getClass())) {
             return UserdataFactory.of(ret).create(ret.cast(out));
         } else {
@@ -515,13 +568,24 @@ public class UserdataFactory<T> {
         return new LuaUserdata(instance, metatable);
     }
 
+    public LuaUserdata createBound(Object instance) {
+        if (boundMetatable == null)
+            boundMetatable = createMetatable(true);
+
+        return new LuaUserdata(instance, boundMetatable);
+    }
+
     private static final class UDFFunctions<T> extends VarArgFunction {
         private final EClass<T> clazz;
         private final List<EMethod> matches;
+        private final String name;
+        private final T boundReceiver;
 
-        public UDFFunctions(EClass<T> clazz, List<EMethod> matches) {
+        public UDFFunctions(EClass<T> clazz, List<EMethod> matches, String name, T boundReceiver) {
             this.clazz = clazz;
             this.matches = matches;
+            this.name = name;
+            this.boundReceiver = boundReceiver;
         }
 
         @Override
@@ -533,11 +597,11 @@ public class UserdataFactory<T> {
             );
 
             try {
-                T instance = args.arg(1).checkUserdata(clazz.raw());
+                T instance = boundReceiver != null ? boundReceiver : args.arg(1).checkUserdata(clazz.raw());
                 for (EMethod method : matches) { // For each matched method from the index call
                     var parameters = method.parameters();
                     try {
-                        var jargs = toJavaArguments(state, args, 2, parameters);
+                        var jargs = toJavaArguments(state, args, boundReceiver == null ? 2 : 1, parameters);
 
                         if (jargs.length == parameters.size()) { // Found a match!
                             try { // Get the return type, invoke method, cast returned value, cry.
