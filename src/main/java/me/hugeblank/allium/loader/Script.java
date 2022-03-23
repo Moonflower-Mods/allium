@@ -3,7 +3,6 @@ package me.hugeblank.allium.loader;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Event;
-import net.minecraft.util.Pair;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.*;
@@ -68,8 +67,7 @@ public class Script {
         SCRIPTS.remove(manifest.name(), this);
         this.executor.getState().abandon();
         for (Event e : Event.getEvents().values()) {
-            List<Pair<Script, LuaFunction>> listeners = e.getListeners();
-            listeners.removeIf(pair -> pair.getLeft().equals(this));
+            e.removeAllListeners(this);
         }
         AlliumResourcePack.drop(this);
     }

@@ -1,7 +1,6 @@
 package me.hugeblank.allium.lua.event;
 
 import me.hugeblank.allium.loader.Script;
-import net.minecraft.util.Pair;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LuaFunction;
 
@@ -16,7 +15,7 @@ public class Event {
 
     private final String name;
     private final Function<Object[], Varargs> convert;
-    private final List<Pair<Script, LuaFunction>> listeners = new ArrayList<>();
+    private final Map<Script, List<LuaFunction>> listeners = new HashMap<>();
     public Event(String name, Function<Object[], Varargs> convert) {
         this.name = name;
         this.convert = convert;
@@ -30,27 +29,35 @@ public class Event {
         return null;
     }
 
-    public List<Pair<Script, LuaFunction>> getListeners() {
-        return listeners;
-    }
-
     public static Map<String, Event> getEvents() {
         return EVENTS;
     }
 
-    public void addListener(Script source, LuaFunction func) {
-        listeners.add(new Pair<>(source, func));
+    public boolean addListener(Script source, LuaFunction func) {
+        if (!listeners.containsKey(source)) listeners.put(source, new ArrayList<>());
+        return listeners.get(source).add(func);
+    }
+
+    public boolean removeListener(Script source, LuaFunction func) {
+        if (!listeners.containsKey(source)) return false;
+        return listeners.get(source).remove(func);
+    }
+
+    public boolean removeAllListeners(Script source) {
+        return listeners.remove(source) != null;
     }
 
     public void queueEvent(Object ... values) {
         Varargs args = this.evaluate(values);
-        for (Pair<Script, LuaFunction> pair : listeners) {
-            try {
-                pair.getRight().invoke(pair.getLeft().getExecutor().getState(), args.asImmutable());
-            } catch (UnwindThrowable | LuaError e) {
-                pair.getLeft().getLogger().error("Error handling event " + this.getName(), e);
-            }
-        }
+        listeners.forEach((script, handlers) -> {
+            handlers.forEach((func) -> {
+                try {
+                    func.invoke(script.getExecutor().getState(), args.asImmutable());
+                } catch (UnwindThrowable | LuaError e) {
+                    script.getLogger().error("Error handling event " + this.getName(), e);
+                }
+            });
+        });
     }
 
     public String getName() {

@@ -1,0 +1,6 @@
+{
+  "id": "wetworks",
+  "version": "1.0.0",
+  "name": "Wetworks",
+  "entrypoint": "main.lua"
+}

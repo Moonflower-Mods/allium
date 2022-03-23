@@ -19,6 +19,6 @@ public class AbstractBlockMixin {
 
     @Inject(at = @At("TAIL"), method = "onUse")
     private void onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit, CallbackInfoReturnable<ActionResult> cir) {
-        Events.BLOCK_INTERACT.queueEvent(state, world, pos, player, hand, hit);
+        if (!world.isClient()) Events.BLOCK_INTERACT.queueEvent(state, world, pos, player, hand, hit);
     }
 }

@@ -14,6 +14,6 @@ public class PlayerManagerMixin {
 
     @Inject(at = @At("TAIL"), method = "onPlayerConnect")
     private void onPlayerConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci) {
-        Events.PLAYER_JOIN.queueEvent(player);
+        if (player.getWorld().isClient()) Events.PLAYER_JOIN.queueEvent(player);
     }
 }

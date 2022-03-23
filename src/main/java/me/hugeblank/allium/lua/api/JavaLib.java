@@ -31,6 +31,7 @@ public class JavaLib {
             "net.minecraft.inventory.",
             "net.minecraft.nbt.",
             "net.minecraft.potion.",
+            "net.minecraft.sound.",
             "net.minecraft.text.",
             "net.minecraft.tag.",
             "net.minecraft.village.",
