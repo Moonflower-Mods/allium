@@ -8,12 +8,14 @@ import me.basiqueevangelist.enhancedreflection.api.*;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.JavaLib;
 import me.hugeblank.allium.util.Mappings;
+import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.ThreeArgFunction;
 import org.squiddev.cobalt.function.TwoArgFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
@@ -30,12 +32,43 @@ public class UserdataFactory<T> {
     private final LuaTable metatable;
     private @Nullable LuaTable boundMetatable;
     private final @Nullable EMethod indexImpl;
+    private final @Nullable EMethod newIndexImpl;
 
     protected UserdataFactory(EClass<T> clazz) {
         this.clazz = clazz;
         this.methods = clazz.methods();
-        this.indexImpl = clazz.methods().stream().filter(x -> !x.isStatic() && x.hasAnnotation(LuaIndex.class)).findAny().orElse(null);
+        this.indexImpl = tryFindOp(LuaIndex.class, 1,"get");
+        this.newIndexImpl = tryFindOp(null, 2, "set", "put");
         this.metatable = createMetatable(false);
+    }
+
+    private @Nullable EMethod tryFindOp(@Nullable Class<? extends Annotation> annotation, int minParams, String... specialNames) {
+        EMethod method = null;
+
+        if (annotation != null)
+            method = clazz
+                .methods()
+                .stream()
+                .filter(x ->
+                    !x.isStatic()
+                 && x.hasAnnotation(annotation))
+                .findAny()
+                .orElse(null);
+
+        if (method != null) return  method;
+
+        method = clazz
+            .methods()
+            .stream()
+            .filter(x ->
+                !x.isStatic()
+             && !AnnotationUtils.isHiddenFromLua(clazz, x)
+             && ArrayUtils.contains(specialNames, x.name())
+             && x.parameters().size() >= minParams)
+            .findAny()
+            .orElse(null);
+
+        return method;
     }
 
     private LuaTable createMetatable(boolean isBound) {
@@ -58,10 +91,15 @@ public class UserdataFactory<T> {
                             } catch (IllegalAccessException e) {
                                 throw new LuaError(e);
                             } catch (InvocationTargetException e) {
-                                if (e.getTargetException() instanceof LuaError err)
-                                    throw err;
+                                var target = e.getTargetException();
 
-                                throw new LuaError(e);
+                                if (target instanceof LuaError err) {
+                                    throw err;
+                                } else if (target instanceof IndexOutOfBoundsException) {
+                                    // Continue.
+                                } else {
+                                    throw new LuaError(target);
+                                }
                             }
                         }
                     } catch (InvalidArgumentException | IllegalArgumentException e) {
@@ -108,6 +146,31 @@ public class UserdataFactory<T> {
         metatable.rawset("__newindex", new ThreeArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
+                if (newIndexImpl != null) {
+                    var parameters = newIndexImpl.parameters();
+                    try {
+                        var jargs = toJavaArguments(state, ValueFactory.varargsOf(arg1, arg2), 1, parameters);
+
+                        if (jargs.length == parameters.size()) {
+                            try {
+                                var instance = toJava(state, arg1, clazz);
+                                EClass<?> ret = newIndexImpl.returnType().upperBound();
+                                Object out = newIndexImpl.invoke(instance, jargs);
+                                return toLuaValue(out, ret);
+                            } catch (IllegalAccessException e) {
+                                throw new LuaError(e);
+                            } catch (InvocationTargetException e) {
+                                if (e.getTargetException() instanceof LuaError err)
+                                    throw err;
+
+                                throw new LuaError(e);
+                            }
+                        }
+                    } catch (InvalidArgumentException | IllegalArgumentException e) {
+                        // Continue.
+                    }
+                }
+
                 String name = arg2.checkString(); // mapped name
 
                 EField matchedField = cachedFields.get(name);
@@ -310,6 +373,9 @@ public class UserdataFactory<T> {
             filledJavaArguments++;
         }
 
+        if (luaOffset != args.count() + 1)
+            throw new InvalidArgumentException("Too many arguments!");
+
         return arguments;
     }
 
@@ -346,17 +412,8 @@ public class UserdataFactory<T> {
             return clatz.cast(arr);
         }
 
-        if (clatz.raw().equals(List.class)) {
+        if (value.isTable() && clatz.raw().equals(List.class)) {
             EClass<?> componentType = clatz.typeVariableValues().get(0).upperBound();
-
-            if (!value.isTable())
-                throw new LuaError(
-                    "Expected table of "
-                        + componentType
-                        + "s, got "
-                        + value.typeName()
-                );
-
             LuaTable table = value.checkTable();
             int length = table.length();
             List<Object> list = new ArrayList<>(length);
@@ -368,20 +425,9 @@ public class UserdataFactory<T> {
             return list;
         }
 
-        if (clatz.raw().equals(Map.class)) {
+        if (value.isTable() && clatz.raw().equals(Map.class)) {
             EClass<?> keyType = clatz.typeVariableValues().get(0).upperBound();
             EClass<?> valueType = clatz.typeVariableValues().get(1).upperBound();
-
-            if (!value.isTable())
-                throw new LuaError(
-                    "Expected table of "
-                        + keyType
-                        + " to "
-                        + valueType
-                        + ", got "
-                        + value.typeName()
-                );
-
             LuaTable table = value.checkTable();
             int length = table.length();
             Map<Object, Object> map = new HashMap<>(length);
@@ -472,6 +518,27 @@ public class UserdataFactory<T> {
         throw new InvalidArgumentException();
     }
 
+    public static <T> LuaTable listToTable(List<T> list, EClass<T> klass) {
+        LuaTable table = new LuaTable();
+        int length = list.size();
+
+        for (int i = 0; i < length; i++) {
+            table.rawset(i + 1, toLuaValue(list.get(i), klass));
+        }
+
+        return table;
+    }
+
+    public static <K, V> LuaTable mapToTable(Map<K, V> map, EClass<K> keyType, EClass<V> valueType) {
+        LuaTable table = new LuaTable();
+
+        for (Map.Entry<K, V> entry : map.entrySet()) {
+            table.rawset(toLuaValue(entry.getKey(), keyType), toLuaValue(entry.getValue(), valueType));
+        }
+
+        return table;
+    }
+
     public static LuaValue toLuaValue(Object out) {
         return toLuaValue(out, out != null ? EClass.fromJava(out.getClass()) : CommonTypes.OBJECT);
     }
@@ -494,30 +561,6 @@ public class UserdataFactory<T> {
             for (int i = 1; i <= length; i++) {
                 table.rawset(i, toLuaValue(Array.get(out, i - 1), ret.arrayComponent()));
             }
-            return table;
-        } else if (ret.raw().equals(List.class)) {
-            EClass<?> componentType = ret.typeVariableValues().get(0).upperBound();
-
-            LuaTable table = new LuaTable();
-            List<Object> list = (List<Object>) out;
-            int length = list.size();
-
-            for (int i = 0; i < length; i++) {
-                table.rawset(i + 1, toLuaValue(list.get(i), componentType));
-            }
-
-            return table;
-        } else if (ret.raw().equals(Map.class)) {
-            EClass<?> keyType = ret.typeVariableValues().get(0).upperBound();
-            EClass<?> valueType = ret.typeVariableValues().get(1).upperBound();
-
-            LuaTable table = new LuaTable();
-            Map<Object, Object> map = (Map<Object, Object>) out;
-
-            for (Map.Entry<Object, Object> entry : map.entrySet()) {
-                table.rawset(toLuaValue(entry.getKey(), keyType), toLuaValue(entry.getValue(), valueType));
-            }
-
             return table;
         } else if (ret.type() == ClassType.PRIMITIVE) {
             if (ret.equals(CommonTypes.INT)) { // int

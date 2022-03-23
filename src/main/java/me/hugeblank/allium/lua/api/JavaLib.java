@@ -1,5 +1,6 @@
 package me.hugeblank.allium.lua.api;
 
+import me.basiqueevangelist.enhancedreflection.api.CommonTypes;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EField;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
@@ -122,8 +123,8 @@ public class JavaLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public static List<String> fromYarn(String string) {
-        return Allium.MAPPINGS.getIntermediary(string);
+    public static LuaTable fromYarn(String string) {
+        return UserdataFactory.listToTable(Allium.MAPPINGS.getIntermediary(string), CommonTypes.STRING);
     }
 
     private static Varargs createInstance(LuaState state, Varargs args) throws LuaError {
