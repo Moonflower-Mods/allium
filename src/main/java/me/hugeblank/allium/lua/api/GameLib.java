@@ -1,5 +1,6 @@
 package me.hugeblank.allium.lua.api;
 
+import me.basiqueevangelist.enhancedreflection.api.CommonTypes;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.LuaWrapped;
@@ -44,15 +45,15 @@ public class GameLib implements WrappedLuaLibrary {
     @LuaWrapped
     public LuaTable listBlocks() {
         return UserdataFactory.mapToTable(
-            Registry.BLOCK.stream().collect(Collectors.toMap(Registry.BLOCK::getId, x -> x)),
-            EClass.fromJava(Identifier.class), EClass.fromJava(Block.class));
+            Registry.BLOCK.stream().collect(Collectors.toMap(x -> Registry.BLOCK.getId(x).toString(), x -> x)),
+            CommonTypes.STRING, EClass.fromJava(Block.class));
     }
 
     @LuaWrapped
     public LuaTable listItems() {
         return UserdataFactory.mapToTable(
-            Registry.ITEM.stream().collect(Collectors.toMap(Registry.ITEM::getId, x -> x)),
-            EClass.fromJava(Identifier.class), EClass.fromJava(Item.class));
+            Registry.ITEM.stream().collect(Collectors.toMap(x -> Registry.ITEM.getId(x).toString(), x -> x)),
+            CommonTypes.STRING, EClass.fromJava(Item.class));
     }
 
     @LuaWrapped
@@ -63,8 +64,8 @@ public class GameLib implements WrappedLuaLibrary {
     @LuaWrapped
     public LuaTable listWorlds() {
         return UserdataFactory.mapToTable(
-            StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false).collect(Collectors.toMap(x -> x.getRegistryKey().getValue(), x -> x)),
-            EClass.fromJava(Identifier.class), EClass.fromJava(ServerWorld.class));
+            StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false).collect(Collectors.toMap(x -> x.getRegistryKey().getValue().toString(), x -> x)),
+            CommonTypes.STRING, EClass.fromJava(ServerWorld.class));
     }
 
     @Override
