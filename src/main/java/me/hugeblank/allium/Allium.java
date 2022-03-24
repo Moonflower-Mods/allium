@@ -12,7 +12,6 @@
 package me.hugeblank.allium;
 
 import me.hugeblank.allium.loader.Script;
-import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
 import me.hugeblank.allium.util.Mappings;
@@ -30,6 +29,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.Function;
 
 public class Allium implements ModInitializer {
 
@@ -40,7 +40,6 @@ public class Allium implements ModInitializer {
     public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
     public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
-    public static AlliumResourcePack PACK;
     public static Set<Script> CANDIDATES = new HashSet<>();
 
     @Override
@@ -54,7 +53,15 @@ public class Allium implements ModInitializer {
         LOGGER.info("Loading Scripts");
         CANDIDATES.addAll(FileHelper.getValidDirScripts());
         CANDIDATES.addAll(FileHelper.getValidModScripts());
+        list(new StringBuilder("Found: "), (script) -> true);
         CANDIDATES.forEach(Script::initialize);
-        PACK = AlliumResourcePack.create("allium_generated");
+        list(new StringBuilder("Initialized: "), Script::isInitialized);
+    }
+
+    private static void list(StringBuilder sb, Function<Script, Boolean> func) {
+        CANDIDATES.forEach((script) -> {
+            if (func.apply(script)) sb.append(script.getManifest().id()).append(", ");
+        });
+        Allium.LOGGER.info(sb.substring(0, sb.length()-2));
     }
 }

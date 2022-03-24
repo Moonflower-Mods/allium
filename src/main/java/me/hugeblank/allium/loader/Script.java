@@ -23,8 +23,8 @@ public class Script {
     // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
-    private final ScriptExecutor executor;
-    private final boolean loaded; // Whether this script was able to register itself
+    private ScriptExecutor executor;
+    // Whether this script was able to register itself
     private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
     private final Path path;
@@ -34,23 +34,36 @@ public class Script {
         this.path = path;
         this.executor = new ScriptExecutor(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
-        boolean loaded;
         try {
             if (SCRIPTS.containsKey(manifest.id()))
                 throw new Exception("Script with ID is already loaded!");
             SCRIPTS.put(manifest.id(), this);
             AlliumResourcePack.register(this);
-            loaded = true;
         } catch (Exception e) {
             getLogger().error("Could not load allium script " + getManifest().id(), e);
             unload();
-            loaded = false;
         }
-        this.loaded = loaded;
     }
 
-    public boolean isLoaded() {
-        return loaded;
+    public void reload() {
+        // Remove listeners
+        for (Event e : Event.getEvents().values()) {
+            e.removeAllListeners(this);
+        }
+        // Re-run dynamic entrypoint again
+        try {
+            InputStream dynamicEntrypoint = manifest.entrypoints().containsDynamic() ?
+                    Files.newInputStream(path.resolve(manifest.entrypoints().getDynamic())) :
+                    null;
+            // Reload and set the module if all that's provided is a dynamic script
+            this.module = manifest.entrypoints().getType().equals(Entrypoint.Type.DYNAMIC) ?
+                    executor.reload(dynamicEntrypoint).arg(1) :
+                    this.module;
+        } catch (Throwable e) {
+            getLogger().error("Could not reload allium script " + getManifest().id(), e);
+            unload();
+        }
+
     }
 
     public void unload() {

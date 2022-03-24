@@ -1,8 +1,7 @@
 package me.hugeblank.allium.loader;
 
-import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.PackageLib;
-import net.minecraft.resource.DirectoryResourcePack;
+import me.hugeblank.allium.lua.api.*;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -93,6 +92,15 @@ public class ScriptExecutor {
         }
         // This should be caught sooner, but who knows maybe a dev (hugeblank) will come along and mess something up
         throw new Exception("Expected either static or dynamic entrypoint, got none");
+    }
+
+    public Varargs reload(InputStream dynamic) throws LuaError, InterruptedException, CompileException, IOException {
+        Entrypoint entrypoint = script.getManifest().entrypoints();
+        if (entrypoint.hasType(Entrypoint.Type.DYNAMIC)) {
+            LuaFunction dynamicFunction = this.load(dynamic, script.getManifest().id());
+            return LuaThread.runMain(state, dynamicFunction);
+        }
+        return null;
     }
 
     public LuaFunction load(InputStream stream, String name) throws CompileException, IOException {

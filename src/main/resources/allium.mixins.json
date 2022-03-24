@@ -10,7 +10,9 @@
     "MinecraftServerMixin",
     "PlayerManagerMixin",
     "block.AbstractBlockMixin",
+    "command.ReloadCommandMixin",
     "entity.EntityMixin",
+    "entity.ServerPlayerEntityMixin",
     "network.ServerPlayerEntityMixin",
     "network.ServerPlayNetworkHandlerMixin",
     "resource.ResourcePackManagerMixin"
