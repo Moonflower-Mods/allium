@@ -54,7 +54,7 @@ public class FileHelper {
                     try {
                         FileSystem fs = FileSystems.newFileSystem(scriptDir); // zip, tarball, whatever has a provider.
                         path = fs.getPath("/");
-                    } catch (IOException e) {
+                    } catch (IOException | ProviderNotFoundException e) {
                         return; // Just a file we can't read, ignore it and move on.
                     }
                 }

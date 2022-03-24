@@ -1,21 +1,25 @@
 package me.hugeblank.allium.lua.api;
 
+import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
+import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import net.minecraft.nbt.*;
 import org.jetbrains.annotations.Nullable;
-import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.lib.LuaLibrary;
+import org.squiddev.cobalt.Constants;
+import org.squiddev.cobalt.LuaTable;
+import org.squiddev.cobalt.LuaValue;
+import org.squiddev.cobalt.ValueFactory;
 
-public class NbtLib {
+import java.util.Set;
 
-    public static LuaLibrary create() {
-        return LibBuilder.create("nbt")
-                .set("toNbt", (state, args) -> UserdataFactory.toLuaValue(toNbt(args.arg(1))))
-                .set("fromNbt", (state, args) -> fromNbt(args.arg(1).checkUserdata(NbtElement.class)))
-                .build();
+@LuaWrapped
+public class NbtLib implements WrappedLuaLibrary {
+    @Override
+    public String getLibraryName() {
+        return "nbt";
     }
 
-
+    @LuaWrapped
     public static LuaValue fromNbt(NbtElement element) {
         return switch (element.getType()) {
             case NbtElement.BYTE_TYPE, NbtElement.SHORT_TYPE, NbtElement.INT_TYPE -> ValueFactory.valueOf(((AbstractNbtNumber) element).intValue());
@@ -50,11 +54,12 @@ public class NbtLib {
     }
 
     @Nullable
+    @LuaWrapped
     public static NbtElement toNbt(LuaValue value) {
-        return toNbtInternal(value, new LuaValue[0]);
+        return toNbtInternal(value, new ReferenceOpenHashSet<>());
     }
 
-    private static NbtElement toNbtInternal(LuaValue value, LuaValue[] obj) {
+    private static NbtElement toNbtInternal(LuaValue value, Set<LuaValue> seenValues) {
         if (value.isUserdata()) {
             var val = value.toUserdata();
             if (val instanceof NbtElement) {
@@ -62,11 +67,7 @@ public class NbtLib {
             }
         }
 
-        for (int i = 0; i < obj.length; i++) {
-            if (obj[i] == value) {
-                return null;
-            }
-        }
+        if (seenValues.contains(value)) return null;
 
         try {
             return switch (value.type()) {
@@ -81,18 +82,16 @@ public class NbtLib {
                 case (Constants.TTABLE) -> {
                     var nbt = new NbtCompound();
                     var table = value.checkTable();
-                    var objNew = new LuaValue[obj.length + 1];
-                    objNew[0] = value;
-                    for (int i = obj.length; i > 0; i--) {
-                        objNew[i] = obj[i - 1];
-                    }
+                    seenValues.add(value);
 
                     for (var key : table.keys()) {
                         var val = table.rawget(key);
                         if (val != Constants.NIL) {
-                            nbt.put(key.toString(), toNbtInternal(val, objNew));
+                            nbt.put(key.toString(), toNbtInternal(val, seenValues));
                         }
                     }
+
+                    seenValues.remove(value);
 
                     yield nbt;
                 }

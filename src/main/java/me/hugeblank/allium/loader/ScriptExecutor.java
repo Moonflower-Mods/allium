@@ -38,13 +38,13 @@ public class ScriptExecutor {
         globals.load( state, new DebugLib() );
 
         // Custom globals
-        globals.load( state, AlliumLib.create(script) );
+        globals.load( state, new AlliumLib(script) );
         globals.load( state, new GameLib() );
-        globals.load( state, JavaLib.create() );
-        globals.load( state, TextLib.create() );
-        globals.load( state, NbtLib.create() );
-        globals.load( state, CommandLib.create(script) );
-        globals.load( state, ScriptLib.create(script) );
+        globals.load( state, new JavaLib() );
+        globals.load( state, new TextLib() );
+        globals.load( state, new NbtLib() );
+        globals.load( state, new CommandLib(script) );
+        globals.load( state, new ScriptLib(script) );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script);

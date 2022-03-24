@@ -1,54 +1,47 @@
 package me.hugeblank.allium.lua.api;
 
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.util.text.TextParserUtils;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
-import org.squiddev.cobalt.LuaError;
-import org.squiddev.cobalt.LuaState;
-import org.squiddev.cobalt.LuaString;
-import org.squiddev.cobalt.Varargs;
-import org.squiddev.cobalt.lib.LuaLibrary;
 
-public class TextLib {
-    public static LuaLibrary create() {
-        return LibBuilder.create("texts")
-                .set("empty", UserdataFactory.toLuaValue(LiteralText.EMPTY, Text.class))
-                .set("parse", TextLib::parse)
-                .set("parseSafe", TextLib::parseSafe)
-                .set("fromJson", TextLib::fromJson)
-                .set("toJson", TextLib::toJson)
-                .set("escape", TextLib::escapeForParser)
-                .set("unescape", TextLib::unescape)
-                .build();
+@LuaWrapped
+public class TextLib implements WrappedLuaLibrary {
+    @LuaWrapped(name = "empty")
+    public Text EMPTY = LiteralText.EMPTY;
+
+    @LuaWrapped
+    public Text parse(String input) {
+        return TextParserUtils.parse(input);
     }
 
-    private static Varargs parseSafe(LuaState state, Varargs args) throws LuaError {
-        return UserdataFactory.toLuaValue(TextParserUtils.parseSafe(args.arg(1).checkString()), Text.class);
+    @LuaWrapped
+    public Text parseSafe(String input) {
+        return TextParserUtils.parseSafe(input);
     }
 
-    private static Varargs parse(LuaState state, Varargs args) throws LuaError {
-        return UserdataFactory.toLuaValue(TextParserUtils.parse(args.arg(1).checkString()), Text.class);
+    @LuaWrapped
+    public Text fromJson(String input) {
+        return Text.Serializer.fromLenientJson(input);
     }
 
-    private static Varargs fromJson(LuaState state, Varargs args) throws LuaError {
-        return UserdataFactory.toLuaValue(Text.Serializer.fromLenientJson(args.arg(1).checkString()), Text.class);
+    @LuaWrapped
+    public String toJson(Text text) {
+        return Text.Serializer.toJson(text);
     }
 
-    private static Varargs toJson(LuaState state, Varargs args) throws LuaError {
-        try {
-            return LuaString.valueOf(Text.Serializer.toJson((Text) UserdataFactory.toJava(state, args.arg(1), Text.class)));
-        } catch (UserdataFactory.InvalidArgumentException e) {
-            throw new LuaError("Arg1 is not a Text!");
-        }
+    @LuaWrapped
+    public String escapeForParser(String string) {
+        return TextParserUtils.escapeCharacters(string);
     }
 
-
-    private static Varargs escapeForParser(LuaState state, Varargs args) throws LuaError {
-        return LuaString.valueOf(TextParserUtils.escapeCharacters(args.arg(1).checkString()));
+    @LuaWrapped
+    public String unescape(String string) {
+        return TextParserUtils.removeEscaping(string);
     }
 
-    private static Varargs unescape(LuaState state, Varargs args) throws LuaError {
-        return LuaString.valueOf(TextParserUtils.removeEscaping(args.arg(1).checkString()));
+    @Override
+    public String getLibraryName() {
+        return "texts";
     }
 }

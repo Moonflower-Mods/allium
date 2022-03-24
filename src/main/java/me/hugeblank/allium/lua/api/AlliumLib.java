@@ -2,40 +2,40 @@ package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.event.Event;
-import org.squiddev.cobalt.Constants;
+import me.hugeblank.allium.lua.type.LuaWrapped;
 import org.squiddev.cobalt.LuaError;
-import org.squiddev.cobalt.LuaValue;
-import org.squiddev.cobalt.Varargs;
 import org.squiddev.cobalt.function.LuaFunction;
-import org.squiddev.cobalt.lib.LuaLibrary;
 
-public record AlliumLib(Script script) {
+@LuaWrapped
+public class AlliumLib implements WrappedLuaLibrary {
+    private final Script script;
 
-    public static LuaLibrary create(Script script) {
-        return LibBuilder.create("allium")
-                .set("onEvent", (state, args) -> onEvent(args, script))
-                .set("removeListener", (state, args) -> removeListener(args, script))
-                .build();
+    public AlliumLib(Script script) {
+        this.script = script;
     }
 
-    private static LuaValue onEvent(Varargs args, Script script) throws LuaError {
-        String eName = args.arg(1).checkString();
+    @LuaWrapped
+    public void onEvent(String eName, LuaFunction handler) throws LuaError {
         Event event = Event.get(eName);
         if (event != null) {
-            event.addListener(script, args.arg(2).checkFunction());
+            event.addListener(script, handler);
         } else {
             throw new LuaError("No event of type '" + eName + "' exists");
         }
-        return args.arg(2);
     }
 
-    private static LuaValue removeListener(Varargs args, Script script) throws LuaError {
-        LuaFunction func = args.arg(1).checkFunction();
+    @LuaWrapped
+    private boolean removeListener(LuaFunction listener) {
         final boolean[] removed = {false};
         Event.getEvents().values().forEach((event) -> {
-            if (event.removeListener(script, func)) removed[0] = true;
+            if (event.removeListener(script, listener)) removed[0] = true;
 
         });
-        return removed[0] ? Constants.TRUE : Constants.FALSE;
+        return removed[0];
+    }
+
+    @Override
+    public String getLibraryName() {
+        return "allium";
     }
 }

@@ -4,11 +4,15 @@ import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EConstructor;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import me.hugeblank.allium.util.AsmUtil;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
-import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.LuaState;
+import org.squiddev.cobalt.LuaValue;
+import org.squiddev.cobalt.ValueFactory;
+import org.squiddev.cobalt.Varargs;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.io.IOException;
@@ -19,6 +23,7 @@ import java.util.*;
 
 import static org.objectweb.asm.Opcodes.*;
 
+@LuaWrapped
 public class ClassBuilder {
     public static int id = 0;
 
@@ -29,7 +34,8 @@ public class ClassBuilder {
     private final List<EMethod> methods = new ArrayList<>();
     private final Map<String, LuaFunction> storedFunctions = new HashMap<>();
 
-    public ClassBuilder(EClass<?> superClass, EClass<?>[] interfaces, LuaState state) {
+    @LuaWrapped
+    public ClassBuilder(EClass<?> superClass, List<EClass<?>> interfaces, LuaState state) {
         this.state = state;
         this.className = "allium/GeneratedClass_" + id;
 
@@ -39,7 +45,7 @@ public class ClassBuilder {
                 className,
                 null,
                 superClass.name().replace('.', '/'),
-                Arrays.stream(interfaces).map(x -> x.name().replace('.', '/')).toArray(String[]::new)
+                interfaces.stream().map(x -> x.name().replace('.', '/')).toArray(String[]::new)
         );
 
         this.c.visitField(ACC_PUBLIC | ACC_STATIC, "allium$luaState", Type.getDescriptor(LuaState.class), null, null);
@@ -75,69 +81,7 @@ public class ClassBuilder {
         id++;
     }
 
-    public static LuaTable createLua(EClass<?> superClass, EClass<?>[] interfaces, LuaState state) {
-        var builder = new ClassBuilder(superClass, interfaces, state);
-
-
-        return LibBuilder.create("javaclass")
-                .set("overrideMethod", (unused, args) -> {
-                    try {
-                        var methodName = args.arg(2).checkString();
-                        var paramsTable = args.arg(3).checkTable().checkTable();
-                        var function = args.arg(4).checkFunction();
-
-                        var params = new EClass[paramsTable.length()];
-
-                        for (int i = 0; i < paramsTable.length(); i++) {
-                            var val = paramsTable.rawget(i + 1);
-                            params[i] = JavaLib.asClass(val);
-                        }
-
-                        builder.overrideMethod(methodName, params, function);
-                        return Constants.NIL;
-                    } catch (Exception e) {
-                        if (e instanceof LuaError le) {
-                            throw le;
-                        } else {
-                            throw new LuaError(e);
-                        }
-                    }
-                })
-                .set("createMethod", (unused, args) -> {
-                    try {
-                        var methodName = args.arg(2).checkString();
-                        var paramsTable = args.arg(3).checkTable().checkTable();
-                        var returnClass = JavaLib.asClass(args.arg(4));
-                        var isStatic = args.arg(5).checkBoolean();
-                        var function = args.arg(6).checkFunction();
-
-                        var params = new EClass[paramsTable.length()];
-
-                        for (int i = 0; i < paramsTable.length(); i++) {
-                            var val = paramsTable.rawget(i + 1);
-                            params[i] = JavaLib.asClass(val);
-                        }
-
-                        builder.createMethod(methodName, params, returnClass, isStatic, function);
-                        return Constants.NIL;
-                    } catch (Exception e) {
-                        if (e instanceof LuaError le) {
-                            throw le;
-                        } else {
-                            throw new LuaError(e);
-                        }
-                    }
-                })
-                .set("build", (unused, args) -> {
-                    try {
-                        return JavaLib.importClass(builder.build());
-                    } catch (Exception e) {
-                        throw new LuaError(e);
-                    }
-                })
-                .buildTable();
-    }
-
+    @LuaWrapped
     public void overrideMethod(String methodName, EClass<?>[] parameters, LuaFunction func) {
         var methods = new ArrayList<EMethod>();
 
@@ -232,6 +176,7 @@ public class ClassBuilder {
         }
     }
 
+    @LuaWrapped
     public void createMethod(String methodName, EClass<?>[] params, EClass<?> returnClass, boolean isStatic, LuaFunction func) {
         var funcFieldName = "allium$func_" + methodName;
 
@@ -310,7 +255,8 @@ public class ClassBuilder {
         return c.toByteArray();
     }
 
-    public EClass<?> build() {
+    @LuaWrapped
+    public LuaValue build() {
         byte[] classBytes = c.toByteArray();
 
         if (Allium.DEVELOPMENT) {
@@ -336,7 +282,7 @@ public class ClassBuilder {
             throw new RuntimeException("Failed to initialize class", roe);
         }
 
-        return klass;
+        return JavaLib.importClass(klass);
     }
 
     public String getName() {
