@@ -10,7 +10,9 @@ import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.*;
 
-import java.io.*;
+import javax.annotation.Nullable;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class ScriptExecutor {
     protected final Script script;
@@ -31,7 +33,7 @@ public class ScriptExecutor {
         globals.load( state, new TableLib() );
         globals.load( state, new StringLib() );
         globals.load( state, new MathLib() );
-        globals.load( state, new CoroutineLib() );
+        // globals.load( state, new CoroutineLib() ); // Not providing this for reasons(tm)
         globals.load( state, new Bit32Lib() );
         globals.load( state, new Utf8Lib() );
         globals.load( state, new DebugLib() );
@@ -46,8 +48,8 @@ public class ScriptExecutor {
         globals.load( state, ScriptLib.create(script) );
 
         // Package library, kinda quirky.
-        PackageLib pkg = new PackageLib();
-        globals.rawset( "package" , pkg.create(script) );
+        PackageLib pkg = new PackageLib(script);
+        globals.rawset( "package" , pkg.create() );
         globals.rawset( "require", new PackageLib.Require(pkg) );
         globals.rawset( "module", Constants.NIL ); // TODO: module call
 
@@ -67,10 +69,30 @@ public class ScriptExecutor {
         return state;
     }
 
-    public LuaValue initialize(InputStream main) throws Throwable {
-        LuaFunction loadValue = this.load(main, script.getManifest().id());
+    public Varargs initialize(@Nullable InputStream sMain, @Nullable InputStream dMain) throws Throwable {
+        Entrypoint entrypoints = script.getManifest().entrypoints();
+        LuaFunction staticFunction;
+        LuaFunction dynamicFunction;
         state.setupThread(new LuaTable());
-        return loadValue.call(state);
+        switch (entrypoints.getType()) {
+            case STATIC -> {
+                staticFunction = this.load(sMain, script.getManifest().id());
+                return LuaThread.runMain(state, staticFunction);
+            }
+            case DYNAMIC -> {
+                dynamicFunction = this.load(dMain, script.getManifest().id());
+                return LuaThread.runMain(state, dynamicFunction);
+            }
+            case BOTH -> {
+                staticFunction = this.load(sMain, script.getManifest().id() + ":static");
+                dynamicFunction = this.load(dMain, script.getManifest().id() + ":dynamic");
+                Varargs out = LuaThread.runMain(state, staticFunction);
+                LuaThread.runMain(state, dynamicFunction);
+                return out;
+            }
+        }
+        // This should be caught sooner, but who knows maybe a dev (hugeblank) will come along and mess something up
+        throw new Exception("Expected either static or dynamic entrypoint, got none");
     }
 
     public LuaFunction load(InputStream stream, String name) throws CompileException, IOException {

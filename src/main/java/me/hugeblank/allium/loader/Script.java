@@ -14,9 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 
 public class Script {
@@ -26,12 +24,12 @@ public class Script {
     private final Manifest manifest;
     private final Logger logger;
     private final ScriptExecutor executor;
-    private final boolean loaded;
-    private boolean initialized = false;
+    private final boolean loaded; // Whether this script was able to register itself
+    private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
     private final Path path;
 
-    public Script(Manifest manifest, Path path, boolean registerResources) {
+    public Script (Manifest manifest, Path path) {
         this.manifest = manifest;
         this.path = path;
         this.executor = new ScriptExecutor(this);
@@ -41,7 +39,7 @@ public class Script {
             if (SCRIPTS.containsKey(manifest.id()))
                 throw new Exception("Script with ID is already loaded!");
             SCRIPTS.put(manifest.id(), this);
-            if (registerResources) AlliumResourcePack.register(this);
+            AlliumResourcePack.register(this);
             loaded = true;
         } catch (Exception e) {
             getLogger().error("Could not load allium script " + getManifest().id(), e);
@@ -49,14 +47,6 @@ public class Script {
             loaded = false;
         }
         this.loaded = loaded;
-    }
-
-    public Script (Manifest manifest, Path path) {
-        this(manifest, path, true);
-    }
-
-    protected InputStream loadEntrypoint() throws Throwable {
-        return Files.newInputStream(path.resolve(manifest.entrypoint()));
     }
 
     public boolean isLoaded() {
@@ -75,8 +65,16 @@ public class Script {
     public void initialize() {
         if (isInitialized()) return;
         try {
-            this.module = getExecutor().initialize(loadEntrypoint());
-            this.initialized = true;
+            // Create InputStreams for each entrypoint, if it exists
+            InputStream staticEntrypoint = manifest.entrypoints().containsStatic() ?
+                    Files.newInputStream(path.resolve(manifest.entrypoints().getStatic())) :
+                    null;
+            InputStream dynamicEntrypoint = manifest.entrypoints().containsDynamic() ?
+                    Files.newInputStream(path.resolve(manifest.entrypoints().getDynamic())) :
+                    null;
+            // Initialize and set module used by require
+            this.module = getExecutor().initialize(staticEntrypoint, dynamicEntrypoint).arg(1);
+            this.initialized = true; // If all these steps are successful, we can set initialized to true
         } catch (Throwable e) {
             getLogger().error("Could not initialize allium script " + getManifest().id(), e);
             unload();
@@ -124,25 +122,6 @@ public class Script {
 
     public static Script getFromID(String id) {
         return SCRIPTS.get(id);
-    }
-
-    public static LuaTable getScriptTable() {
-        LuaTable out = new LuaTable();
-        SCRIPTS.forEach((key, value) -> {
-            Manifest man = value.getManifest();
-            LuaTable luaMan = new LuaTable();
-            luaMan.rawset("id", LuaString.valueOf(man.id()));
-            luaMan.rawset("version", LuaString.valueOf(man.version()));
-            luaMan.rawset("name", LuaString.valueOf(man.name()));
-            out.rawset(key, luaMan);
-        });
-        return out;
-    }
-
-    public static void unloadAll() {
-        // Unused. Let's think about script reload-ability in the future.
-        List<Script> scripts = new ArrayList<>(SCRIPTS.values());
-        scripts.forEach(Script::unload);
     }
 
     @Override

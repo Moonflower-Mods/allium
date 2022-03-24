@@ -2,7 +2,10 @@ package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.event.Event;
-import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.Constants;
+import org.squiddev.cobalt.LuaError;
+import org.squiddev.cobalt.LuaValue;
+import org.squiddev.cobalt.Varargs;
 import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.lib.LuaLibrary;
 
@@ -12,7 +15,6 @@ public record AlliumLib(Script script) {
         return LibBuilder.create("allium")
                 .set("onEvent", (state, args) -> onEvent(args, script))
                 .set("removeListener", (state, args) -> removeListener(args, script))
-                .set("getRunningScripts", (state, args) -> Script.getScriptTable())
                 .build();
     }
 

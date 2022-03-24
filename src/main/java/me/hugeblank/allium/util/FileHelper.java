@@ -2,6 +2,7 @@ package me.hugeblank.allium.util;
 
 import com.google.gson.Gson;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.loader.Entrypoint;
 import me.hugeblank.allium.loader.Manifest;
 import me.hugeblank.allium.loader.Script;
 import net.fabricmc.loader.api.FabricLoader;
@@ -84,15 +85,14 @@ public class FileHelper {
                             metadata.getVersion().getFriendlyString(),
                             metadata.getName()
                     );
-
-                    if (man == null || man.entrypoint() == null) { // Make sure the manifest exists and has an entrypoint
-                        Allium.LOGGER.error("Could not read entrypoint from script with ID " + metadata.getId());
+                    if (man == null || man.entrypoints().valid()) { // Make sure the manifest exists and has an entrypoint
+                        Allium.LOGGER.error("Could not read manifest from script with ID " + metadata.getId());
                     } else {
                         Script script = scriptFromContainer(man, container);
                         if (script != null) {
                             out.add(script);
                         } else {
-                            Allium.LOGGER.error("Could not read entrypoint from script with ID " + metadata.getId());
+                            Allium.LOGGER.error("Could not find entrypoint(s) for script with ID " + metadata.getId());
                         }
                     }
                 } catch (ClassCastException e) { // Not an object...
@@ -130,10 +130,10 @@ public class FileHelper {
     private static Script scriptFromContainer( Manifest man, ModContainer container) {
         final Script[] out = new Script[1];
         container.getRootPaths().forEach((path) -> {
-            if (path.resolve(man.entrypoint()).toFile().exists()) {
+            if (path.resolve(man.entrypoints().getStatic()).toFile().exists()) {
                 // This has an incidental safeguard in the event that multiple plugins with the same
                 // ID, the most recent script loaded will just *overwrite* previous ones.
-                out[0] = new Script(man, path, false);
+                out[0] = new Script(man, path);
             }
         });
         return out[0];
@@ -144,13 +144,18 @@ public class FileHelper {
     }
 
     private static Manifest makeManifest(CustomValue.CvObject value, String optId, String optVersion, String optName) {
-        String id; String version; String name; String entrypoint;
+        String id; String version; String name; CustomValue.CvObject entrypoint;
 
         id = value.get("id") == null ? optId : value.get("id").getAsString();
         version = value.get("version") == null ? optVersion : value.get("version").getAsString();
         name = value.get("name") == null ? optName : value.get("name").getAsString();
-        entrypoint = value.get("entrypoint") == null ? null : value.get("entrypoint").getAsString();
-
-        return entrypoint == null ? null : new Manifest(id, version, name, entrypoint);
+        entrypoint = value.get("entrypoints") == null ? null : value.get("entrypoints").getAsObject();
+        if (entrypoint != null && entrypoint.containsKey("static")) {
+            String eStatic = entrypoint.containsKey("static") ? entrypoint.get("static").getAsString() : null;
+            String eDynamic = entrypoint.containsKey("dynamic") ? entrypoint.get("dynamic").getAsString() : null;
+            return new Manifest(id, version, name, new Entrypoint(eStatic, eDynamic));
+        } else {
+            return null;
+        }
     }
 }
