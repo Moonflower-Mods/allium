@@ -17,9 +17,7 @@ import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -482,21 +480,7 @@ public class UserdataFactory<T> {
             }
 
             if (unimplemented == 1) {
-                EMethod finalIfaceMethod = ifaceMethod;
-
-                return Proxy.newProxyInstance(clatz.classLoader(), new Class[]{clatz.raw()},
-                        (p, m, params) -> {
-                            if (m.isDefault()) {
-                                return InvocationHandler.invokeDefault(p, m, params);
-                            }
-
-                            var args = new LuaValue[params.length];
-                            for (int i = 0; i < params.length; i++) {
-                                args[i] = toLuaValue(params[i], finalIfaceMethod.parameters().get(i).parameterType().lowerBound());
-                            }
-
-                            return toJava(state, func.invoke(state, ValueFactory.varargsOf(args)).first(), finalIfaceMethod.returnType().upperBound());
-                        });
+                return ProxyGenerator.getProxyFactory(clatz, ifaceMethod).apply(state, func);
             } else {
                 return value.checkUserdata(clatz.raw());
             }
@@ -541,10 +525,6 @@ public class UserdataFactory<T> {
 
     public static LuaValue toLuaValue(Object out) {
         return toLuaValue(out, out != null ? EClass.fromJava(out.getClass()) : CommonTypes.OBJECT);
-    }
-
-    public static LuaValue toLuaValue(Object out, Class<?> ret) {
-        return toLuaValue(out, EClass.fromJava(ret));
     }
 
     @SuppressWarnings({"unchecked", "rawtypes"})
@@ -599,7 +579,11 @@ public class UserdataFactory<T> {
                 }
             }
 
-            return new UDFFunctions(ret, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
+            if (unimplemented == 1) {
+                return new UDFFunctions(ret, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
+            } else {
+                return UserdataFactory.of(ret).create(ret.cast(out));
+            }
         } else if (ret.raw().isAssignableFrom(out.getClass())) {
             return UserdataFactory.of(ret).create(ret.cast(out));
         } else {
@@ -635,7 +619,7 @@ public class UserdataFactory<T> {
         public Varargs invoke(LuaState state, Varargs args) throws LuaError {
             List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
             StringBuilder error = new StringBuilder("Could not find parameter match for called function \"" +
-                    this.matches.get(0).name() + "\" for \"" + clazz.name() + "\"" +
+                    name + "\" for \"" + clazz.name() + "\"" +
                     "\nThe following are correct argument types:\n"
             );
 
@@ -663,7 +647,7 @@ public class UserdataFactory<T> {
                                 throw new LuaError(e);
                             }
                         }
-                    } catch (InvalidArgumentException | IllegalArgumentException e) {
+                    } catch (InvalidArgumentException e) {
                         paramList.add(UserdataFactory.paramsToPrettyString(parameters));
                     }
                 }
