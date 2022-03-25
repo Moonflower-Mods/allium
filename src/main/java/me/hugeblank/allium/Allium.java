@@ -22,7 +22,6 @@ import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.Identifier;
-import org.apache.logging.log4j.core.appender.rolling.action.DeletingVisitor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
