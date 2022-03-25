@@ -142,7 +142,7 @@ public class ClassBuilder {
             m.visitVarInsn(ALOAD, varPrefix);
             m.visitLdcInsn(0);
             m.visitVarInsn(ALOAD, 0);
-            fields.storeAndGetComplex(m, EClass::fromJava, EClass.class);
+            fields.storeAndGetComplex(m, EClass::fromJava, EClass.class, className);
             m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
             m.visitInsn(AASTORE);
         }
