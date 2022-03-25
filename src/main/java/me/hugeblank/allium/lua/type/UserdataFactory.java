@@ -17,9 +17,7 @@ import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Array;
-import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Proxy;
 import java.util.*;
 import java.util.function.Consumer;
 
@@ -529,10 +527,6 @@ public class UserdataFactory<T> {
         return toLuaValue(out, out != null ? EClass.fromJava(out.getClass()) : CommonTypes.OBJECT);
     }
 
-    public static LuaValue toLuaValue(Object out, Class<?> ret) {
-        return toLuaValue(out, EClass.fromJava(ret));
-    }
-
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static LuaValue toLuaValue(Object out, EClass<?> ret) {
         ret = ret.unwrapPrimitive();
@@ -585,7 +579,11 @@ public class UserdataFactory<T> {
                 }
             }
 
-            return new UDFFunctions(ret, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
+            if (unimplemented == 1) {
+                return new UDFFunctions(ret, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
+            } else {
+                return UserdataFactory.of(ret).create(ret.cast(out));
+            }
         } else if (ret.raw().isAssignableFrom(out.getClass())) {
             return UserdataFactory.of(ret).create(ret.cast(out));
         } else {
@@ -621,7 +619,7 @@ public class UserdataFactory<T> {
         public Varargs invoke(LuaState state, Varargs args) throws LuaError {
             List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
             StringBuilder error = new StringBuilder("Could not find parameter match for called function \"" +
-                    this.matches.get(0).name() + "\" for \"" + clazz.name() + "\"" +
+                    name + "\" for \"" + clazz.name() + "\"" +
                     "\nThe following are correct argument types:\n"
             );
 
