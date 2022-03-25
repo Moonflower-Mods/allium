@@ -1,9 +1,10 @@
-package me.hugeblank.allium.lua.api;
+package me.hugeblank.allium.lua.api.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.CommandNode;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.lua.api.WrappedLuaLibrary;
 import me.hugeblank.allium.lua.type.LuaIndex;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import net.minecraft.server.command.CommandManager;
@@ -38,7 +39,7 @@ public class CommandLib implements WrappedLuaLibrary {
     }
 
     @LuaIndex
-    public BoundCommand index(String command) {
+    public Object index(String command) {
         if (isServerNull()) return null;
 
         CommandManager manager = Allium.SERVER.getCommandManager();
@@ -47,7 +48,7 @@ public class CommandLib implements WrappedLuaLibrary {
         CommandNode<?> node = dispatcher.findNode(Collections.singleton(command));
 
         if (node == null) return null;
-        else return (args) -> manager.execute(source, (command + " " + String.join(" ", args).trim())) != 0;
+        else return (BoundCommand)(args) -> manager.execute(source, (command + " " + String.join(" ", args).trim())) != 0;
     }
 
     @Override

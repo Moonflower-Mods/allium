@@ -42,6 +42,7 @@ public class JavaLib implements WrappedLuaLibrary {
             "net.minecraft.util.",
             "net.minecraft.util.registry.",
             "net.minecraft.server.",
+            "net.minecraft.server.command.",
             "net.minecraft.server.world.",
             "net.minecraft.server.network.",
             "com.mojang."

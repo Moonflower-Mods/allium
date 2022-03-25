@@ -53,8 +53,8 @@ dependencies {
 
 	// Used for testing Scripts. No code in the repo should depend on these
 	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api}"
-	modImplementation include("eu.pb4:placeholder-api:${project.placeholder_api}")
-	modImplementation include("eu.pb4:polymer:${project.polymer}+${project.minecraft_version}")
+	modImplementation "eu.pb4:placeholder-api:${project.placeholder_api}"
+	modImplementation "eu.pb4:polymer:${project.polymer}+${project.minecraft_version}"
 }
 
 processResources {

@@ -10,19 +10,22 @@ import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 import net.minecraft.world.World;
 import org.squiddev.cobalt.Constants;
+import org.squiddev.cobalt.LuaBoolean;
 import org.squiddev.cobalt.LuaString;
 import org.squiddev.cobalt.ValueFactory;
 
 public class Events {
     // TODO: Make the Event class smarter
-    public static final Event CHAT_MESSAGE;
-    public static final Event PLAYER_TICK;
-    public static final Event PLAYER_JOIN;
-    public static final Event PLAYER_QUIT;
-    public static final Event PLAYER_BLOCK_COLLISION;
-    public static final Event PLAYER_DEATH;
-    public static final Event BLOCK_INTERACT;
-    public static final Event SERVER_TICK;
+    public static final Event CHAT_MESSAGE; // player sends a chat message
+    public static final Event PLAYER_TICK; // player gets ticked
+    public static final Event PLAYER_JOIN; // player joins the game
+    public static final Event PLAYER_QUIT; // player leaves the game
+    public static final Event PLAYER_BLOCK_COLLISION; // player collides with a block
+    public static final Event PLAYER_DEATH; // player dies
+    public static final Event BLOCK_INTERACT; // player interacts (right clicks) with a block
+    public static final Event SERVER_TICK; // server gets ticked
+    public static final Event COMMAND_REGISTER; // the result of a registered command
+
     static {
         CHAT_MESSAGE = new Event("chat_message", (objects) -> {
             // Expects: [ServerPlayerEntity player, String message]
@@ -104,8 +107,17 @@ public class Events {
         });
         SERVER_TICK = new Event("server_tick", (objects) -> {
             // Expects: nothing
+            return Constants.NIL;
+        });
+        COMMAND_REGISTER = new Event("command_register", (objects) -> {
+            // Expects: [String script_id, String command_name, Boolean successful]
             try {
-                return ValueFactory.varargsOf();
+                LuaBoolean result = (Boolean) objects[2] ? Constants.TRUE : Constants.FALSE;
+                return ValueFactory.varargsOf(
+                        LuaString.valueOf((String) objects[0]),
+                        LuaString.valueOf((String) objects[1]),
+                        result
+                );
             } catch(ClassCastException e) {
                 return Constants.NIL;
             }

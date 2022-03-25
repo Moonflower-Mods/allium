@@ -15,13 +15,14 @@ import java.util.List;
 
 public class PackageLib {
     private final LuaTable loaders = new LuaTable();
-    private final LuaTable loaded = new LuaTable();
     private final LuaTable preload = new LuaTable();
     private static final String pathString = "./?.lua;./?/init.lua";
+    private final LuaTable loaded;
     private final Script loadedFor;
 
-    public PackageLib(Script script) {
+    public PackageLib(Script script, LuaState state) {
         this.loadedFor = script;
+        this.loaded = state.loadedPackages;
     }
 
     public LuaTable create() {
