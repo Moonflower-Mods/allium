@@ -25,6 +25,7 @@ import java.util.function.Function;
 public class UserdataFactory<T> {
     private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
     private static final Map<Class<?>, Function<EClass<?>, LuaDeserializer<?>>> DESERIALIZERS = new HashMap<>();
+    private static final Map<Class<?>, Function<EClass<?>, LuaSerializer<?>>> SERIALIZERS = new HashMap<>();
     private final Map<String, List<EMethod>> cachedMethods = new HashMap<>();
     private final Map<String, EField> cachedFields = new HashMap<>();
     private final EClass<T> clazz;
@@ -211,13 +212,24 @@ public class UserdataFactory<T> {
         return FACTORIES.computeIfAbsent(EClass.fromJava(instance.getClass()), UserdataFactory::new).create(instance);
     }
 
-    public static <T> void registerDeserializer(Class<T> klass, LuaDeserializer<T> deserializerFactory) {
-        if (DESERIALIZERS.put(klass, unused -> deserializerFactory) != null)
+    public static <T> void registerSerializer(Class<T> klass, LuaSerializer<T> serializer) {
+        if (SERIALIZERS.put(klass, unused -> serializer) != null)
+            throw new IllegalStateException("Serializer already registered for " + klass);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> void registerComplexSerializer(Class<T> klass, Function<EClass<T>, LuaSerializer<T>> serializerFactory) {
+        if (SERIALIZERS.put(klass, (Function<EClass<?>, LuaSerializer<?>>)(Object) serializerFactory) != null)
+            throw new IllegalStateException("Serializer already registered for " + klass);
+    }
+
+    public static <T> void registerDeserializer(Class<T> klass, LuaDeserializer<T> deserializer) {
+        if (DESERIALIZERS.put(klass, unused -> deserializer) != null)
             throw new IllegalStateException("Deserializer already registered for " + klass);
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> void registerDeserializer(Class<T> klass, Function<EClass<T>, LuaDeserializer<T>> deserializerFactory) {
+    public static <T> void registerComplexDeserializer(Class<T> klass, Function<EClass<T>, LuaDeserializer<T>> deserializerFactory) {
         if (DESERIALIZERS.put(klass, (Function<EClass<?>, LuaDeserializer<?>>)(Object) deserializerFactory) != null)
             throw new IllegalStateException("Deserializer already registered for " + klass);
     }
@@ -496,35 +508,26 @@ public class UserdataFactory<T> {
             return Constants.NIL;
         } else if (out instanceof LuaValue) {
             return (LuaValue) out;
-        } else if (ret.type() == ClassType.ARRAY) {
+        }
+
+        var serializerFactory = SERIALIZERS.get(ret.raw());
+        if (serializerFactory != null) {
+            var serializer = (LuaSerializer<Object>) serializerFactory.apply(ret);
+
+            if (serializer != null) {
+                LuaValue result = serializer.toLua(out);
+
+                if (result != null) return result;
+            }
+        }
+
+        if (ret.type() == ClassType.ARRAY) {
             var table = new LuaTable();
             int length = Array.getLength(out);
             for (int i = 1; i <= length; i++) {
                 table.rawset(i, toLuaValue(Array.get(out, i - 1), ret.arrayComponent()));
             }
             return table;
-        } else if (ret.type() == ClassType.PRIMITIVE) {
-            if (ret.equals(CommonTypes.INT)) { // int
-                return ValueFactory.valueOf((int) out);
-            } else if (ret.equals(CommonTypes.DOUBLE)) { // double
-                return ValueFactory.valueOf((double) out);
-            } else if (ret.equals(CommonTypes.FLOAT)) { // float
-                return ValueFactory.valueOf((float) out);
-            } else if (ret.equals(CommonTypes.LONG)) { // long
-                return ValueFactory.valueOf((long) out);
-            } else if (ret.equals(CommonTypes.BOOLEAN)) { // boolean
-                return ValueFactory.valueOf((boolean) out);
-            } else if (ret.equals(CommonTypes.SHORT)) { // short
-                return ValueFactory.valueOf((short) out);
-            } else if (ret.equals(CommonTypes.BYTE)) { // byte
-                return ValueFactory.valueOf((byte) out);
-            } else if (ret.equals(CommonTypes.CHAR)) { // char
-                return ValueFactory.valueOf((char) out);
-            }
-
-            throw new IllegalStateException("Unknown primitive type" + ret);
-        } else if (ret.equals(CommonTypes.STRING)) { // string
-            return ValueFactory.valueOf((String) out);
         } else if (ret.type() == ClassType.INTERFACE && ret.hasAnnotation(FunctionalInterface.class)) {
             EMethod ifaceMethod = null;
 
@@ -564,6 +567,16 @@ public class UserdataFactory<T> {
     }
 
     static {
+        registerSerializer(int.class, ValueFactory::valueOf);
+        registerSerializer(byte.class, ValueFactory::valueOf);
+        registerSerializer(short.class, ValueFactory::valueOf);
+        registerSerializer(char.class, ValueFactory::valueOf);
+        registerSerializer(double.class, ValueFactory::valueOf);
+        registerSerializer(float.class, ValueFactory::valueOf);
+        registerSerializer(long.class, ValueFactory::valueOf);
+        registerSerializer(boolean.class, ValueFactory::valueOf);
+        registerSerializer(String.class, ValueFactory::valueOf);
+
         registerDeserializer(int.class, (state, val) -> val.isInteger() ? val.toInteger() : null);
         registerDeserializer(byte.class, (state, val) -> val.isInteger() ? (byte)val.toInteger() : null);
         registerDeserializer(short.class, (state, val) -> val.isInteger() ? (short)val.toInteger() : null);
@@ -581,7 +594,7 @@ public class UserdataFactory<T> {
             else return klass.raw();
         });
 
-        registerDeserializer(List.class, klass -> {
+        registerComplexDeserializer(List.class, klass -> {
             EClass<?> componentType = klass.typeVariableValues().get(0).upperBound();
 
             return (state, value) -> {
@@ -597,7 +610,7 @@ public class UserdataFactory<T> {
             };
         });
 
-        registerDeserializer(Map.class, klass -> {
+        registerComplexDeserializer(Map.class, klass -> {
             EClass<?> keyType = klass.typeVariableValues().get(0).upperBound();
             EClass<?> valueType = klass.typeVariableValues().get(1).upperBound();
 
