@@ -53,7 +53,7 @@ public class CommandManagerMixin {
 
     private static void allium$queueEvent(CommandRegisterEntry entry, boolean result) {
         DefaultEventsLib.COMMAND_REGISTER.invoker().onCommandRegistration(
-                entry.script().getManifest().id(),
+                entry.script().getId(),
                 entry.builder().getLiteral(),
                 result
         );

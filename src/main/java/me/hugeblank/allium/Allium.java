@@ -92,7 +92,7 @@ public class Allium implements ModInitializer {
 
     private static void list(StringBuilder sb, Function<Script, Boolean> func) {
         CANDIDATES.forEach((script) -> {
-            if (func.apply(script)) sb.append(script.getManifest().id()).append(", ");
+            if (func.apply(script)) sb.append(script.getId()).append(", ");
         });
         Allium.LOGGER.info(sb.substring(0, sb.length()-2));
     }

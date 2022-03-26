@@ -81,16 +81,16 @@ public class ScriptExecutor {
         state.setupThread(new LuaTable());
         switch (entrypoints.getType()) {
             case STATIC -> {
-                staticFunction = this.load(sMain, script.getManifest().id());
+                staticFunction = this.load(sMain, script.getId());
                 return LuaThread.runMain(state, staticFunction);
             }
             case DYNAMIC -> {
-                dynamicFunction = this.load(dMain, script.getManifest().id());
+                dynamicFunction = this.load(dMain, script.getId());
                 return LuaThread.runMain(state, dynamicFunction);
             }
             case BOTH -> {
-                staticFunction = this.load(sMain, script.getManifest().id() + ":static");
-                dynamicFunction = this.load(dMain, script.getManifest().id() + ":dynamic");
+                staticFunction = this.load(sMain, script.getId() + ":static");
+                dynamicFunction = this.load(dMain, script.getId() + ":dynamic");
                 Varargs out = LuaThread.runMain(state, staticFunction);
                 LuaThread.runMain(state, dynamicFunction);
                 return out;
@@ -103,7 +103,7 @@ public class ScriptExecutor {
     public Varargs reload(InputStream dynamic) throws LuaError, InterruptedException, CompileException, IOException {
         Entrypoint entrypoint = script.getManifest().entrypoints();
         if (entrypoint.hasType(Entrypoint.Type.DYNAMIC)) {
-            LuaFunction dynamicFunction = this.load(dynamic, script.getManifest().id());
+            LuaFunction dynamicFunction = this.load(dynamic, script.getId());
             return LuaThread.runMain(state, dynamicFunction);
         }
         return null;

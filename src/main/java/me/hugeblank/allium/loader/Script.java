@@ -17,6 +17,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
+@LuaWrapped
 public class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
 
@@ -43,7 +44,7 @@ public class Script {
             SCRIPTS.put(manifest.id(), this);
             AlliumResourcePack.register(this);
         } catch (Exception e) {
-            getLogger().error("Could not load allium script " + getManifest().id(), e);
+            getLogger().error("Could not load allium script " + getId(), e);
             unload();
         }
     }
@@ -61,7 +62,7 @@ public class Script {
                     executor.reload(dynamicEntrypoint).arg(1) :
                     this.module;
         } catch (Throwable e) {
-            getLogger().error("Could not reload allium script " + getManifest().id(), e);
+            getLogger().error("Could not reload allium script " + getId(), e);
             unload();
         }
 
@@ -126,7 +127,7 @@ public class Script {
             this.module = getExecutor().initialize(staticEntrypoint, dynamicEntrypoint).arg(1);
             this.initialized = true; // If all these steps are successful, we can set initialized to true
         } catch (Throwable e) {
-            getLogger().error("Could not initialize allium script " + getManifest().id(), e);
+            getLogger().error("Could not initialize allium script " + getId(), e);
             unload();
         }
     }
@@ -162,6 +163,21 @@ public class Script {
 
     public Manifest getManifest() {
         return manifest;
+    }
+
+    @LuaWrapped
+    public String getId() {
+        return manifest.id();
+    }
+
+    @LuaWrapped
+    public String getVersion() {
+        return manifest.version();
+    }
+
+    @LuaWrapped
+    public String getName() {
+        return manifest.name();
     }
 
     public Logger getLogger() {
