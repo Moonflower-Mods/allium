@@ -1,9 +1,11 @@
 package me.hugeblank.allium.loader;
 
+import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.lua.api.PackageLib;
 import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.commands.CommandLib;
 import me.hugeblank.allium.lua.api.commands.CommandsLib;
+import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -40,14 +42,15 @@ public class ScriptExecutor {
         globals.load( state, new DebugLib() );
 
         // Custom globals
-        globals.load( state, new AlliumLib(script) );
+        globals.load( state, new AlliumLib() );
         globals.load( state, new GameLib() );
         globals.load( state, new JavaLib() );
         globals.load( state, new TextLib() );
         globals.load( state, new NbtLib() );
         globals.load( state, new CommandLib(script) );
         globals.load( state, new CommandsLib(script) );
-        globals.load( state, new ScriptLib(script) );
+        globals.rawset( "script", UserdataFactory.toLuaValue(script, EClass.fromJava(Script.class)) );
+        globals.load( state, new DefaultEventsLib() );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script, state);
@@ -78,16 +81,16 @@ public class ScriptExecutor {
         state.setupThread(new LuaTable());
         switch (entrypoints.getType()) {
             case STATIC -> {
-                staticFunction = this.load(sMain, script.getManifest().id());
+                staticFunction = this.load(sMain, script.getId());
                 return LuaThread.runMain(state, staticFunction);
             }
             case DYNAMIC -> {
-                dynamicFunction = this.load(dMain, script.getManifest().id());
+                dynamicFunction = this.load(dMain, script.getId());
                 return LuaThread.runMain(state, dynamicFunction);
             }
             case BOTH -> {
-                staticFunction = this.load(sMain, script.getManifest().id() + ":static");
-                dynamicFunction = this.load(dMain, script.getManifest().id() + ":dynamic");
+                staticFunction = this.load(sMain, script.getId() + ":static");
+                dynamicFunction = this.load(dMain, script.getId() + ":dynamic");
                 Varargs out = LuaThread.runMain(state, staticFunction);
                 LuaThread.runMain(state, dynamicFunction);
                 return out;
@@ -100,7 +103,7 @@ public class ScriptExecutor {
     public Varargs reload(InputStream dynamic) throws LuaError, InterruptedException, CompileException, IOException {
         Entrypoint entrypoint = script.getManifest().entrypoints();
         if (entrypoint.hasType(Entrypoint.Type.DYNAMIC)) {
-            LuaFunction dynamicFunction = this.load(dynamic, script.getManifest().id());
+            LuaFunction dynamicFunction = this.load(dynamic, script.getId());
             return LuaThread.runMain(state, dynamicFunction);
         }
         return null;

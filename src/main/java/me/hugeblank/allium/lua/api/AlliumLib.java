@@ -1,40 +1,40 @@
 package me.hugeblank.allium.lua.api;
 
+import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.commands.CommandRegisterEntry;
-import me.hugeblank.allium.lua.event.Event;
 import me.hugeblank.allium.lua.type.LuaWrapped;
-import org.squiddev.cobalt.LuaError;
-import org.squiddev.cobalt.function.LuaFunction;
+import me.hugeblank.allium.lua.type.UserdataFactory;
+import org.jetbrains.annotations.Nullable;
+import org.squiddev.cobalt.LuaTable;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Supplier;
 
-@LuaWrapped
+@LuaWrapped(name = "allium")
 public class AlliumLib implements WrappedLuaLibrary {
-    private final Script script;
     public static final List<CommandRegisterEntry>
             COMMANDS = new ArrayList<>();
 
 
-    public AlliumLib(Script script) {
-        this.script = script;
+    public AlliumLib() {
     }
 
     @LuaWrapped
-    public Supplier<Boolean> onEvent(String eName, LuaFunction handler) throws LuaError {
-        Event event = Event.get(eName);
-        if (event != null) {
-            event.addListener(script, handler);
-        } else {
-            throw new LuaError("No event of type '" + eName + "' exists");
-        }
-        return () -> event.removeListener(script, handler); // return an unsubscribe function
+    public boolean isScriptLoaded(String id) {
+        return Script.getFromID(id) != null;
     }
 
-    @Override
-    public String getLibraryName() {
-        return "allium";
+    @LuaWrapped
+    public LuaTable getAllScripts() {
+        return UserdataFactory.listToTable(
+            Script.getAllScripts().stream().toList(),
+            EClass.fromJava(Script.class)
+        );
+    }
+
+    @LuaWrapped
+    public @Nullable Script getScript(String id) {
+        return Script.getFromID(id);
     }
 }

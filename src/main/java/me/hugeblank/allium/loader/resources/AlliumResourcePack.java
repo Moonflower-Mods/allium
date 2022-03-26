@@ -89,14 +89,14 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
                         s = s.replace(separator, "");
 
                         if (!RESOURCE_PACK_PATH.matcher(s).matches()) {
-                            LOGGER.warn("NioResourcePack: ignored invalid namespace: {} in script ID {}", s, script.getManifest().id());
+                            LOGGER.warn("NioResourcePack: ignored invalid namespace: {} in script ID {}", s, script.getId());
                             continue;
                         }
 
                         namespaces.add(s);
                     }
                 } catch (IOException e) {
-                    LOGGER.warn("getNamespaces on script " + script.getManifest().id() + " failed!", e);
+                    LOGGER.warn("getNamespaces on script " + script.getId() + " failed!", e);
                 }
             });
 
@@ -214,7 +214,7 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
                     }
                 });
             } catch (IOException e) {
-                LOGGER.warn("findResources at " + path + " in namespace " + namespace + ", script " + basePath.getKey().getManifest().id() + " failed!", e);
+                LOGGER.warn("findResources at " + path + " in namespace " + namespace + ", script " + basePath.getKey().getId() + " failed!", e);
             }
         }
 

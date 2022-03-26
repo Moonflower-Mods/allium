@@ -5,7 +5,7 @@ import me.hugeblank.allium.util.text.TextParserUtils;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
-@LuaWrapped
+@LuaWrapped(name = "texts")
 public class TextLib implements WrappedLuaLibrary {
     @LuaWrapped(name = "empty")
     public Text EMPTY = LiteralText.EMPTY;
@@ -38,10 +38,5 @@ public class TextLib implements WrappedLuaLibrary {
     @LuaWrapped
     public String unescape(String string) {
         return TextParserUtils.removeEscaping(string);
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "texts";
     }
 }

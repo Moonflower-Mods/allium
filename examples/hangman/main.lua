@@ -40,7 +40,7 @@ end
 
 local builder = CommandManager.literal("hangman") -- Create the builder for the hangman command
 
-allium.onEvent("command_register", function(_, _, _, success)
+events.COMMAND_REGISTER:register(script, function(_, _, success)
     -- Let us know if the command was successfully registered
     if success then
         print("/hangman command registered!")

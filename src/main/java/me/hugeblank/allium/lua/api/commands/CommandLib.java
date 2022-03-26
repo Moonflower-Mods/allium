@@ -11,7 +11,7 @@ import net.minecraft.server.command.ServerCommandSource;
 
 import static me.hugeblank.allium.lua.api.AlliumLib.COMMANDS;
 
-@LuaWrapped
+@LuaWrapped(name = "command")
 public class CommandLib implements WrappedLuaLibrary {
     private final Script script;
 
@@ -28,14 +28,6 @@ public class CommandLib implements WrappedLuaLibrary {
         ));
     }
 
-    @LuaIndex
-    public ArgumentTypeLib index(String key) {
-        if (key.equals("arguments")) return new ArgumentTypeLib();
-        return null;
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "command";
-    }
+    @LuaWrapped(name = "arguments")
+    public static final ArgumentTypeLib ARGUMENTS = new ArgumentTypeLib();
 }

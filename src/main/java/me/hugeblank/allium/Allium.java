@@ -12,7 +12,6 @@
 package me.hugeblank.allium;
 
 import me.hugeblank.allium.loader.Script;
-import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.FileHelper;
 import me.hugeblank.allium.util.Mappings;
 import me.hugeblank.allium.util.YarnLoader;
@@ -83,9 +82,6 @@ public class Allium implements ModInitializer {
         LOGGER.info("Loading NathanFudge's Yarn Remapper");
         MAPPINGS = YarnLoader.init();
 
-        LOGGER.info("Initializing events");
-        Events.init();
-
         LOGGER.info("Loading Scripts");
         CANDIDATES.addAll(FileHelper.getValidDirScripts());
         CANDIDATES.addAll(FileHelper.getValidModScripts());
@@ -96,7 +92,7 @@ public class Allium implements ModInitializer {
 
     private static void list(StringBuilder sb, Function<Script, Boolean> func) {
         CANDIDATES.forEach((script) -> {
-            if (func.apply(script)) sb.append(script.getManifest().id()).append(", ");
+            if (func.apply(script)) sb.append(script.getId()).append(", ");
         });
         Allium.LOGGER.info(sb.substring(0, sb.length()-2));
     }

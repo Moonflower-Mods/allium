@@ -19,7 +19,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
-@LuaWrapped
+@LuaWrapped(name = "game")
 public class GameLib implements WrappedLuaLibrary {
     public ServerPlayerEntity getPlayer(String username) throws LuaError {
         ServerPlayerEntity player = Allium.SERVER.getPlayerManager().getPlayer(username);
@@ -66,10 +66,5 @@ public class GameLib implements WrappedLuaLibrary {
         return UserdataFactory.mapToTable(
             StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false).collect(Collectors.toMap(x -> x.getRegistryKey().getValue().toString(), x -> x)),
             CommonTypes.STRING, EClass.fromJava(ServerWorld.class));
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "game";
     }
 }

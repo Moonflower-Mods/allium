@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@LuaWrapped
+@LuaWrapped(name = "java")
 public class JavaLib implements WrappedLuaLibrary {
     private static final String[] AUTO_COMPLETE = new String[]{
             "",
@@ -56,13 +56,13 @@ public class JavaLib implements WrappedLuaLibrary {
         List<EField> staticFields = new ArrayList<>();
 
         for (EMethod declaredMethod : clazz.declaredMethods()) {
-            if (declaredMethod.isPublic() && declaredMethod.isStatic() && !declaredMethod.isAbstract() && !AnnotationUtils.isHiddenFromLua(clazz, declaredMethod)) {
+            if (declaredMethod.isPublic() && declaredMethod.isStatic() && !declaredMethod.isAbstract() && !AnnotationUtils.isHiddenFromLua(declaredMethod)) {
                 staticMethods.add(declaredMethod);
             }
         }
 
         for (EField declaredField : clazz.declaredFields()) {
-            if (declaredField.isPublic() && declaredField.isStatic() && !declaredField.isAbstract() && !AnnotationUtils.isHiddenFromLua(clazz, declaredField)) {
+            if (declaredField.isPublic() && declaredField.isStatic() && !declaredField.isAbstract() && !AnnotationUtils.isHiddenFromLua(declaredField)) {
                 staticFields.add(declaredField);
             }
         }
@@ -114,7 +114,7 @@ public class JavaLib implements WrappedLuaLibrary {
 
     // TODO: merge this with the Lua string library
     @LuaWrapped
-    public static String[] split(String strToSplit, String delimiter) throws LuaError {
+    public static String[] split(String strToSplit, String delimiter) {
         return strToSplit.split(delimiter);
     }
 
@@ -128,29 +128,23 @@ public class JavaLib implements WrappedLuaLibrary {
         return UserdataFactory.listToTable(Allium.MAPPINGS.getIntermediary(string), CommonTypes.STRING);
     }
 
-    private static Varargs createInstance(LuaState state, Varargs args) throws LuaError {
-        EClass<?> clazz = asClass(args.arg(1));
-
+    private static Varargs createInstance(LuaState state, EClass<?> clazz, Varargs args) throws LuaError {
         List<String> paramList = new ArrayList<>();
         for (var constructor : clazz.constructors()) {
-            if (AnnotationUtils.isHiddenFromLua(clazz, constructor)) continue;
+            if (AnnotationUtils.isHiddenFromLua(constructor)) continue;
 
             var parameters = constructor.parameters();
-            if (args.count() - 1 == parameters.size()) {
-                try {
-                    var jargs = UserdataFactory.toJavaArguments(state, args, 2, parameters);
+            try {
+                var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
 
-                    if (jargs.length == parameters.size()) { // Found a match!
-                        try { // Get the return type, invoke method, cast returned value, cry.
-                            Object out = constructor.invoke(jargs);
-                            return UserdataFactory.toLuaValue(out, clazz);
-                        } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
-                            throw new LuaError(e);
-                        }
-                    }
-                } catch (UserdataFactory.InvalidArgumentException e) {
-                    paramList.add(UserdataFactory.paramsToPrettyString(parameters));
+                try { // Get the return type, invoke method, cast returned value, cry.
+                    Object out = constructor.invoke(jargs);
+                    return UserdataFactory.toLuaValue(out, clazz);
+                } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
+                    throw new LuaError(e);
                 }
+            } catch (UserdataFactory.InvalidArgumentException e) {
+                paramList.add(UserdataFactory.paramsToPrettyString(parameters));
             }
         }
 
@@ -169,7 +163,7 @@ public class JavaLib implements WrappedLuaLibrary {
     @LuaWrapped
     public static LuaValue cast(@LuaStateArg LuaState state, EClass<?> klass, LuaUserdata object) throws LuaError {
         try {
-            return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, object, klass));
+            return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, object, klass), klass);
         } catch (UserdataFactory.InvalidArgumentException e) {
             e.printStackTrace();
             return Constants.NIL;
@@ -262,11 +256,6 @@ public class JavaLib implements WrappedLuaLibrary {
         throw new LuaError(new ClassNotFoundException());
     }
 
-    @Override
-    public String getLibraryName() {
-        return "java";
-    }
-
     private static class StaticMethods {
         private final EClass<?> clazz;
         private final EMethod[][] methods;
@@ -315,7 +304,8 @@ public class JavaLib implements WrappedLuaLibrary {
                 public Varargs invoke(LuaState state, Varargs args) throws LuaError {
                     return JavaLib.createInstance(
                         state,
-                        ValueFactory.varargsOf(UserdataFactory.toLuaValue(clazz), args.subargs(2))
+                        clazz,
+                        args.subargs(2)
                     );
                 }
             });
@@ -402,7 +392,7 @@ public class JavaLib implements WrappedLuaLibrary {
                 }
             }
 
-            tbl.rawset("allium_java_class", UserdataFactory.toLuaValue(this.clazz));
+            tbl.rawset("allium_java_class", UserdataFactory.of(EClass.fromJava(EClass.class)).create(this.clazz));
             return tbl;
         }
 
@@ -410,7 +400,7 @@ public class JavaLib implements WrappedLuaLibrary {
             @Override
             public Varargs invoke(LuaState state, Varargs args) throws LuaError {
                 if (methods.length == opcode) {
-                    return UserdataFactory.toLuaValue(clazz);
+                    return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
                 } else {
                     return invokeStatic(clazz, this.name, methods[opcode], state, args);
                 }

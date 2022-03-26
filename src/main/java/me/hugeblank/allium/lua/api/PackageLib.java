@@ -56,8 +56,8 @@ public class PackageLib {
 
                 if (loadingEntrypoint) {
                     Allium.LOGGER.warn(
-                        "Attempted to require an entrypoint of script '" + script.getManifest().id() +
-                        "'. Use require(\"" + script.getManifest().id() + "\") if you'd like to get" +
+                        "Attempted to require an entrypoint of script '" + script.getId() +
+                        "'. Use require(\"" + script.getId() + "\") if you'd like to get" +
                         " the value loaded by the entrypoint script."
                     ); // Slap on the wrist. Allium has already handled loading of the script.
                     return null;
