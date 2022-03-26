@@ -20,7 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-@LuaWrapped
+@LuaWrapped(name = "java")
 public class JavaLib implements WrappedLuaLibrary {
     private static final String[] AUTO_COMPLETE = new String[]{
             "",
@@ -114,7 +114,7 @@ public class JavaLib implements WrappedLuaLibrary {
 
     // TODO: merge this with the Lua string library
     @LuaWrapped
-    public static String[] split(String strToSplit, String delimiter) throws LuaError {
+    public static String[] split(String strToSplit, String delimiter) {
         return strToSplit.split(delimiter);
     }
 
@@ -254,11 +254,6 @@ public class JavaLib implements WrappedLuaLibrary {
         }
 
         throw new LuaError(new ClassNotFoundException());
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "java";
     }
 
     private static class StaticMethods {

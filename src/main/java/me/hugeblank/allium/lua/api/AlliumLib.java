@@ -11,7 +11,7 @@ import org.squiddev.cobalt.LuaTable;
 import java.util.ArrayList;
 import java.util.List;
 
-@LuaWrapped
+@LuaWrapped(name = "allium")
 public class AlliumLib implements WrappedLuaLibrary {
     public static final List<CommandRegisterEntry>
             COMMANDS = new ArrayList<>();
@@ -36,10 +36,5 @@ public class AlliumLib implements WrappedLuaLibrary {
     @LuaWrapped
     public @Nullable Script getScript(String id) {
         return Script.getFromID(id);
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "allium";
     }
 }

@@ -12,13 +12,8 @@ import org.squiddev.cobalt.ValueFactory;
 
 import java.util.Set;
 
-@LuaWrapped
+@LuaWrapped(name = "nbt")
 public class NbtLib implements WrappedLuaLibrary {
-    @Override
-    public String getLibraryName() {
-        return "nbt";
-    }
-
     @LuaWrapped
     public static LuaValue fromNbt(NbtElement element) {
         return switch (element.getType()) {

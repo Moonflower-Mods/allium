@@ -11,7 +11,7 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.hit.BlockHitResult;
 import net.minecraft.util.math.BlockPos;
 
-@LuaWrapped
+@LuaWrapped(name = "events")
 public class DefaultEventsLib implements WrappedLuaLibrary {
     @LuaWrapped public static final SimpleEventType<ChatMessageHandler> CHAT_MESSAGE; // player sends a chat message
     @LuaWrapped public static final SimpleEventType<PlayerTickHandler> PLAYER_TICK; // player gets ticked
@@ -33,11 +33,6 @@ public class DefaultEventsLib implements WrappedLuaLibrary {
         BLOCK_INTERACT = new SimpleEventType<>(new Identifier("allium:block_interact"));
         SERVER_TICK = new SimpleEventType<>(new Identifier("allium:server_tick"));
         COMMAND_REGISTER = new SimpleEventType<>(new Identifier("allium:command_register"));
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "events";
     }
 
     public interface ChatMessageHandler {

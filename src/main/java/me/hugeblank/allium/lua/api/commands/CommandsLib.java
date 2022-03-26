@@ -14,6 +14,7 @@ import java.util.Collections;
 
 // Functionally similar to ComputerCraft's commands API
 // See: https://github.com/cc-tweaked/CC-Tweaked/blob/mc-1.16.x/src/main/java/dan200/computercraft/shared/computer/apis/CommandAPI.java
+@LuaWrapped(name = "commands")
 public class CommandsLib implements WrappedLuaLibrary {
     private final Script script;
 
@@ -49,11 +50,6 @@ public class CommandsLib implements WrappedLuaLibrary {
 
         if (node == null) return null;
         else return (args) -> manager.execute(source, (command + " " + String.join(" ", args).trim())) != 0;
-    }
-
-    @Override
-    public String getLibraryName() {
-        return "commands";
     }
 
     @FunctionalInterface
