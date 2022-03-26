@@ -42,7 +42,7 @@ public class ScriptExecutor {
         globals.load( state, new DebugLib() );
 
         // Custom globals
-        globals.load( state, new AlliumLib(script) );
+        globals.load( state, new AlliumLib() );
         globals.load( state, new GameLib() );
         globals.load( state, new JavaLib() );
         globals.load( state, new TextLib() );
