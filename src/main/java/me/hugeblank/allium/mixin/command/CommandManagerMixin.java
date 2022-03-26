@@ -2,7 +2,7 @@ package me.hugeblank.allium.mixin.command;
 
 import com.mojang.brigadier.CommandDispatcher;
 import me.hugeblank.allium.lua.api.AlliumLib;
-import me.hugeblank.allium.lua.api.commands.CommandEntry;
+import me.hugeblank.allium.lua.api.commands.CommandRegisterEntry;
 import me.hugeblank.allium.lua.event.Events;
 import me.hugeblank.allium.util.DebugLoggerWrapper;
 import net.minecraft.server.command.CommandManager;
@@ -51,7 +51,7 @@ public class CommandManagerMixin {
         LOGGER = new DebugLoggerWrapper(LOGGER);
     }
 
-    private static void allium$queueEvent(CommandEntry entry, boolean result) {
+    private static void allium$queueEvent(CommandRegisterEntry entry, boolean result) {
         Events.COMMAND_REGISTER.queueEvent(
                 entry.script().getManifest().id(),
                 entry.builder().getLiteral(),

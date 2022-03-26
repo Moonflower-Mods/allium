@@ -2,8 +2,8 @@ package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.lua.api.PackageLib;
 import me.hugeblank.allium.lua.api.*;
-import me.hugeblank.allium.lua.api.commands.ArgumentTypeLib;
 import me.hugeblank.allium.lua.api.commands.CommandLib;
+import me.hugeblank.allium.lua.api.commands.CommandsLib;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -46,8 +46,8 @@ public class ScriptExecutor {
         globals.load( state, new TextLib() );
         globals.load( state, new NbtLib() );
         globals.load( state, new CommandLib(script) );
+        globals.load( state, new CommandsLib(script) );
         globals.load( state, new ScriptLib(script) );
-        globals.load( state, new ArgumentTypeLib() );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script, state);

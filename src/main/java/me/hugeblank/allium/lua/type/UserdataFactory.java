@@ -85,6 +85,8 @@ public class UserdataFactory<T> {
                                 var instance = toJava(state, arg1, clazz);
                                 EClass<?> ret = indexImpl.returnType().upperBound();
                                 Object out = indexImpl.invoke(instance, jargs);
+                                // If out is null, we can assume the index is nil
+                                if (out == null) throw new InvalidArgumentException();
                                 return toLuaValue(out, ret);
                             } catch (IllegalAccessException e) {
                                 throw new LuaError(e);
@@ -98,7 +100,7 @@ public class UserdataFactory<T> {
                                 } else {
                                     throw new LuaError(target);
                                 }
-                            }
+                            } catch (InvalidArgumentException ignore) {}
                         }
                     } catch (InvalidArgumentException | IllegalArgumentException e) {
                         // Continue.
