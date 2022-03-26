@@ -1,7 +1,6 @@
 package me.hugeblank.allium.lua.api.commands;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
-import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.WrappedLuaLibrary;
 import me.hugeblank.allium.lua.type.LuaIndex;
@@ -31,7 +30,6 @@ public class CommandLib implements WrappedLuaLibrary {
 
     @LuaIndex
     public ArgumentTypeLib index(String key) {
-        Allium.LOGGER.info(key);
         if (key.equals("arguments")) return new ArgumentTypeLib();
         return null;
     }
