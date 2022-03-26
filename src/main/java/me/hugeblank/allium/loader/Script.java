@@ -2,7 +2,7 @@ package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
-import me.hugeblank.allium.lua.event.Event;
+import me.hugeblank.allium.lua.event.EventType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.*;
@@ -14,8 +14,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
@@ -28,6 +27,9 @@ public class Script {
     private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
     private final Path path;
+    // Resources are stored in a weak set so that if a resource is abandoned, it gets
+    private final Set<ScriptResource> resources = Collections.newSetFromMap(new WeakHashMap<>());
+    private boolean destroyingResources = false;
 
     public Script (Manifest manifest, Path path) {
         this.manifest = manifest;
@@ -46,10 +48,8 @@ public class Script {
     }
 
     public void reload() {
-        // Remove listeners
-        for (Event e : Event.getEvents().values()) {
-            e.removeAllListeners(this);
-        }
+        destroyAllResources();
+
         // Re-run dynamic entrypoint again
         try {
             InputStream dynamicEntrypoint = manifest.entrypoints().containsDynamic() ?
@@ -66,12 +66,47 @@ public class Script {
 
     }
 
+    public ResourceRegistration registerResource(ScriptResource resource) {
+        resources.add(resource);
+
+        return new ResourceRegistration(resource);
+    }
+
+    public class ResourceRegistration implements AutoCloseable {
+        private final ScriptResource resource;
+
+        private ResourceRegistration(ScriptResource resource) {
+            this.resource = resource;
+        }
+
+        @Override
+        public void close() {
+            if (destroyingResources) return;
+
+            resources.remove(resource);
+        }
+    }
+
+    private void destroyAllResources() {
+        if (destroyingResources) throw new IllegalStateException("Tried to recursively destroy resources!");
+
+        destroyingResources = true;
+
+        try {
+            for (ScriptResource resource : resources) {
+                resource.close();
+            }
+        } finally {
+            destroyingResources = false;
+
+            resources.clear();
+        }
+    }
+
     public void unload() {
         SCRIPTS.remove(manifest.name(), this);
+        destroyAllResources();
         this.executor.getState().abandon();
-        for (Event e : Event.getEvents().values()) {
-            e.removeAllListeners(this);
-        }
         AlliumResourcePack.drop(this);
     }
 

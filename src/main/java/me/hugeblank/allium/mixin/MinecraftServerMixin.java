@@ -4,7 +4,7 @@ import com.mojang.authlib.GameProfileRepository;
 import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.lua.event.Events;
+import me.hugeblank.allium.lua.api.DefaultEventsLib;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.resource.ResourcePackManager;
@@ -51,6 +51,6 @@ public abstract class MinecraftServerMixin {
     
     @Inject(at = @At("TAIL"), method = "tick")
     private void tick(BooleanSupplier shouldKeepTicking, CallbackInfo ci) {
-        Events.SERVER_TICK.queueEvent();
+        DefaultEventsLib.SERVER_TICK.invoker().onServerTick();
     }
 }

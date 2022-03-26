@@ -1,6 +1,6 @@
 package me.hugeblank.allium.mixin;
 
-import me.hugeblank.allium.lua.event.Events;
+import me.hugeblank.allium.lua.api.DefaultEventsLib;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -14,6 +14,6 @@ public class PlayerManagerMixin {
 
     @Inject(at = @At("TAIL"), method = "onPlayerConnect")
     private void onPlayerConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci) {
-        if (player.getWorld().isClient()) Events.PLAYER_JOIN.queueEvent(player);
+        if (player.getWorld().isClient()) DefaultEventsLib.PLAYER_JOIN.invoker().onPlayerJoin(player);
     }
 }

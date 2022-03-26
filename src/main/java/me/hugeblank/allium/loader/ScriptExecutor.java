@@ -48,6 +48,7 @@ public class ScriptExecutor {
         globals.load( state, new CommandLib(script) );
         globals.load( state, new CommandsLib(script) );
         globals.load( state, new ScriptLib(script) );
+        globals.load( state, new DefaultEventsLib() );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script, state);

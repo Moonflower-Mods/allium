@@ -6,7 +6,9 @@ package me.hugeblank.allium.lua.type;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.JavaLib;
+import me.hugeblank.allium.lua.api.ScriptLib;
 import me.hugeblank.allium.util.Mappings;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
@@ -20,9 +22,11 @@ import java.lang.reflect.Array;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class UserdataFactory<T> {
     private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
+    private static final Map<Class<?>, Function<EClass<?>, LuaDeserializer<?>>> DESERIALIZERS = new HashMap<>();
     private final Map<String, List<EMethod>> cachedMethods = new HashMap<>();
     private final Map<String, EField> cachedFields = new HashMap<>();
     private final EClass<T> clazz;
@@ -60,7 +64,7 @@ public class UserdataFactory<T> {
             .stream()
             .filter(x ->
                 !x.isStatic()
-             && !AnnotationUtils.isHiddenFromLua(clazz, x)
+             && !AnnotationUtils.isHiddenFromLua(x)
              && ArrayUtils.contains(specialNames, x.name())
              && x.parameters().size() >= minParams)
             .findAny()
@@ -123,20 +127,20 @@ public class UserdataFactory<T> {
 
                 EField matchedField = cachedFields.get(name);
                 if (matchedField == null) {
-                    matchedField = findField(clazz, clazz.fields().stream().filter(field -> !field.isStatic()).toList(), name);
+                    matchedField = findField(clazz, clazz.fields().stream().toList(), name);
                     cachedFields.put(name, matchedField);
                 }
 
                 if (matchedField != null) {
                     try {
-                        return toLuaValue(matchedField.get(arg1.checkUserdata(clazz.raw())));
+                        return toLuaValue(matchedField.get(arg1.checkUserdata(clazz.raw())), matchedField.fieldType().upperBound());
                     } catch (Exception e) {
                         // Silent
                     }
                 }
 
                 if (name.equals("allium_java_class")) {
-                    return UserdataFactory.toLuaValue(clazz);
+                    return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
                 }
 
                 return Constants.NIL;
@@ -209,9 +213,20 @@ public class UserdataFactory<T> {
         return FACTORIES.computeIfAbsent(EClass.fromJava(instance.getClass()), UserdataFactory::new).create(instance);
     }
 
+    public static <T> void registerDeserializer(Class<T> klass, LuaDeserializer<T> deserializerFactory) {
+        if (DESERIALIZERS.put(klass, unused -> deserializerFactory) != null)
+            throw new IllegalStateException("Deserializer already registered for " + klass);
+    }
+
+    @SuppressWarnings("unchecked")
+    public static <T> void registerDeserializer(Class<T> klass, Function<EClass<T>, LuaDeserializer<T>> deserializerFactory) {
+        if (DESERIALIZERS.put(klass, (Function<EClass<?>, LuaDeserializer<?>>)(Object) deserializerFactory) != null)
+            throw new IllegalStateException("Deserializer already registered for " + klass);
+    }
+
     public static void collectMethods(EClass<?> sourceClass, List<EMethod> methods, String name, Consumer<EMethod> consumer) {
         methods.forEach((method -> {
-            if (AnnotationUtils.isHiddenFromLua(sourceClass, method)) return;
+            if (AnnotationUtils.isHiddenFromLua(method)) return;
 
             String[] altNames = AnnotationUtils.findNames(method);
             if (altNames != null) {
@@ -259,7 +274,7 @@ public class UserdataFactory<T> {
 
     public static EField findField(EClass<?> sourceClass, List<EField> fields, String name) {
         for (var field : fields) {
-            if (AnnotationUtils.isHiddenFromLua(sourceClass, field)) continue;
+            if (AnnotationUtils.isHiddenFromLua(field)) continue;
 
             String[] altNames = AnnotationUtils.findNames(field);
             if (altNames != null) {
@@ -388,12 +403,24 @@ public class UserdataFactory<T> {
             return value;
         }
 
-        if (clatz.raw() == EClass.class)
-            return JavaLib.asClass(value);
-        else if (clatz.raw() == Class.class)
-            return JavaLib.asClass(value).raw();
+        if (value.isNil())
+            return null;
+
+        if (value.isUserdata(clatz.wrapPrimitive().raw()))
+            return value.toUserdata();
 
         clatz = clatz.unwrapPrimitive();
+
+        var deserializerFactory = DESERIALIZERS.get(clatz.raw());
+        if (deserializerFactory != null) {
+            var deserializer = deserializerFactory.apply(clatz);
+
+            if (deserializer != null) {
+                Object result = deserializer.fromLua(state, value);
+
+                if (result != null) return result;
+            }
+        }
 
         if (clatz.type() == ClassType.ARRAY) {
             if (!value.isTable())
@@ -412,60 +439,7 @@ public class UserdataFactory<T> {
             return clatz.cast(arr);
         }
 
-        if (value.isTable() && clatz.raw().equals(List.class)) {
-            EClass<?> componentType = clatz.typeVariableValues().get(0).upperBound();
-            LuaTable table = value.checkTable();
-            int length = table.length();
-            List<Object> list = new ArrayList<>(length);
-
-            for (int i = 0; i < length; i++) {
-                list.add(toJava(state, table.rawget(i + 1), componentType));
-            }
-
-            return list;
-        }
-
-        if (value.isTable() && clatz.raw().equals(Map.class)) {
-            EClass<?> keyType = clatz.typeVariableValues().get(0).upperBound();
-            EClass<?> valueType = clatz.typeVariableValues().get(1).upperBound();
-            LuaTable table = value.checkTable();
-            int length = table.length();
-            Map<Object, Object> map = new HashMap<>(length);
-
-            LuaValue k = Constants.NIL;
-            while (true) {
-                Varargs n = table.next(k);
-                if ((k = n.arg(1)).isNil())
-                    break;
-                LuaValue v = n.arg(2);
-
-                map.put(toJava(state, k, keyType), toJava(state, v, valueType));
-            }
-
-            return map;
-        }
-
-        if (clatz.type() == ClassType.PRIMITIVE) {
-            if (value.isInteger() && clatz.isAssignableFrom(CommonTypes.INT)) { // int
-                return value.toInteger();
-            } else if (value.isInteger() && clatz.isAssignableFrom(CommonTypes.BYTE)) { // byte
-                return (byte) value.toInteger();
-            } else if (value.isInteger() && clatz.isAssignableFrom(CommonTypes.SHORT)) { // short
-                return (short) value.toInteger();
-            } else if (value.isInteger() && clatz.isAssignableFrom(CommonTypes.CHAR)) { // char
-                return (char) value.toInteger();
-            } else if (value.isNumber() && clatz.isAssignableFrom(CommonTypes.DOUBLE)) { // double
-                return value.toDouble();
-            } else if (value.isNumber() && clatz.isAssignableFrom(CommonTypes.FLOAT)) { // float
-                return (float) value.toDouble();
-            } else if (value.isLong() && clatz.isAssignableFrom(CommonTypes.LONG)) { // long
-                return value.toLong();
-            } else if (value.isBoolean() && clatz.isAssignableFrom(CommonTypes.BOOLEAN)) { // boolean
-                return value.toBoolean();
-            }
-        } else if (value.isString() && clatz.isAssignableFrom(CommonTypes.STRING)) { // string
-            return value.toString();
-        } else if (value.isFunction() && clatz.type() == ClassType.INTERFACE) { // Callbacks
+        if (value.isFunction() && clatz.type() == ClassType.INTERFACE) { // Callbacks
             var func = value.checkFunction();
             EMethod ifaceMethod = null;
 
@@ -486,22 +460,9 @@ public class UserdataFactory<T> {
             } else {
                 return value.checkUserdata(clatz.raw());
             }
-        } else if (value.isUserdata()) {
-            var userData = value.checkUserdata();
-
-            if (userData instanceof EClass<?> eClass && clatz.raw() == Class.class)
-                return eClass.raw();
-
-            if (clatz.raw().isAssignableFrom(userData.getClass())) {
-                return value.checkUserdata();
-            }
         }
 
-        if (value.isNil()) {
-            return null;
-        }
-
-        throw new InvalidArgumentException();
+        throw new InvalidArgumentException("Couldn't convert " + value + " to java! Target type is " + clatz);
     }
 
     public static <T> LuaTable listToTable(List<T> list, EClass<T> klass) {
@@ -604,6 +565,73 @@ public class UserdataFactory<T> {
         return new LuaUserdata(instance, boundMetatable);
     }
 
+    static {
+        registerDeserializer(int.class, (state, val) -> val.isInteger() ? val.toInteger() : null);
+        registerDeserializer(byte.class, (state, val) -> val.isInteger() ? (byte)val.toInteger() : null);
+        registerDeserializer(short.class, (state, val) -> val.isInteger() ? (short)val.toInteger() : null);
+        registerDeserializer(char.class, (state, val) -> val.isInteger() ? (char)val.toInteger() : null);
+        registerDeserializer(double.class, (state, val) -> val.isNumber() ? val.toDouble() : null);
+        registerDeserializer(float.class, (state, val) -> val.isNumber() ? (float)val.toDouble() : null);
+        registerDeserializer(long.class, (state, val) -> val.isLong() ? val.toLong() : null);
+        registerDeserializer(boolean.class, (state, val) -> val.isBoolean() ? val.toBoolean() : null);
+        registerDeserializer(String.class, (state, val) -> val.isString() ? val.toString() : null);
+
+        registerDeserializer(EClass.class, (state, val) -> JavaLib.asClass(val));
+        registerDeserializer(Class.class, (state, val) -> {
+            EClass<?> klass = JavaLib.asClass(val);
+            if (klass == null) return null;
+            else return klass.raw();
+        });
+
+        registerDeserializer(List.class, klass -> {
+            EClass<?> componentType = klass.typeVariableValues().get(0).upperBound();
+
+            return (state, value) -> {
+                LuaTable table = value.checkTable();
+                int length = table.length();
+                List<Object> list = new ArrayList<>(length);
+
+                for (int i = 0; i < length; i++) {
+                    list.add(toJava(state, table.rawget(i + 1), componentType));
+                }
+
+                return list;
+            };
+        });
+
+        registerDeserializer(Map.class, klass -> {
+            EClass<?> keyType = klass.typeVariableValues().get(0).upperBound();
+            EClass<?> valueType = klass.typeVariableValues().get(1).upperBound();
+
+            return (state, value) -> {
+                LuaTable table = value.checkTable();
+                int length = table.length();
+                Map<Object, Object> map = new HashMap<>(length);
+
+                LuaValue k = Constants.NIL;
+                while (true) {
+                    Varargs n = table.next(k);
+                    if ((k = n.arg(1)).isNil())
+                        break;
+                    LuaValue v = n.arg(2);
+
+                    map.put(toJava(state, k, keyType), toJava(state, v, valueType));
+                }
+
+                return map;
+            };
+        });
+
+        // Misc allium stuff.
+        registerDeserializer(Script.class, (state, value) -> {
+            if (value.isUserdata(ScriptLib.class)) {
+                return value.toUserdata(ScriptLib.class).getScript();
+            }
+
+            return null;
+        });
+    }
+
     private static final class UDFFunctions<T> extends VarArgFunction {
         private final EClass<T> clazz;
         private final List<EMethod> matches;
@@ -646,7 +674,7 @@ public class UserdataFactory<T> {
                                 if (e.getTargetException() instanceof LuaError err)
                                     throw err;
 
-                                throw new LuaError(e);
+                                throw new LuaError(e.getTargetException());
                             }
                         }
                     } catch (InvalidArgumentException e) {
@@ -723,4 +751,5 @@ public class UserdataFactory<T> {
             return ValueFactory.valueOf(cmp.compareTo(cmp2) < 0 || cmp.equals(cmp2));
         }
     }
+
 }

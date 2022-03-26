@@ -26,6 +26,10 @@ public class ScriptLib implements WrappedLuaLibrary {
         return script.getManifest().name();
     }
 
+    public Script getScript() {
+        return script;
+    }
+
     @Override
     public String getLibraryName() {
         return "script";

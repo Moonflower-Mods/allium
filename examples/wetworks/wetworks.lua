@@ -13,7 +13,7 @@ local SoundCategory = java.import("SoundCategory")
 local EquipmentSlot = java.import("EquipmentSlot")
 
 -- Return a function that we can modify while the game is playing
-local listener = allium.onEvent("block_interact", function(e, state, world, pos, player, hand, hitResult)
+events.BLOCK_INTERACT:register(script, function(state, world, pos, player, hand, hitResult)
     local concrete = Registry.BLOCK:getId(state:getBlock()):getPath() -- Get the name of the block interacted with
     local mainHand = player:getEquippedStack(EquipmentSlot.MAINHAND) -- Get the main hand itemstack of the player
     -- Check if the block name has 'concrete_powder' in it, then check if the main hand is holding a water bottle

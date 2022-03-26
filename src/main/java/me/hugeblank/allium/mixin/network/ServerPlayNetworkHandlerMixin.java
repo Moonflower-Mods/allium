@@ -1,6 +1,6 @@
 package me.hugeblank.allium.mixin.network;
 
-import me.hugeblank.allium.lua.event.Events;
+import me.hugeblank.allium.lua.api.DefaultEventsLib;
 import net.minecraft.server.filter.TextStream;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -18,6 +18,6 @@ public class ServerPlayNetworkHandlerMixin {
     @Inject(at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Lnet/minecraft/network/MessageType;Ljava/util/UUID;)V"), method = "handleMessage(Lnet/minecraft/server/filter/TextStream$Message;)V")
     private void onChatMessage(TextStream.Message message, CallbackInfo ci) {
         String msg = message.getFiltered();
-        Events.CHAT_MESSAGE.queueEvent(player, msg);
+        DefaultEventsLib.CHAT_MESSAGE.invoker().onChatMessage(player, msg);
     }
 }
