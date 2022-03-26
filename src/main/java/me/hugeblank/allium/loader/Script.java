@@ -3,6 +3,7 @@ package me.hugeblank.allium.loader;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.event.EventType;
+import me.hugeblank.allium.lua.type.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.*;
@@ -22,12 +23,12 @@ public class Script {
     // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
-    private ScriptExecutor executor;
+    private final ScriptExecutor executor;
     // Whether this script was able to register itself
     private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
     private final Path path;
-    // Resources are stored in a weak set so that if a resource is abandoned, it gets
+    // Resources are stored in a weak set so that if a resource is abandoned, it gets destroyed.
     private final Set<ScriptResource> resources = Collections.newSetFromMap(new WeakHashMap<>());
     private boolean destroyingResources = false;
 
@@ -66,6 +67,7 @@ public class Script {
 
     }
 
+    @LuaWrapped
     public ResourceRegistration registerResource(ScriptResource resource) {
         resources.add(resource);
 
@@ -148,10 +150,12 @@ public class Script {
         }
     }
 
+    @LuaWrapped
     public LuaValue getModule() {
         return module;
     }
 
+    @LuaWrapped
     public Path getPath() {
         return path;
     }
@@ -170,6 +174,10 @@ public class Script {
 
     public static Script getFromID(String id) {
         return SCRIPTS.get(id);
+    }
+
+    public static Collection<Script> getAllScripts() {
+        return SCRIPTS.values();
     }
 
     @Override

@@ -6,9 +6,7 @@ package me.hugeblank.allium.lua.type;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.JavaLib;
-import me.hugeblank.allium.lua.api.ScriptLib;
 import me.hugeblank.allium.util.Mappings;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
@@ -620,15 +618,6 @@ public class UserdataFactory<T> {
 
                 return map;
             };
-        });
-
-        // Misc allium stuff.
-        registerDeserializer(Script.class, (state, value) -> {
-            if (value.isUserdata(ScriptLib.class)) {
-                return value.toUserdata(ScriptLib.class).getScript();
-            }
-
-            return null;
         });
     }
 

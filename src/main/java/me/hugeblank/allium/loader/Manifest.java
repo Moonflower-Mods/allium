@@ -1,5 +1,7 @@
 package me.hugeblank.allium.loader;
 
+import me.hugeblank.allium.lua.type.LuaWrapped;
+
 public class Manifest {
     private final String id;
     private final String version;
@@ -13,14 +15,17 @@ public class Manifest {
         this.entrypoints = entrypoint;
     }
 
+    @LuaWrapped
     public String id() {
         return id;
     }
 
+    @LuaWrapped
     public String version() {
         return version;
     }
 
+    @LuaWrapped
     public String name() {
         return name;
     }
