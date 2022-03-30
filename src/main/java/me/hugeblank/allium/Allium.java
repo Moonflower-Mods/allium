@@ -46,34 +46,36 @@ public class Allium implements ModInitializer {
     public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
     public static Set<Script> CANDIDATES = new HashSet<>();
+    public static final Path DUMP_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve("allium-dump");
 
     @Override
     public void onInitialize() {
         if (DEVELOPMENT) {
             try {
-                Files.walkFileTree(Path.of("allium-dump"), new FileVisitor<>() {
-                    @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                        return FileVisitResult.CONTINUE;
-                    }
+                if (Files.isDirectory(DUMP_DIRECTORY))
+                    Files.walkFileTree(DUMP_DIRECTORY, new FileVisitor<>() {
+                        @Override
+                        public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+                            return FileVisitResult.CONTINUE;
+                        }
 
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                        Files.delete(file);
-                        return FileVisitResult.CONTINUE;
-                    }
+                        @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
+                            Files.delete(file);
+                            return FileVisitResult.CONTINUE;
+                        }
 
-                    @Override
-                    public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
-                        throw exc;
-                    }
+                        @Override
+                        public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
+                            throw exc;
+                        }
 
-                    @Override
-                    public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
-                        Files.delete(dir);
-                        return FileVisitResult.CONTINUE;
-                    }
-                });
+                        @Override
+                        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+                            Files.delete(dir);
+                            return FileVisitResult.CONTINUE;
+                        }
+                    });
             } catch (IOException e) {
                 throw new RuntimeException("Couldn't delete dump directory", e);
             }
