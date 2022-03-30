@@ -26,7 +26,7 @@ public class UserdataFactory<T> {
     private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
     private static final Map<Class<?>, Function<EClass<?>, LuaDeserializer<?>>> DESERIALIZERS = new HashMap<>();
     private static final Map<Class<?>, Function<EClass<?>, LuaSerializer<?>>> SERIALIZERS = new HashMap<>();
-    private final Map<String, List<EMethod>> cachedMethods = new HashMap<>();
+    private final Map<String, MethodData> cachedMethods = new HashMap<>();
     private final Map<String, EField> cachedFields = new HashMap<>();
     private final EClass<T> clazz;
     private final List<EMethod> methods;
@@ -111,18 +111,23 @@ public class UserdataFactory<T> {
                 }
 
                 String name = arg2.checkString(); // mapped name
-                List<EMethod> matchedMethods = cachedMethods.get(name);
-                if (matchedMethods == null) {
+
+                MethodData methodData = cachedMethods.get(name);
+                if (methodData == null) {
                     var collectedMatches = new ArrayList<EMethod>();
 
                     collectMethods(UserdataFactory.this.clazz, UserdataFactory.this.methods, name, collectedMatches::add);
 
-                    cachedMethods.put(name, collectedMatches);
-
-                    matchedMethods = collectedMatches;
+                    methodData = new MethodData(collectedMatches, collectedMatches.size() == 0 ? null : new UDFFunctions<>(clazz, collectedMatches, name, null));
+                    cachedMethods.put(name, methodData);
                 }
 
-                if (matchedMethods.size() > 0) return new UDFFunctions<>(clazz, matchedMethods, name, isBound ? arg1.checkUserdata(clazz.raw()) : null);
+                if (methodData.methods.size() > 0) {
+                    if (isBound)
+                        return new UDFFunctions<>(clazz, methodData.methods, name, arg1.checkUserdata(clazz.raw()));
+                    else
+                        return methodData.unboundFunction;
+                }
 
                 EField matchedField = cachedFields.get(name);
                 if (matchedField == null) {
@@ -633,6 +638,8 @@ public class UserdataFactory<T> {
             };
         });
     }
+
+    private record MethodData(List<EMethod> methods, UDFFunctions<?> unboundFunction) { }
 
     private static final class UDFFunctions<T> extends VarArgFunction {
         private final EClass<T> clazz;
