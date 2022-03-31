@@ -3,6 +3,7 @@ package me.hugeblank.allium.lua.api.commands;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.WrappedLuaLibrary;
+import me.hugeblank.allium.lua.type.CoerceToBound;
 import me.hugeblank.allium.lua.type.LuaIndex;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.OptionalArg;
@@ -29,5 +30,5 @@ public class CommandLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped(name = "arguments")
-    public static final ArgumentTypeLib ARGUMENTS = new ArgumentTypeLib();
+    public static final @CoerceToBound ArgumentTypeLib ARGUMENTS = new ArgumentTypeLib();
 }
