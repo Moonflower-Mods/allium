@@ -5,6 +5,7 @@
 package me.hugeblank.allium.lua.type;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
+import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.JavaLib;
 import me.hugeblank.allium.util.Mappings;
@@ -25,8 +26,8 @@ import java.util.function.Function;
 public class UserdataFactory<T> {
     private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
     private static final Map<Class<?>, Function<EClass<?>, LuaDeserializer<?>>> DESERIALIZERS = new HashMap<>();
-    private static final Map<Class<?>, Function<EClass<?>, LuaSerializer<?>>> SERIALIZERS = new HashMap<>();
-    private final Map<String, List<EMethod>> cachedMethods = new HashMap<>();
+    private static final Map<Class<?>, Function<EClassUse<?>, LuaSerializer<?>>> SERIALIZERS = new HashMap<>();
+    private final Map<String, MethodData> cachedMethods = new HashMap<>();
     private final Map<String, EField> cachedFields = new HashMap<>();
     private final EClass<T> clazz;
     private final List<EMethod> methods;
@@ -86,7 +87,7 @@ public class UserdataFactory<T> {
                         if (jargs.length == parameters.size()) {
                             try {
                                 var instance = toJava(state, arg1, clazz);
-                                EClass<?> ret = indexImpl.returnType().upperBound();
+                                EClassUse<?> ret = indexImpl.returnTypeUse().upperBound();
                                 Object out = indexImpl.invoke(instance, jargs);
                                 // If out is null, we can assume the index is nil
                                 if (out == null) throw new InvalidArgumentException();
@@ -111,18 +112,23 @@ public class UserdataFactory<T> {
                 }
 
                 String name = arg2.checkString(); // mapped name
-                List<EMethod> matchedMethods = cachedMethods.get(name);
-                if (matchedMethods == null) {
+
+                MethodData methodData = cachedMethods.get(name);
+                if (methodData == null) {
                     var collectedMatches = new ArrayList<EMethod>();
 
                     collectMethods(UserdataFactory.this.clazz, UserdataFactory.this.methods, name, collectedMatches::add);
 
-                    cachedMethods.put(name, collectedMatches);
-
-                    matchedMethods = collectedMatches;
+                    methodData = new MethodData(collectedMatches, collectedMatches.size() == 0 ? null : new UDFFunctions<>(clazz, collectedMatches, name, null));
+                    cachedMethods.put(name, methodData);
                 }
 
-                if (matchedMethods.size() > 0) return new UDFFunctions<>(clazz, matchedMethods, name, isBound ? arg1.checkUserdata(clazz.raw()) : null);
+                if (methodData.methods.size() > 0) {
+                    if (isBound)
+                        return new UDFFunctions<>(clazz, methodData.methods, name, arg1.checkUserdata(clazz.raw()));
+                    else
+                        return methodData.unboundFunction;
+                }
 
                 EField matchedField = cachedFields.get(name);
                 if (matchedField == null) {
@@ -132,7 +138,7 @@ public class UserdataFactory<T> {
 
                 if (matchedField != null) {
                     try {
-                        return toLuaValue(matchedField.get(arg1.checkUserdata(clazz.raw())), matchedField.fieldType().upperBound());
+                        return toLuaValue(matchedField.get(arg1.checkUserdata(clazz.raw())), matchedField.fieldTypeUse().upperBound());
                     } catch (Exception e) {
                         // Silent
                     }
@@ -157,7 +163,7 @@ public class UserdataFactory<T> {
                         if (jargs.length == parameters.size()) {
                             try {
                                 var instance = toJava(state, arg1, clazz);
-                                EClass<?> ret = newIndexImpl.returnType().upperBound();
+                                EClassUse<?> ret = newIndexImpl.returnTypeUse().upperBound();
                                 Object out = newIndexImpl.invoke(instance, jargs);
                                 return toLuaValue(out, ret);
                             } catch (IllegalAccessException e) {
@@ -218,8 +224,8 @@ public class UserdataFactory<T> {
     }
 
     @SuppressWarnings("unchecked")
-    public static <T> void registerComplexSerializer(Class<T> klass, Function<EClass<T>, LuaSerializer<T>> serializerFactory) {
-        if (SERIALIZERS.put(klass, (Function<EClass<?>, LuaSerializer<?>>)(Object) serializerFactory) != null)
+    public static <T> void registerComplexSerializer(Class<T> klass, Function<EClassUse<T>, LuaSerializer<T>> serializerFactory) {
+        if (SERIALIZERS.put(klass, (Function<EClassUse<?>, LuaSerializer<?>>)(Object) serializerFactory) != null)
             throw new IllegalStateException("Serializer already registered for " + klass);
     }
 
@@ -475,34 +481,19 @@ public class UserdataFactory<T> {
         throw new InvalidArgumentException("Couldn't convert " + value + " to java! Target type is " + clatz);
     }
 
-    public static <T> LuaTable listToTable(List<T> list, EClass<T> klass) {
-        LuaTable table = new LuaTable();
-        int length = list.size();
-
-        for (int i = 0; i < length; i++) {
-            table.rawset(i + 1, toLuaValue(list.get(i), klass));
-        }
-
-        return table;
-    }
-
-    public static <K, V> LuaTable mapToTable(Map<K, V> map, EClass<K> keyType, EClass<V> valueType) {
-        LuaTable table = new LuaTable();
-
-        for (Map.Entry<K, V> entry : map.entrySet()) {
-            table.rawset(toLuaValue(entry.getKey(), keyType), toLuaValue(entry.getValue(), valueType));
-        }
-
-        return table;
-    }
-
     public static LuaValue toLuaValue(Object out) {
         return toLuaValue(out, out != null ? EClass.fromJava(out.getClass()) : CommonTypes.OBJECT);
     }
 
-    @SuppressWarnings({"unchecked", "rawtypes"})
     public static LuaValue toLuaValue(Object out, EClass<?> ret) {
-        ret = ret.unwrapPrimitive();
+        return toLuaValue(out, ret.asEmptyUse());
+    }
+
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    public static LuaValue toLuaValue(Object out, EClassUse<?> ret) {
+        EClass<?> klass = ret.type();
+
+        klass = klass.unwrapPrimitive();
 
         if (out == null) {
             return Constants.NIL;
@@ -510,7 +501,7 @@ public class UserdataFactory<T> {
             return (LuaValue) out;
         }
 
-        var serializerFactory = SERIALIZERS.get(ret.raw());
+        var serializerFactory = SERIALIZERS.get(klass.raw());
         if (serializerFactory != null) {
             var serializer = (LuaSerializer<Object>) serializerFactory.apply(ret);
 
@@ -521,18 +512,18 @@ public class UserdataFactory<T> {
             }
         }
 
-        if (ret.type() == ClassType.ARRAY) {
+        if (klass.type() == ClassType.ARRAY) {
             var table = new LuaTable();
             int length = Array.getLength(out);
             for (int i = 1; i <= length; i++) {
                 table.rawset(i, toLuaValue(Array.get(out, i - 1), ret.arrayComponent()));
             }
             return table;
-        } else if (ret.type() == ClassType.INTERFACE && ret.hasAnnotation(FunctionalInterface.class)) {
+        } else if (klass.type() == ClassType.INTERFACE && klass.hasAnnotation(FunctionalInterface.class)) {
             EMethod ifaceMethod = null;
 
             int unimplemented = 0;
-            for (var meth : ret.methods()) {
+            for (var meth : klass.methods()) {
                 if (meth.isAbstract()) {
                     unimplemented++;
                     ifaceMethod = meth;
@@ -544,12 +535,15 @@ public class UserdataFactory<T> {
             }
 
             if (unimplemented == 1) {
-                return new UDFFunctions(ret, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
+                return new UDFFunctions(klass, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out);
             } else {
-                return UserdataFactory.of(ret).create(ret.cast(out));
+                return UserdataFactory.of(klass).create(klass.cast(out));
             }
-        } else if (ret.raw().isAssignableFrom(out.getClass())) {
-            return UserdataFactory.of(ret).create(ret.cast(out));
+        } else if (klass.raw().isAssignableFrom(out.getClass())) {
+            if (ret.hasAnnotation(CoerceToBound.class))
+                return UserdataFactory.of(klass).createBound(klass.cast(out));
+            else
+                return UserdataFactory.of(klass).create(klass.cast(out));
         } else {
             return Constants.NIL;
         }
@@ -576,6 +570,40 @@ public class UserdataFactory<T> {
         registerSerializer(long.class, ValueFactory::valueOf);
         registerSerializer(boolean.class, ValueFactory::valueOf);
         registerSerializer(String.class, ValueFactory::valueOf);
+
+        registerComplexSerializer(List.class, use -> {
+            if (!use.hasAnnotation(CoerceToNative.class)) return null;
+
+            EClassUse<?> componentUse = use.typeVariableValues().get(0).upperBound();
+
+            return list -> {
+                LuaTable table = new LuaTable();
+                int length = list.size();
+
+                for (int i = 0; i < length; i++) {
+                    table.rawset(i + 1, toLuaValue(list.get(i), componentUse));
+                }
+
+                return table;
+            };
+        });
+
+        registerComplexSerializer(Map.class, use -> {
+            if (!use.hasAnnotation(CoerceToNative.class)) return null;
+
+            EClassUse<?> keyUse = use.typeVariableValues().get(0).upperBound();
+            EClassUse<?> valueUse = use.typeVariableValues().get(0).upperBound();
+
+            return map -> {
+                LuaTable table = new LuaTable();
+
+                for (Map.Entry<?, ?> entry : ((Map<?, ?>) map).entrySet()) {
+                    table.rawset(toLuaValue(entry.getKey(), keyUse), toLuaValue(entry.getValue(), valueUse));
+                }
+
+                return table;
+            };
+        });
 
         registerDeserializer(int.class, (state, val) -> val.isInteger() ? val.toInteger() : null);
         registerDeserializer(byte.class, (state, val) -> val.isInteger() ? (byte)val.toInteger() : null);
@@ -634,6 +662,8 @@ public class UserdataFactory<T> {
         });
     }
 
+    private record MethodData(List<EMethod> methods, UDFFunctions<?> unboundFunction) { }
+
     private static final class UDFFunctions<T> extends VarArgFunction {
         private final EClass<T> clazz;
         private final List<EMethod> matches;
@@ -664,9 +694,9 @@ public class UserdataFactory<T> {
 
                         if (jargs.length == parameters.size()) { // Found a match!
                             try { // Get the return type, invoke method, cast returned value, cry.
-                                EClass<?> ret = method.returnType().upperBound();
+                                EClassUse<?> ret = method.returnTypeUse().upperBound();
                                 Object out = method.invoke(instance, jargs);
-                                if (ret.raw() == Varargs.class)
+                                if (ret.type().raw() == Varargs.class)
                                     return (Varargs) out;
                                 else
                                     return toLuaValue(out, ret);

@@ -21,7 +21,7 @@ public class AsmUtil {
 
     public static Class<?> defineClass(String name, byte[] bytes) {
         if (Allium.DEVELOPMENT) {
-            Path classPath = Path.of("allium-dump", name + ".class");
+            Path classPath = Allium.DUMP_DIRECTORY.resolve(name + ".class");
 
             try {
                 Files.createDirectories(classPath.getParent());

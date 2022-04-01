@@ -3,6 +3,7 @@ package me.hugeblank.allium.lua.api;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.commands.CommandRegisterEntry;
+import me.hugeblank.allium.lua.type.CoerceToNative;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.jetbrains.annotations.Nullable;
@@ -26,11 +27,8 @@ public class AlliumLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public LuaTable getAllScripts() {
-        return UserdataFactory.listToTable(
-            Script.getAllScripts().stream().toList(),
-            EClass.fromJava(Script.class)
-        );
+    public @CoerceToNative List<Script> getAllScripts() {
+        return Script.getAllScripts().stream().toList();
     }
 
     @LuaWrapped

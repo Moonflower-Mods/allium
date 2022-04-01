@@ -3,6 +3,7 @@ package me.hugeblank.allium.lua.api;
 import me.basiqueevangelist.enhancedreflection.api.CommonTypes;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.lua.type.CoerceToNative;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import net.minecraft.block.Block;
@@ -15,6 +16,8 @@ import net.minecraft.util.registry.RegistryKey;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaTable;
 
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
@@ -43,28 +46,22 @@ public class GameLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public LuaTable listBlocks() {
-        return UserdataFactory.mapToTable(
-            Registry.BLOCK.stream().collect(Collectors.toMap(x -> Registry.BLOCK.getId(x).toString(), x -> x)),
-            CommonTypes.STRING, EClass.fromJava(Block.class));
+    public @CoerceToNative Map<String, Block> listBlocks() {
+        return Registry.BLOCK.stream().collect(Collectors.toMap(x -> Registry.BLOCK.getId(x).toString(), x -> x));
     }
 
     @LuaWrapped
-    public LuaTable listItems() {
-        return UserdataFactory.mapToTable(
-            Registry.ITEM.stream().collect(Collectors.toMap(x -> Registry.ITEM.getId(x).toString(), x -> x)),
-            CommonTypes.STRING, EClass.fromJava(Item.class));
+    public @CoerceToNative Map<String, Item> listItems() {
+        return Registry.ITEM.stream().collect(Collectors.toMap(x -> Registry.ITEM.getId(x).toString(), x -> x));
     }
 
     @LuaWrapped
-    public LuaTable listPlayers() {
-        return UserdataFactory.listToTable(Allium.SERVER.getPlayerManager().getPlayerList(), EClass.fromJava(ServerPlayerEntity.class));
+    public @CoerceToNative List<ServerPlayerEntity> listPlayers() {
+        return Allium.SERVER.getPlayerManager().getPlayerList();
     }
 
     @LuaWrapped
-    public LuaTable listWorlds() {
-        return UserdataFactory.mapToTable(
-            StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false).collect(Collectors.toMap(x -> x.getRegistryKey().getValue().toString(), x -> x)),
-            CommonTypes.STRING, EClass.fromJava(ServerWorld.class));
+    public @CoerceToNative Map<String, ServerWorld> listWorlds() {
+        return StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false).collect(Collectors.toMap(x -> x.getRegistryKey().getValue().toString(), x -> x));
     }
 }

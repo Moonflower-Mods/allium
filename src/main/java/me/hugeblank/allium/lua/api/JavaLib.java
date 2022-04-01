@@ -4,6 +4,7 @@ import me.basiqueevangelist.enhancedreflection.api.CommonTypes;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EField;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
+import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.*;
 import me.hugeblank.allium.util.Mappings;
@@ -87,7 +88,7 @@ public class JavaLib implements WrappedLuaLibrary {
                 var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
                 if (jargs.length == parameters.size()) { // Found a match!
                     try { // Get the return type, invoke method, cast returned value, cry.
-                        EClass<?> ret = method.returnType().upperBound();
+                        EClassUse<?> ret = method.returnTypeUse().upperBound();
 //                        method.setAccessible(true); // throws InaccessibleObjectException | SecurityException
                         Object out = method.invoke(null, jargs);
                         return UserdataFactory.toLuaValue(out, ret);
@@ -124,8 +125,8 @@ public class JavaLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public static LuaTable fromYarn(String string) {
-        return UserdataFactory.listToTable(Allium.MAPPINGS.getIntermediary(string), CommonTypes.STRING);
+    public static @CoerceToNative List<String> fromYarn(String string) {
+        return Allium.MAPPINGS.getIntermediary(string);
     }
 
     private static Varargs createInstance(LuaState state, EClass<?> clazz, Varargs args) throws LuaError {
@@ -138,8 +139,12 @@ public class JavaLib implements WrappedLuaLibrary {
                 var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
 
                 try { // Get the return type, invoke method, cast returned value, cry.
+                    EClassUse<?> ret = (EClassUse<?>) constructor.receiverTypeUse();
+
+                    if (ret == null) ret = clazz.asEmptyUse();
+
                     Object out = constructor.invoke(jargs);
-                    return UserdataFactory.toLuaValue(out, clazz);
+                    return UserdataFactory.toLuaValue(out, ret);
                 } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
                     throw new LuaError(e);
                 }
@@ -320,7 +325,7 @@ public class JavaLib implements WrappedLuaLibrary {
 
                             if (jargs.length == parameters.size()) {
                                 try {
-                                    EClass<?> ret = indexImpl.returnType().upperBound();
+                                    EClassUse<?> ret = indexImpl.returnTypeUse().upperBound();
                                     Object out = indexImpl.invoke(null, jargs);
                                     return UserdataFactory.toLuaValue(out, ret);
                                 } catch (IllegalAccessException e) {
@@ -372,18 +377,18 @@ public class JavaLib implements WrappedLuaLibrary {
                     if (altNames != null) {
                         for (String altName : altNames) {
                             if (tbl.rawget(altName) == Constants.NIL) {
-                                tbl.rawset(altName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
+                                tbl.rawset(altName, UserdataFactory.toLuaValue(field.get(null), field.fieldTypeUse().upperBound()));
                             } else {
-                                tbl.rawset("f_" + altName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
+                                tbl.rawset("f_" + altName, UserdataFactory.toLuaValue(field.get(null), field.fieldTypeUse().upperBound()));
                             }
                         }
                     } else {
                         var fieldName = Allium.MAPPINGS.getYarn(Mappings.asMethod(this.clazz.name(), field.name())).split("#")[1];
 
                         if (tbl.rawget(fieldName) == Constants.NIL) {
-                            tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
+                            tbl.rawset(fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldTypeUse().upperBound()));
                         } else {
-                            tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldType().upperBound()));
+                            tbl.rawset("f_" + fieldName, UserdataFactory.toLuaValue(field.get(null), field.fieldTypeUse().upperBound()));
                         }
                     }
 
