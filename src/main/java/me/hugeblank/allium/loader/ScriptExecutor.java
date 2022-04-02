@@ -52,6 +52,7 @@ public class ScriptExecutor {
         globals.rawset( "script", UserdataFactory.toLuaValue(script, EClass.fromJava(Script.class)) );
         globals.load( state, new DefaultEventsLib() );
         globals.load( state, new FabricLib() );
+        globals.load( state, new ConfigLib(script) );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script, state);

@@ -1,6 +1,9 @@
 package me.hugeblank.allium.util;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.Entrypoint;
 import me.hugeblank.allium.loader.Manifest;
@@ -12,6 +15,8 @@ import net.fabricmc.loader.api.metadata.ModMetadata;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.HashSet;
 import java.util.Set;
@@ -131,12 +136,30 @@ public class FileHelper {
         final Script[] out = new Script[1];
         container.getRootPaths().forEach((path) -> {
             if (path.resolve(man.entrypoints().getStatic()).toFile().exists()) {
-                // This has an incidental safeguard in the event that multiple plugins with the same
-                // ID, the most recent script loaded will just *overwrite* previous ones.
+                // This has an incidental safeguard in the event that if multiple root paths have the same script
+                // the most recent script loaded will just *overwrite* previous ones.
                 out[0] = new Script(man, path);
             }
         });
         return out[0];
+    }
+
+    public static JsonElement getConfig(Script script) throws IOException {
+        Path path = FileHelper.CONFIG_DIR.resolve(script.getId() + ".json");
+        if (Files.exists(path)) {
+            return JsonParser.parseReader(Files.newBufferedReader(path));
+        }
+        return null;
+    }
+
+    public static void saveConfig(Script script, JsonElement element) throws IOException {
+        Path path = FileHelper.CONFIG_DIR.resolve(script.getId() + ".json");
+        Files.deleteIfExists(path);
+        OutputStream outputStream = Files.newOutputStream(path);
+        String jstr = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create().toJson(element);
+        Allium.LOGGER.info(jstr);
+        outputStream.write(jstr.getBytes(StandardCharsets.UTF_8));
+        outputStream.close();
     }
 
     private static Manifest makeManifest(CustomValue.CvObject value) {

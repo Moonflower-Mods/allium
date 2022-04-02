@@ -81,6 +81,12 @@ public class Allium implements ModInitializer {
             }
         }
 
+        try {
+            if (!Files.exists(FileHelper.CONFIG_DIR)) Files.createDirectory(FileHelper.CONFIG_DIR);
+        } catch (IOException e) {
+            throw new RuntimeException("Couldn't create config directory", e);
+        }
+
         LOGGER.info("Loading NathanFudge's Yarn Remapper");
         MAPPINGS = YarnLoader.init();
 

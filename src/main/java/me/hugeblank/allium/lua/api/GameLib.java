@@ -1,11 +1,8 @@
 package me.hugeblank.allium.lua.api;
 
-import me.basiqueevangelist.enhancedreflection.api.CommonTypes;
-import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.CoerceToNative;
 import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.UserdataFactory;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -14,7 +11,6 @@ import net.minecraft.util.Identifier;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryKey;
 import org.squiddev.cobalt.LuaError;
-import org.squiddev.cobalt.LuaTable;
 
 import java.util.List;
 import java.util.Map;
@@ -24,6 +20,7 @@ import java.util.stream.StreamSupport;
 
 @LuaWrapped(name = "game")
 public class GameLib implements WrappedLuaLibrary {
+    @LuaWrapped
     public ServerPlayerEntity getPlayer(String username) throws LuaError {
         ServerPlayerEntity player = Allium.SERVER.getPlayerManager().getPlayer(username);
         if (player == null) throw new LuaError("Player '" + username + "' does not exist");
@@ -62,6 +59,7 @@ public class GameLib implements WrappedLuaLibrary {
 
     @LuaWrapped
     public @CoerceToNative Map<String, ServerWorld> listWorlds() {
-        return StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false).collect(Collectors.toMap(x -> x.getRegistryKey().getValue().toString(), x -> x));
+        return StreamSupport.stream(Allium.SERVER.getWorlds().spliterator(), false)
+                .collect(Collectors.toMap(x -> x.getRegistryKey().getValue().toString(), x -> x));
     }
 }
