@@ -47,10 +47,10 @@ public class FileHelper {
         return SCRIPT_DIR;
     }
 
-    public static Set<Script> getValidDirScripts() {
+    public static Set<Script> getValidDirScripts(Path p) {
         Set<Script> out = new HashSet<>();
         try {
-            Stream<Path> files = Files.list(FileHelper.getScriptsDirectory());
+            Stream<Path> files = Files.list(p);
             files.forEach((scriptDir) -> {
                 Path path;
                 if (Files.isDirectory(scriptDir)) {

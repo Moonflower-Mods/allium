@@ -91,7 +91,11 @@ public class Allium implements ModInitializer {
         MAPPINGS = YarnLoader.init();
 
         LOGGER.info("Loading Scripts");
-        CANDIDATES.addAll(FileHelper.getValidDirScripts());
+
+        if (DEVELOPMENT) CANDIDATES.addAll(FileHelper.getValidDirScripts( // Load example scripts if in development
+                FabricLoader.getInstance().getGameDir().resolve("../examples")
+        ));
+        CANDIDATES.addAll(FileHelper.getValidDirScripts(FileHelper.getScriptsDirectory()));
         CANDIDATES.addAll(FileHelper.getValidModScripts());
         list(new StringBuilder("Found: "), (script) -> true);
         CANDIDATES.forEach(Script::initialize);
