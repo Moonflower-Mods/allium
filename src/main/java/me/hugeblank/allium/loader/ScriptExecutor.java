@@ -53,6 +53,7 @@ public class ScriptExecutor {
         globals.load( state, new DefaultEventsLib() );
         globals.load( state, new FabricLib() );
         globals.load( state, new ConfigLib(script) );
+        globals.load( state, new FsLib(script) );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script, state);
