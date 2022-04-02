@@ -57,6 +57,7 @@ public class LuaWriteHandle extends LuaHandle {
         }
     }
 
+    @LuaWrapped
     @Override
     public void close() throws LuaError {
         closeInternal(handle);

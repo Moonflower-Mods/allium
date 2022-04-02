@@ -540,10 +540,18 @@ public class UserdataFactory<T> {
                 return UserdataFactory.of(klass).create(klass.cast(out));
             }
         } else if (klass.raw().isAssignableFrom(out.getClass())) {
-            if (ret.hasAnnotation(CoerceToBound.class))
-                return UserdataFactory.of(klass).createBound(klass.cast(out));
-            else
-                return UserdataFactory.of(klass).create(klass.cast(out));
+            if (klass.isGeneric()) {
+                if (ret.hasAnnotation(CoerceToBound.class))
+                    return UserdataFactory.of(klass).createBound(klass.cast(out));
+                else
+                    return UserdataFactory.of(klass).create(klass.cast(out));
+            } else {
+                EClass<?> trueRet = EClass.fromJava(out.getClass());
+                if (ret.hasAnnotation(CoerceToBound.class))
+                    return UserdataFactory.of(trueRet).createBound(out);
+                else
+                    return UserdataFactory.of(trueRet).create(out);
+            }
         } else {
             return Constants.NIL;
         }
@@ -592,7 +600,7 @@ public class UserdataFactory<T> {
             if (!use.hasAnnotation(CoerceToNative.class)) return null;
 
             EClassUse<?> keyUse = use.typeVariableValues().get(0).upperBound();
-            EClassUse<?> valueUse = use.typeVariableValues().get(0).upperBound();
+            EClassUse<?> valueUse = use.typeVariableValues().get(1).upperBound();
 
             return map -> {
                 LuaTable table = new LuaTable();

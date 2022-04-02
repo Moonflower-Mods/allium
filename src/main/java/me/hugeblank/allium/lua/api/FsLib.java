@@ -85,7 +85,7 @@ public class FsLib implements WrappedLuaLibrary {
 
     @LuaWrapped
     public boolean isReadOnly(String path) {
-        return Files.isReadable(sanitize(path));
+        return !Files.isWritable(sanitize(path));
     }
 
     @LuaWrapped

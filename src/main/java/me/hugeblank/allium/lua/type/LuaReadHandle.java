@@ -1,6 +1,8 @@
 package me.hugeblank.allium.lua.type;
 
 import org.squiddev.cobalt.LuaError;
+import org.squiddev.cobalt.LuaValue;
+import org.squiddev.cobalt.ValueFactory;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -24,13 +26,13 @@ public class LuaReadHandle extends LuaHandle {
     }
 
     @LuaWrapped
-    public String readLine(boolean withTrailing) throws LuaError {
+    public String readLine(@OptionalArg Boolean withTrailing) throws LuaError {
         StringBuilder builder = new StringBuilder();
         char value;
         do {
             try {
                 value = (char) handle.read();
-                if (value == '\n' && withTrailing) {
+                if (value == '\n' && withTrailing != null && withTrailing) {
                     builder.append(value);
                 } else if (value != '\n') {
                     builder.append(value);
@@ -56,20 +58,25 @@ public class LuaReadHandle extends LuaHandle {
     }
 
     @LuaWrapped
-    public String read(int count) throws LuaError {
+    public LuaValue read(@OptionalArg Integer count) throws LuaError {
         StringBuilder builder = new StringBuilder();
         try {
-            for (int i = 0; i < count; i++) {
-                char value = (char) handle.read();
-                if (value == EOF) return builder.toString();
-                builder.append(value);
+            if (count != null) {
+                for (int i = 0; i < count; i++) {
+                    char value = (char) handle.read();
+                    if (value == EOF) return ValueFactory.valueOf(builder.toString());
+                    builder.append(value);
+                }
+                return ValueFactory.valueOf(builder.toString());
+            } else {
+                return ValueFactory.valueOf(handle.read());
             }
-            return builder.toString();
         } catch (IOException e) {
             throw new LuaError(e);
         }
     }
 
+    @LuaWrapped
     @Override
     public void close() throws LuaError {
         closeInternal(handle);
