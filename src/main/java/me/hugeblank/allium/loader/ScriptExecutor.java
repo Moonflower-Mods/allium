@@ -5,6 +5,7 @@ import me.hugeblank.allium.lua.api.PackageLib;
 import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.commands.CommandLib;
 import me.hugeblank.allium.lua.api.commands.CommandsLib;
+import me.hugeblank.allium.lua.api.http.HttpLib;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
@@ -54,6 +55,8 @@ public class ScriptExecutor {
         globals.load( state, new FabricLib() );
         globals.load( state, new ConfigLib(script) );
         globals.load( state, new FsLib(script) );
+        globals.load( state, new HttpLib() );
+        globals.load( state, new JsonLib() );
 
         // Package library, kinda quirky.
         PackageLib pkg = new PackageLib(script, state);

@@ -7,7 +7,6 @@ import me.hugeblank.allium.loader.ScriptResource;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.OptionalArg;
 import me.hugeblank.allium.util.FileHelper;
-import me.hugeblank.allium.util.TableJsonParser;
 import org.squiddev.cobalt.Constants;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaTable;
@@ -81,7 +80,7 @@ public class ConfigLib implements WrappedLuaLibrary, ScriptResource {
         // or the key is outright missing, it gets replaced with the default passed in.
         LuaValue cached = null;
         try {
-            cached = TableJsonParser.toLua(FileHelper.getConfig(script));
+            cached = JsonLib.fromJson(FileHelper.getConfig(script));
         } catch (IOException ignore) {}
 
         if (cached == null || cached.isNil()) {
@@ -102,7 +101,7 @@ public class ConfigLib implements WrappedLuaLibrary, ScriptResource {
         if (config == null) {
             throw new LuaError("Attempt to flush config file before opening");
         }
-        JsonElement json = TableJsonParser.toJson(config);
+        JsonElement json = JsonLib.toJsonElement(config);
         try {
             FileHelper.saveConfig(script, json);
         } catch (IOException e) {

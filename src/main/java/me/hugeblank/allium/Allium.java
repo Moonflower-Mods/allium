@@ -47,6 +47,7 @@ public class Allium implements ModInitializer {
     public static Mappings MAPPINGS;
     public static Set<Script> CANDIDATES = new HashSet<>();
     public static final Path DUMP_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve("allium-dump");
+    public static final String VERSION = FabricLoader.getInstance().getModContainer("allium").orElseThrow().getMetadata().getVersion().getFriendlyString();
 
     @Override
     public void onInitialize() {
