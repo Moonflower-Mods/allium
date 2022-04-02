@@ -3,7 +3,6 @@ package me.hugeblank.allium.lua.api;
 import com.google.gson.*;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import me.hugeblank.allium.lua.type.LuaWrapped;
-import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 
 import java.util.Set;
@@ -17,102 +16,90 @@ public class JsonLib implements WrappedLuaLibrary {
 
     @LuaWrapped
     public static LuaValue fromJson(JsonElement element) {
-        if (element.isJsonNull()) {
-            return Constants.NIL;
-        } else if (element instanceof JsonPrimitive prim) {
-            if (prim.isString())
-                return ValueFactory.valueOf(prim.getAsString());
-            else if (prim.isNumber())
-                return ValueFactory.valueOf(prim.getAsDouble());
-            else if (prim.isBoolean())
-                return ValueFactory.valueOf(prim.getAsBoolean());
-            else
-                throw new UnsupportedOperationException("Unknown JsonPrimitive type");
-        } else if (element instanceof JsonArray arr) {
-            var table = new LuaTable(arr.size(), 0);
-
-            for (int i = 0; i < arr.size(); i++) {
-                table.rawset(i + 1, fromJson(arr.get(i)));
+        if (element == null) return Constants.NIL;
+        if (element.isJsonObject()) {
+            LuaTable out = new LuaTable();
+            JsonObject json = element.getAsJsonObject();
+            json.entrySet().forEach((entry) -> out.rawset(entry.getKey(), fromJson(entry.getValue())));
+            return out;
+        } else if (element.isJsonArray()) {
+            LuaTable out = new LuaTable();
+            JsonArray json = element.getAsJsonArray();
+            for (int i = 0; i < json.size(); i++) {
+                out.rawset(i+1, fromJson(json.get(i)));
             }
-
-            return table;
-        } else if (element instanceof JsonObject obj) {
-            var table = new LuaTable(0, obj.size());
-
-            for (var entry : obj.entrySet()) {
-                table.rawset(entry.getKey(), fromJson(entry.getValue()));
+            return out;
+        } else if (element.isJsonPrimitive()) {
+            JsonPrimitive primitive = element.getAsJsonPrimitive();
+            if (primitive.isBoolean()) {
+                return primitive.getAsBoolean() ? Constants.TRUE : Constants.FALSE;
+            } else if (primitive.isNumber()) {
+                return ValueFactory.valueOf(primitive.getAsDouble());
+            } else if (primitive.isString()) {
+                return ValueFactory.valueOf(primitive.getAsString());
+            } else {
+                return Constants.NIL;
             }
-
-            return table;
         } else {
-            throw new UnsupportedOperationException("Unknown JsonElement type");
+            return Constants.NIL;
         }
     }
 
     @LuaWrapped
-    public static String toJson(LuaValue value) {
+    public static String toJson(LuaValue value) throws LuaError {
         return toJsonElement(value).toString();
     }
 
     @LuaWrapped
-    public static JsonElement toJsonElement(LuaValue value) {
+    public static JsonElement toJsonElement(LuaValue value) throws LuaError {
         return toJsonElementInternal(value, new ReferenceOpenHashSet<>());
     }
 
-    private static JsonElement toJsonElementInternal(LuaValue value, Set<LuaValue> seenValues) {
+    private static JsonElement toJsonElementInternal(LuaValue value, Set<LuaValue> seenValues) throws LuaError {
+        if (seenValues.contains(value)) return JsonNull.INSTANCE;
+
+        if (value.isUserdata(JsonElement.class))
+            return value.toUserdata(JsonElement.class);
+
         if (value.isUserdata()) {
             var val = value.toUserdata();
             if (val instanceof JsonElement) {
                 return (JsonElement) val;
             }
-        }
-
-        if (seenValues.contains(value)) return JsonNull.INSTANCE;
-
-        try {
-            return switch (value.type()) {
-                case (Constants.TINT) -> new JsonPrimitive(value.checkInteger());
-                case (Constants.TBOOLEAN) -> new JsonPrimitive(value.checkBoolean());
-                case (Constants.TNUMBER) -> {
-                    if (value.isInteger()) yield new JsonPrimitive(value.checkInteger());
-                    else if (value.isLong()) yield new JsonPrimitive(value.checkLong());
-                    else yield new JsonPrimitive(value.checkDouble());
+        } else if (value.isTable()) {
+            LuaTable table = value.checkTable();
+            if (table.length() > 0) {
+                JsonArray out = new JsonArray();
+                seenValues.add(value);
+                for (int i = 1; i <= table.length(); i++) {
+                    out.add(toJsonElementInternal(table.rawget(i), seenValues));
                 }
-                case (Constants.TSTRING) -> new JsonPrimitive(value.checkString());
-                case (Constants.TTABLE) -> {
-                    var table = value.checkTable();
-                    seenValues.add(value);
-
-                    if (table.getArrayLength() > 0) {
-                        var list = new JsonArray(table.getArrayLength());
-
-                        for (int i = 0; i < table.getArrayLength(); i++) {
-                            list.set(i, toJsonElementInternal(table.rawget(i + 1), seenValues));
-                        }
-
-                        seenValues.remove(value);
-
-                        yield list;
-                    } else {
-                        var obj = new JsonObject();
-
-                        for (var key : table.keys()) {
-                            var val = table.rawget(key);
-                            if (val != Constants.NIL) {
-                                obj.add(key.toString(), toJsonElementInternal(val, seenValues));
-                            }
-                        }
-
-                        seenValues.remove(value);
-
-                        yield obj;
+                seenValues.remove(value);
+                return out;
+            } else {
+                JsonObject out = new JsonObject();
+                seenValues.add(value);
+                for (LuaValue key : table.keys()) {
+                    if (!key.isString()) {
+                        throw new LuaError("Expected json object key of type 'string', got " + key.typeName());
                     }
+                    String k = key.toString();
+                    out.add(k, toJsonElementInternal(table.rawget(k), seenValues));
                 }
-                case (Constants.TNIL) -> JsonNull.INSTANCE;
-                default -> throw ErrorFactory.argError(value, "nil, boolean, number, string or table");
-            };
-        } catch (Exception e) {
-            return null;
+                seenValues.remove(value);
+                return out;
+            }
+        } else if (value.isBoolean()) {
+            return new JsonPrimitive(value.toBoolean());
+        } else if (value.isInteger()) {
+            return new JsonPrimitive(value.toInteger());
+        } else if (value.isNumber()) {
+            return new JsonPrimitive(value.toDouble());
+        } else if (value.isString()) {
+            return new JsonPrimitive(value.toString());
+        } else if (value.isNil()) {
+            return JsonNull.INSTANCE;
         }
+        throw new LuaError("Could not parse value " + value);
     }
 }

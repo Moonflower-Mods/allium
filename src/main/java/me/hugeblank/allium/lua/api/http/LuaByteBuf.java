@@ -5,6 +5,7 @@ import io.netty.util.ReferenceCounted;
 import me.hugeblank.allium.lua.api.JsonLib;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import me.hugeblank.allium.lua.type.OptionalArg;
+import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaValue;
 
 import java.lang.ref.Cleaner;
@@ -177,7 +178,7 @@ public class LuaByteBuf {
     }
 
     @LuaWrapped
-    public LuaByteBuf writeJson(LuaValue value, @OptionalArg String charset) {
+    public LuaByteBuf writeJson(LuaValue value, @OptionalArg String charset) throws LuaError {
         return writeString(JsonLib.toJson(value), charset);
     }
 
