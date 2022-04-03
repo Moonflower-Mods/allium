@@ -83,6 +83,7 @@ public class Allium implements ModInitializer {
         }
 
         try {
+            if (!Files.exists(FileHelper.PERSISTENCE_DIR)) Files.createDirectory(FileHelper.PERSISTENCE_DIR);
             if (!Files.exists(FileHelper.CONFIG_DIR)) Files.createDirectory(FileHelper.CONFIG_DIR);
         } catch (IOException e) {
             throw new RuntimeException("Couldn't create config directory", e);

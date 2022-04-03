@@ -99,12 +99,12 @@ public class FsLib implements WrappedLuaLibrary {
 
     @LuaWrapped
     public boolean isDir(String path) {
-        return Files.isDirectory(sanitize(path));
+        return exists(path) && Files.isDirectory(sanitize(path));
     }
 
     @LuaWrapped
     public boolean isReadOnly(String path) {
-        return !Files.isWritable(sanitize(path));
+        return exists(path) && !Files.isWritable(sanitize(path));
     }
 
     @LuaWrapped
@@ -162,6 +162,11 @@ public class FsLib implements WrappedLuaLibrary {
     public LuaHandle open(String path, String mode) throws LuaError {
         if (mode.length() == 1) {
             Path p = sanitize(path);
+            try {
+                Files.createDirectories(p.getParent());
+            } catch (IOException e) {
+                throw new LuaError(e);
+            }
             return switch (mode.charAt(0)) {
                 case 'r' -> new LuaReadHandle(script, p);
                 case 'w' -> new LuaWriteHandle(script, p, false);
