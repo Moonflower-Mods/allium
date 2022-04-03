@@ -10,6 +10,7 @@ import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.JavaLib;
 import me.hugeblank.allium.util.Mappings;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.ThreeArgFunction;
@@ -22,13 +23,13 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 
 public class UserdataFactory<T> {
     private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
     private static final Map<Class<?>, Function<EClass<?>, LuaDeserializer<?>>> DESERIALIZERS = new HashMap<>();
     private static final Map<Class<?>, Function<EClassUse<?>, LuaSerializer<?>>> SERIALIZERS = new HashMap<>();
-    private final Map<String, MethodData> cachedMethods = new HashMap<>();
-    private final Map<String, EField> cachedFields = new HashMap<>();
+    private final Map<String, PropertyData<? super T>> cachedProperties = new HashMap<>();
     private final EClass<T> clazz;
     private final List<EMethod> methods;
     private final LuaTable metatable;
@@ -113,42 +114,19 @@ public class UserdataFactory<T> {
 
                 String name = arg2.checkString(); // mapped name
 
-                MethodData methodData = cachedMethods.get(name);
-                if (methodData == null) {
-                    var collectedMatches = new ArrayList<EMethod>();
-
-                    collectMethods(UserdataFactory.this.clazz, UserdataFactory.this.methods, name, collectedMatches::add);
-
-                    methodData = new MethodData(collectedMatches, collectedMatches.size() == 0 ? null : new UDFFunctions<>(clazz, collectedMatches, name, null));
-                    cachedMethods.put(name, methodData);
-                }
-
-                if (methodData.methods.size() > 0) {
-                    if (isBound)
-                        return new UDFFunctions<>(clazz, methodData.methods, name, arg1.checkUserdata(clazz.raw()));
-                    else
-                        return methodData.unboundFunction;
-                }
-
-                EField matchedField = cachedFields.get(name);
-                if (matchedField == null) {
-                    matchedField = findField(clazz, clazz.fields().stream().toList(), name);
-                    cachedFields.put(name, matchedField);
-                }
-
-                if (matchedField != null) {
-                    try {
-                        return toLuaValue(matchedField.get(arg1.checkUserdata(clazz.raw())), matchedField.fieldTypeUse().upperBound());
-                    } catch (Exception e) {
-                        // Silent
-                    }
-                }
-
                 if (name.equals("allium_java_class")) {
                     return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
                 }
 
-                return Constants.NIL;
+                PropertyData<? super T> cachedProperty = cachedProperties.get(name);
+
+                if (cachedProperty == null) {
+                    cachedProperty = resolveProperty(name);
+
+                    cachedProperties.put(name, cachedProperty);
+                }
+
+                return cachedProperty.get(name, state, arg1.checkUserdata(clazz.raw()), isBound);
             }
         });
 
@@ -182,18 +160,15 @@ public class UserdataFactory<T> {
 
                 String name = arg2.checkString(); // mapped name
 
-                EField matchedField = cachedFields.get(name);
-                if (matchedField == null) {
-                    matchedField = findField(clazz, clazz.fields().stream().filter(field -> !field.isStatic() && !field.isFinal()).toList(), name);
+                PropertyData<? super T> cachedProperty = cachedProperties.get(name);
+
+                if (cachedProperty == null) {
+                    cachedProperty = resolveProperty(name);
+
+                    cachedProperties.put(name, cachedProperty);
                 }
 
-                if (matchedField != null) {
-                    try {
-                        matchedField.set(arg1.checkUserdata(clazz.raw()), toJava(state, arg3, matchedField.fieldType().lowerBound()));
-                    } catch (Exception e) {
-                        // Silent
-                    }
-                }
+                cachedProperty.set(name, state, arg1.checkUserdata(clazz.raw()), arg3);
 
                 return Constants.NIL;
             }
@@ -207,6 +182,30 @@ public class UserdataFactory<T> {
         }
 
         return metatable;
+    }
+
+    private PropertyData<? super T> resolveProperty(String name) {
+        List<EMethod> foundMethods = new ArrayList<>();
+
+        collectMethods(clazz, this.methods, name, foundMethods::add);
+
+        if (foundMethods.size() > 0)
+            return new MethodData(foundMethods, name);
+
+        EField field = findField(clazz, clazz.fields(), name);
+
+        if (field != null)
+            return new FieldData(field);
+
+        EMethod getter = findMethod(clazz, this.methods, "get" + StringUtils.capitalize(name), method -> AnnotationUtils.countLuaArguments(method) == 0);
+
+        if (getter != null) {
+            EMethod setter = findMethod(clazz, this.methods, "set" + StringUtils.capitalize(name), method -> AnnotationUtils.countLuaArguments(method) == 1);
+
+            return new PropertyMethodData(getter, setter);
+        }
+
+        return EmptyData.INSTANCE;
     }
 
     @SuppressWarnings("unchecked")
@@ -288,7 +287,58 @@ public class UserdataFactory<T> {
         }));
     }
 
-    public static EField findField(EClass<?> sourceClass, List<EField> fields, String name) {
+    public static EMethod findMethod(EClass<?> sourceClass, List<EMethod> methods, String name, Predicate<EMethod> filter) {
+        for (EMethod method : methods) {
+            if (AnnotationUtils.isHiddenFromLua(method)) continue;
+            if (!filter.test(method)) continue;
+
+            String[] altNames = AnnotationUtils.findNames(method);
+            if (altNames != null) {
+                for (String altName : altNames) {
+                    if (altName.equals(name)) {
+                        return method;
+                    }
+                }
+
+                continue;
+            }
+
+            var methodName = method.name();
+
+            if (methodName.equals(name) || methodName.equals("allium$" + name) || name.equals("m_" + methodName)) {
+                return method;
+            }
+
+            if (methodName.startsWith("allium_private$")) {
+                continue;
+            }
+
+            if (!Allium.DEVELOPMENT) {
+                var mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1];
+                if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
+                    return method;
+                }
+
+                for (var clazz : sourceClass.allSuperclasses()) {
+                    mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1];
+                    if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
+                        return method;
+                    }
+                }
+
+                for (var clazz : sourceClass.allInterfaces()) {
+                    mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1];
+                    if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
+                        return method;
+                    }
+                }
+            }
+        }
+
+        return null;
+    }
+
+    public static EField findField(EClass<?> sourceClass, Collection<EField> fields, String name) {
         for (var field : fields) {
             if (AnnotationUtils.isHiddenFromLua(field)) continue;
 
@@ -670,7 +720,112 @@ public class UserdataFactory<T> {
         });
     }
 
-    private record MethodData(List<EMethod> methods, UDFFunctions<?> unboundFunction) { }
+    private interface PropertyData<T> {
+        LuaValue get(String name, LuaState state, T instance, boolean isBound) throws LuaError;
+
+        default void set(String name, LuaState state, T instance, LuaValue value) throws LuaError {
+            throw new LuaError("property '" + name + "' doesn't support set");
+        }
+    }
+
+    private static class EmptyData implements PropertyData<Object> {
+        public static EmptyData INSTANCE = new EmptyData();
+
+        @Override
+        public LuaValue get(String name, LuaState state, Object instance, boolean isBound) throws LuaError {
+            return Constants.NIL;
+        }
+
+        @Override
+        public void set(String name, LuaState state, Object instance, LuaValue value) throws LuaError {
+            throw new LuaError("property '" + name + "' doesn't exist");
+        }
+    }
+
+    private class MethodData implements PropertyData<T> {
+        public final List<EMethod> methods;
+        public final UDFFunctions<T> unboundFunction;
+
+        public MethodData(List<EMethod> methods, String name) {
+            this.methods = methods;
+            this.unboundFunction = new UDFFunctions<>(clazz, methods, name, null);
+        }
+
+        @Override
+        public LuaValue get(String name, LuaState state, T instance, boolean isBound) {
+            if (isBound)
+                return new UDFFunctions<>(clazz, methods, name, instance);
+            else
+                return unboundFunction;
+        }
+    }
+
+    private class FieldData implements PropertyData<T> {
+        public final EField field;
+
+        private FieldData(EField field) {
+            this.field = field;
+        }
+
+        @Override
+        public LuaValue get(String name, LuaState state, Object instance, boolean isBound) throws LuaError {
+            try {
+                return toLuaValue(field.get(instance), field.fieldTypeUse().upperBound());
+            } catch (IllegalAccessException e) {
+                throw new LuaError(e);
+            }
+        }
+    }
+
+    private class PropertyMethodData implements PropertyData<T> {
+        public final EMethod getter;
+        public final @Nullable EMethod setter;
+
+        private PropertyMethodData(EMethod getter, @Nullable EMethod setter) {
+            this.getter = getter;
+            this.setter = setter;
+        }
+
+        @Override
+        public LuaValue get(String name, LuaState state, T instance, boolean isBound) throws LuaError {
+            var params = getter.parameters();
+            try {
+                var jargs = toJavaArguments(state, Constants.NONE, 1, params);
+
+                EClassUse<?> ret = getter.returnTypeUse().upperBound();
+                Object out = getter.invoke(instance, jargs);
+                return toLuaValue(out, ret);
+            } catch (InvalidArgumentException e) {
+                throw new IllegalStateException("Getter for '" + name + "' needs arguments");
+            } catch (ReflectiveOperationException roe) {
+                throw new LuaError(roe);
+            }
+        }
+
+        @Override
+        public void set(String name, LuaState state, T instance, LuaValue value) throws LuaError {
+            if (setter == null) {
+                PropertyData.super.set(name, state, instance, value);
+                return;
+            }
+
+            var params = setter.parameters();
+            try {
+                var jargs = toJavaArguments(state, value, 1, params);
+
+                setter.invoke(instance, jargs);
+            } catch (InvalidArgumentException e) {
+                throw new IllegalStateException("Setter for '" + name + "' needs more than one argument");
+            } catch (InvocationTargetException e) {
+                if (e.getTargetException() instanceof LuaError luaError)
+                    throw luaError;
+
+                throw new LuaError(e.getTargetException());
+            } catch (ReflectiveOperationException e) {
+                throw new LuaError(e);
+            }
+        }
+    }
 
     private static final class UDFFunctions<T> extends VarArgFunction {
         private final EClass<T> clazz;
