@@ -2,7 +2,9 @@ package me.hugeblank.allium.lua.type.property;
 
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.ArgumentUtils;
+import me.hugeblank.allium.lua.type.InvalidArgumentException;
+import me.hugeblank.allium.lua.type.TypeCoercions;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.Constants;
 import org.squiddev.cobalt.LuaError;
@@ -17,12 +19,12 @@ public record PropertyMethodData<I>(EMethod getter,
     public LuaValue get(String name, LuaState state, I instance, boolean noThisArg) throws LuaError {
         var params = getter.parameters();
         try {
-            var jargs = UserdataFactory.toJavaArguments(state, Constants.NONE, 1, params);
+            var jargs = ArgumentUtils.toJavaArguments(state, Constants.NONE, 1, params);
 
             EClassUse<?> ret = getter.returnTypeUse().upperBound();
             Object out = getter.invoke(instance, jargs);
-            return UserdataFactory.toLuaValue(out, ret);
-        } catch (UserdataFactory.InvalidArgumentException e) {
+            return TypeCoercions.toLuaValue(out, ret);
+        } catch (InvalidArgumentException e) {
             throw new IllegalStateException("Getter for '" + name + "' needs arguments");
         } catch (ReflectiveOperationException roe) {
             throw new LuaError(roe);
@@ -38,10 +40,10 @@ public record PropertyMethodData<I>(EMethod getter,
 
         var params = setter.parameters();
         try {
-            var jargs = UserdataFactory.toJavaArguments(state, value, 1, params);
+            var jargs = ArgumentUtils.toJavaArguments(state, value, 1, params);
 
             setter.invoke(instance, jargs);
-        } catch (UserdataFactory.InvalidArgumentException e) {
+        } catch (InvalidArgumentException e) {
             throw new IllegalStateException("Setter for '" + name + "' needs more than one argument");
         } catch (InvocationTargetException e) {
             if (e.getTargetException() instanceof LuaError luaError)

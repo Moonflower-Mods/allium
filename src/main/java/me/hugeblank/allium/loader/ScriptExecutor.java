@@ -7,7 +7,7 @@ import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.commands.CommandLib;
 import me.hugeblank.allium.lua.api.commands.CommandsLib;
 import me.hugeblank.allium.lua.api.http.HttpLib;
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.TypeCoercions;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -51,7 +51,7 @@ public class ScriptExecutor {
         globals.load( state, new NbtLib() );
         globals.load( state, new CommandLib(script) );
         globals.load( state, new CommandsLib(script) );
-        globals.rawset( "script", UserdataFactory.toLuaValue(script, EClass.fromJava(Script.class)) );
+        globals.rawset( "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)) );
         globals.load( state, new DefaultEventsLib() );
         globals.load( state, new FabricLib() );
         globals.load( state, new ConfigLib(script) );

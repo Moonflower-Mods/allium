@@ -2,6 +2,6 @@ package me.hugeblank.allium.lua.type;
 
 import org.squiddev.cobalt.LuaValue;
 
-public interface LuaSerializer<T> {
+public interface JavaToLuaConverter<T> {
     LuaValue toLua(T value);
 }

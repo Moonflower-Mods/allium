@@ -33,16 +33,16 @@ public final class StaticClassBinder {
                 if (indexImpl != null) {
                     var parameters = indexImpl.parameters();
                     try {
-                        var jargs = UserdataFactory.toJavaArguments(state, arg2, 1, parameters);
+                        var jargs = ArgumentUtils.toJavaArguments(state, arg2, 1, parameters);
 
                         if (jargs.length == parameters.size()) {
                             try {
-                                var instance = UserdataFactory.toJava(state, arg1, clazz);
+                                var instance = TypeCoercions.toJava(state, arg1, clazz);
                                 EClassUse<?> ret = indexImpl.returnTypeUse().upperBound();
                                 Object out = indexImpl.invoke(instance, jargs);
                                 // If out is null, we can assume the index is nil
-                                if (out == null) throw new UserdataFactory.InvalidArgumentException();
-                                return UserdataFactory.toLuaValue(out, ret);
+                                if (out == null) throw new InvalidArgumentException();
+                                return TypeCoercions.toLuaValue(out, ret);
                             } catch (IllegalAccessException e) {
                                 throw new LuaError(e);
                             } catch (InvocationTargetException e) {
@@ -55,9 +55,9 @@ public final class StaticClassBinder {
                                 } else {
                                     throw new LuaError(target);
                                 }
-                            } catch (UserdataFactory.InvalidArgumentException ignore) {}
+                            } catch (InvalidArgumentException ignore) {}
                         }
-                    } catch (UserdataFactory.InvalidArgumentException | IllegalArgumentException e) {
+                    } catch (InvalidArgumentException | IllegalArgumentException e) {
                         // Continue.
                     }
                 }
@@ -137,7 +137,7 @@ public final class StaticClassBinder {
 
             var parameters = constructor.parameters();
             try {
-                var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
+                var jargs = ArgumentUtils.toJavaArguments(state, args, 1, parameters);
 
                 try { // Get the return type, invoke method, cast returned value, cry.
                     EClassUse<?> ret = (EClassUse<?>) constructor.receiverTypeUse();
@@ -145,12 +145,12 @@ public final class StaticClassBinder {
                     if (ret == null) ret = clazz.asEmptyUse();
 
                     Object out = constructor.invoke(jargs);
-                    return UserdataFactory.toLuaValue(out, ret);
+                    return TypeCoercions.toLuaValue(out, ret);
                 } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
                     throw new LuaError(e);
                 }
-            } catch (UserdataFactory.InvalidArgumentException e) {
-                paramList.add(UserdataFactory.paramsToPrettyString(parameters));
+            } catch (InvalidArgumentException e) {
+                paramList.add(ArgumentUtils.paramsToPrettyString(parameters));
             }
         }
 
@@ -176,7 +176,7 @@ public final class StaticClassBinder {
 
         @Override
         public LuaValue call(LuaState state) {
-            return UserdataFactory.toLuaValue(clazz, EClass.fromJava(EClass.class).instantiateWith(List.of(clazz)));
+            return TypeCoercions.toLuaValue(clazz, EClass.fromJava(EClass.class).instantiateWith(List.of(clazz)));
         }
     }
 }

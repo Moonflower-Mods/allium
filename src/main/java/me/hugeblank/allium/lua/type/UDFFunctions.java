@@ -40,7 +40,7 @@ public final class UDFFunctions<T> extends VarArgFunction {
             for (EMethod method : matches) { // For each matched method from the index call
                 var parameters = method.parameters();
                 try {
-                    var jargs = UserdataFactory.toJavaArguments(state, args, boundReceiver == null && !isStatic ? 2 : 1, parameters);
+                    var jargs = ArgumentUtils.toJavaArguments(state, args, boundReceiver == null && !isStatic ? 2 : 1, parameters);
 
                     if (jargs.length == parameters.size()) { // Found a match!
                         try { // Get the return type, invoke method, cast returned value, cry.
@@ -49,7 +49,7 @@ public final class UDFFunctions<T> extends VarArgFunction {
                             if (ret.type().raw() == Varargs.class)
                                 return (Varargs) out;
                             else
-                                return UserdataFactory.toLuaValue(out, ret);
+                                return TypeCoercions.toLuaValue(out, ret);
                         } catch (IllegalAccessException e) {
                             throw new LuaError(e);
                         } catch (InvocationTargetException e) {
@@ -59,8 +59,8 @@ public final class UDFFunctions<T> extends VarArgFunction {
                             throw new LuaError(e.getTargetException());
                         }
                     }
-                } catch (UserdataFactory.InvalidArgumentException e) {
-                    paramList.add(UserdataFactory.paramsToPrettyString(parameters));
+                } catch (InvalidArgumentException e) {
+                    paramList.add(ArgumentUtils.paramsToPrettyString(parameters));
                 }
             }
         } catch (Exception e) {

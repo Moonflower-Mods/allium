@@ -1,18 +1,12 @@
 package me.hugeblank.allium.lua.api;
 
 import me.basiqueevangelist.enhancedreflection.api.EClass;
-import me.basiqueevangelist.enhancedreflection.api.EField;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.type.*;
 import me.hugeblank.allium.lua.type.annotation.*;
-import me.hugeblank.allium.util.Mappings;
-import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.function.LibFunction;
-import org.squiddev.cobalt.function.TwoArgFunction;
-import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.reflect.InaccessibleObjectException;
 import java.lang.reflect.InvocationTargetException;
@@ -66,13 +60,13 @@ public class JavaLib implements WrappedLuaLibrary {
         for (var method : methods) {
             var parameters = method.parameters();
             try {
-                var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
+                var jargs = ArgumentUtils.toJavaArguments(state, args, 1, parameters);
                 if (jargs.length == parameters.size()) { // Found a match!
                     try { // Get the return type, invoke method, cast returned value, cry.
                         EClassUse<?> ret = method.returnTypeUse().upperBound();
 //                        method.setAccessible(true); // throws InaccessibleObjectException | SecurityException
                         Object out = method.invoke(null, jargs);
-                        return UserdataFactory.toLuaValue(out, ret);
+                        return TypeCoercions.toLuaValue(out, ret);
                     } catch (InaccessibleObjectException | SecurityException | IllegalAccessException e) {
                         throw new LuaError(e);
                     } catch (InvocationTargetException e) {
@@ -82,8 +76,8 @@ public class JavaLib implements WrappedLuaLibrary {
                         throw new LuaError(e);
                     }
                 }
-            } catch (UserdataFactory.InvalidArgumentException e) {
-                paramList.add(UserdataFactory.paramsToPrettyString(parameters));
+            } catch (InvalidArgumentException e) {
+                paramList.add(ArgumentUtils.paramsToPrettyString(parameters));
             }
         }
 
@@ -117,7 +111,7 @@ public class JavaLib implements WrappedLuaLibrary {
 
             var parameters = constructor.parameters();
             try {
-                var jargs = UserdataFactory.toJavaArguments(state, args, 1, parameters);
+                var jargs = ArgumentUtils.toJavaArguments(state, args, 1, parameters);
 
                 try { // Get the return type, invoke method, cast returned value, cry.
                     EClassUse<?> ret = (EClassUse<?>) constructor.receiverTypeUse();
@@ -125,12 +119,12 @@ public class JavaLib implements WrappedLuaLibrary {
                     if (ret == null) ret = clazz.asEmptyUse();
 
                     Object out = constructor.invoke(jargs);
-                    return UserdataFactory.toLuaValue(out, ret);
+                    return TypeCoercions.toLuaValue(out, ret);
                 } catch (IllegalAccessException | InvocationTargetException | InstantiationException e) {
                     throw new LuaError(e);
                 }
-            } catch (UserdataFactory.InvalidArgumentException e) {
-                paramList.add(UserdataFactory.paramsToPrettyString(parameters));
+            } catch (InvalidArgumentException e) {
+                paramList.add(ArgumentUtils.paramsToPrettyString(parameters));
             }
         }
 
@@ -149,8 +143,8 @@ public class JavaLib implements WrappedLuaLibrary {
     @LuaWrapped
     public static LuaValue cast(@LuaStateArg LuaState state, EClass<?> klass, LuaUserdata object) throws LuaError {
         try {
-            return UserdataFactory.toLuaValue(UserdataFactory.toJava(state, object, klass), klass);
-        } catch (UserdataFactory.InvalidArgumentException e) {
+            return TypeCoercions.toLuaValue(TypeCoercions.toJava(state, object, klass), klass);
+        } catch (InvalidArgumentException e) {
             e.printStackTrace();
             return Constants.NIL;
         }
