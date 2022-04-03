@@ -1,6 +1,7 @@
 package me.hugeblank.allium.loader;
 
 import me.basiqueevangelist.enhancedreflection.api.EClass;
+import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.PackageLib;
 import me.hugeblank.allium.lua.api.*;
 import me.hugeblank.allium.lua.api.commands.CommandLib;
@@ -73,7 +74,7 @@ public class ScriptExecutor {
         globals.rawset( "print", new PrintMethod(script) );
 
         globals.rawset( "_VERSION", ValueFactory.valueOf( "Lua 5.1" ) );
-        globals.rawset( "_HOST", ValueFactory.valueOf("Allium 0.1.0" ) );
+        globals.rawset( "_HOST", ValueFactory.valueOf(Allium.ID + Allium.VERSION) );
     }
 
     public LuaState getState() {
