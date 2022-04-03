@@ -8,9 +8,7 @@ import me.hugeblank.allium.lua.type.annotation.LuaIndex;
 import me.hugeblank.allium.lua.type.property.PropertyData;
 import me.hugeblank.allium.lua.type.property.PropertyResolver;
 import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.function.ThreeArgFunction;
-import org.squiddev.cobalt.function.TwoArgFunction;
-import org.squiddev.cobalt.function.VarArgFunction;
+import org.squiddev.cobalt.function.*;
 
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -25,6 +23,7 @@ public final class StaticClassBinder {
 
     public static LuaUserdata bindClass(EClass<?> clazz) {
         Map<String, PropertyData<?>> cachedProperties = new HashMap<>();
+        GetClassFunction getClassFunc = new GetClassFunction(clazz);
         LuaTable metatable = new LuaTable();
         EMethod indexImpl = clazz.methods().stream().filter(x -> x.isStatic() && x.hasAnnotation(LuaIndex.class)).findAny().orElse(null);
 
@@ -82,6 +81,8 @@ public final class StaticClassBinder {
 
                 if (name.equals("allium_java_class")) {
                     return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
+                } else if (name.equals("getClass")) {
+                    return getClassFunc;
                 }
 
                 PropertyData<?> cachedProperty = cachedProperties.get(name);
@@ -163,5 +164,19 @@ public final class StaticClassBinder {
         }
 
         throw new LuaError(error.toString());
+    }
+
+    private static class GetClassFunction extends ZeroArgFunction {
+        private final EClass<?> clazz;
+
+        public GetClassFunction(EClass<?> clazz) {
+            super();
+            this.clazz = clazz;
+        }
+
+        @Override
+        public LuaValue call(LuaState state) {
+            return UserdataFactory.toLuaValue(clazz, EClass.fromJava(EClass.class).instantiateWith(List.of(clazz)));
+        }
     }
 }
