@@ -3,12 +3,16 @@ package me.hugeblank.allium.lua.api;
 import com.google.gson.*;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
 import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.OptionalArg;
 import org.squiddev.cobalt.*;
 
 import java.util.Set;
 
 @LuaWrapped(name = "json")
 public class JsonLib implements WrappedLuaLibrary {
+    public static final Gson PRETTY = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
+    public static final Gson COMPACT = new GsonBuilder().disableHtmlEscaping().create();
+
     @LuaWrapped
     public static LuaValue fromJson(String json) {
         return fromJson(JsonParser.parseString(json));
@@ -46,8 +50,10 @@ public class JsonLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public static String toJson(LuaValue value) throws LuaError {
-        return toJsonElement(value).toString();
+    public static String toJson(LuaValue value, @OptionalArg Boolean compact) throws LuaError {
+        JsonElement element = toJsonElement(value);
+        if (compact != null && compact) return COMPACT.toJson(element);
+        return  PRETTY.toJson(element);
     }
 
     @LuaWrapped

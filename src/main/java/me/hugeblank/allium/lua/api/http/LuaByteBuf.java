@@ -178,8 +178,8 @@ public class LuaByteBuf {
     }
 
     @LuaWrapped
-    public LuaByteBuf writeJson(LuaValue value, @OptionalArg String charset) throws LuaError {
-        return writeString(JsonLib.toJson(value), charset);
+    public LuaByteBuf writeJson(LuaValue value, @OptionalArg String charset, @OptionalArg Boolean compact) throws LuaError {
+        return writeString(JsonLib.toJson(value, compact), charset);
     }
 
     @LuaWrapped

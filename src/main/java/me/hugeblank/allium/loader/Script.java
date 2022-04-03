@@ -2,11 +2,13 @@ package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
-import me.hugeblank.allium.lua.event.EventType;
 import me.hugeblank.allium.lua.type.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.LuaError;
+import org.squiddev.cobalt.LuaState;
+import org.squiddev.cobalt.LuaValue;
+import org.squiddev.cobalt.UnwindThrowable;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.function.LuaFunction;
 
@@ -33,7 +35,7 @@ public class Script {
     private final Set<ScriptResource> resources = Collections.newSetFromMap(new WeakHashMap<>());
     private boolean destroyingResources = false;
 
-    public Script (Manifest manifest, Path path) {
+    public Script(Manifest manifest, Path path) {
         this.manifest = manifest;
         this.path = path;
         this.executor = new ScriptExecutor(this);
@@ -97,7 +99,11 @@ public class Script {
 
         try {
             for (ScriptResource resource : resources) {
-                resource.close();
+                try {
+                    resource.close();
+                } catch (Exception e) {
+                    getLogger().error("Failed to close script resource", e);
+                }
             }
         } finally {
             destroyingResources = false;

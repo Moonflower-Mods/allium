@@ -1,13 +1,17 @@
 package me.hugeblank.allium.lua.type;
 
+import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.loader.ScriptResource;
 import org.squiddev.cobalt.LuaError;
 
 import java.io.Closeable;
 import java.io.IOException;
 
-public abstract class LuaHandle {
+public abstract class LuaHandle implements ScriptResource {
 
-    public LuaHandle() {}
+    public LuaHandle(Script script) {
+        script.registerResource(this);
+    }
 
     public abstract void close() throws LuaError;
 

@@ -2,6 +2,7 @@ package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.type.*;
+import me.hugeblank.allium.util.FileHelper;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaTable;
 import org.squiddev.cobalt.LuaValue;
@@ -13,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributeView;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -20,18 +22,35 @@ import java.util.stream.Stream;
 
 @LuaWrapped(name = "fs")
 public class FsLib implements WrappedLuaLibrary {
+    private final Script script;
     private final Path root;
 
+    // Creates a persistent file storage outside of the script, since the scripts path could be in a mod or zip
+    // Files cannot be created in mods/zips from what I can tell.
     public FsLib(Script script) {
-        this.root = script.getPath();
+        this(script, FileHelper.PERSISTENCE_DIR.resolve(script.getId()));
+    }
+
+    public FsLib(Script script, Path root) {
+        this.script = script;
+        this.root = root;
     }
 
     private Path sanitize(String str) {
         if (str.charAt(0) == '/') {
+            Path p = root.resolve("." + str);
+             if (p.compareTo(root) < 0) {
+                 return root;
+             }
             return root.resolve("." + str);
         } else {
             return root.resolve(str);
         }
+    }
+
+    @LuaWrapped
+    public FsLib create(String path) {
+        return new FsLib(this.script, Path.of(path));
     }
 
     @LuaWrapped
@@ -144,9 +163,9 @@ public class FsLib implements WrappedLuaLibrary {
         if (mode.length() == 1) {
             Path p = sanitize(path);
             return switch (mode.charAt(0)) {
-                case 'r' -> new LuaReadHandle(p);
-                case 'w' -> new LuaWriteHandle(p, false);
-                case 'a' -> new LuaWriteHandle(p, true);
+                case 'r' -> new LuaReadHandle(script, p);
+                case 'w' -> new LuaWriteHandle(script, p, false);
+                case 'a' -> new LuaWriteHandle(script, p, true);
                 default -> null;
             };
         } else if (mode.length() == 2) {
@@ -168,10 +187,39 @@ public class FsLib implements WrappedLuaLibrary {
         }
     }
 
-    // TODO: Find https://tweaked.cc/module/fs.html#v:find
     @LuaWrapped
-    public @CoerceToNative List<String> find(String query) {
-        return null;
+    public @CoerceToNative List<String> find(String query) throws LuaError {
+        List<String> out = new ArrayList<>();
+        findInternal(root, query, out);
+        return out;
+    }
+
+    private void findInternal(Path base, String query, List<String> out) throws LuaError {
+        try {
+            String[] routes = query.split("/");
+            if (routes.length == 1 && routes[0].isEmpty()) {
+                out.add(base.toString().replace(root + "/", ""));
+                return;
+            }
+            String route = routes[0];
+            String expr = route.replace("*", "(|.*)");
+            Stream<Path> list = Files.list(base);
+            for (Path path : list.toList()) {
+                if (path.getFileName().toString().matches(expr))
+                    findInternal(base.resolve(path), subPath(routes), out);
+            }
+
+        } catch (IOException e) {
+            throw new LuaError(e);
+        }
+    }
+
+    private String subPath(String[] routes) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 1; i < routes.length; i++) {
+            builder.append(routes[i]).append("/");
+        }
+        return builder.toString();
     }
 
     // Differs from cct documentation

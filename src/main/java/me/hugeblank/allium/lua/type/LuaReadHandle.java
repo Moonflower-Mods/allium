@@ -1,5 +1,6 @@
 package me.hugeblank.allium.lua.type;
 
+import me.hugeblank.allium.loader.Script;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaValue;
 import org.squiddev.cobalt.ValueFactory;
@@ -16,8 +17,8 @@ public class LuaReadHandle extends LuaHandle {
 
     protected final InputStream handle;
 
-    public LuaReadHandle(Path path) throws LuaError {
-        super();
+    public LuaReadHandle(Script script, Path path) throws LuaError {
+        super(script);
         try {
             this.handle = Files.newInputStream(path, StandardOpenOption.READ, StandardOpenOption.CREATE);
         } catch (IOException e) {

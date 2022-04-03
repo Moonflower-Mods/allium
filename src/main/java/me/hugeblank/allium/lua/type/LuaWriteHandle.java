@@ -1,5 +1,6 @@
 package me.hugeblank.allium.lua.type;
 
+import me.hugeblank.allium.loader.Script;
 import org.squiddev.cobalt.LuaError;
 
 import java.io.IOException;
@@ -12,8 +13,8 @@ import java.nio.file.StandardOpenOption;
 public class LuaWriteHandle extends LuaHandle {
     private final OutputStream handle;
 
-    public LuaWriteHandle(Path path, boolean append) throws LuaError {
-        super();
+    public LuaWriteHandle(Script script, Path path, boolean append) throws LuaError {
+        super(script);
         try {
             if (append) {
                 this.handle = Files.newOutputStream(path, StandardOpenOption.APPEND, StandardOpenOption.WRITE, StandardOpenOption.CREATE);
