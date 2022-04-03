@@ -1,8 +1,8 @@
 package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.Allium;
-import me.hugeblank.allium.lua.type.CoerceToNative;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.CoerceToNative;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.server.network.ServerPlayerEntity;

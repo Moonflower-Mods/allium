@@ -2,8 +2,8 @@ package me.hugeblank.allium.lua.api;
 
 import com.google.gson.*;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.OptionalArg;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.OptionalArg;
 import org.squiddev.cobalt.*;
 
 import java.util.Set;

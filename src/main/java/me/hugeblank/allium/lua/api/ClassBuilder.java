@@ -4,8 +4,9 @@ import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EConstructor;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.EParameter;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.property.PropertyResolver;
 import me.hugeblank.allium.util.AsmUtil;
 import me.hugeblank.allium.util.ClassFieldBuilder;
 import org.objectweb.asm.ClassWriter;
@@ -80,7 +81,7 @@ public class ClassBuilder {
     public void overrideMethod(String methodName, EClass<?>[] parameters, LuaFunction func) {
         var methods = new ArrayList<EMethod>();
 
-        UserdataFactory.collectMethods(this.superClass, this.methods, methodName, methods::add);
+        PropertyResolver.collectMethods(this.superClass, this.methods, methodName, false, methods::add);
 
         for (var method : methods) {
             var methParams = method.parameters();

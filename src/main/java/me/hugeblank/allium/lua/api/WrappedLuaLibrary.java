@@ -1,7 +1,7 @@
 package me.hugeblank.allium.lua.api;
 
 import me.basiqueevangelist.enhancedreflection.api.EClass;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaTable;

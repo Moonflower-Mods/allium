@@ -3,10 +3,9 @@ package me.hugeblank.allium.lua.api.commands;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.WrappedLuaLibrary;
-import me.hugeblank.allium.lua.type.CoerceToBound;
-import me.hugeblank.allium.lua.type.LuaIndex;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.OptionalArg;
+import me.hugeblank.allium.lua.type.annotation.CoerceToBound;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.OptionalArg;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 

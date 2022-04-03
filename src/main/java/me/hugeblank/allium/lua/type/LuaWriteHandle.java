@@ -1,6 +1,7 @@
 package me.hugeblank.allium.lua.type;
 
 import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.squiddev.cobalt.LuaError;
 
 import java.io.IOException;

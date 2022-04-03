@@ -3,8 +3,8 @@ package me.hugeblank.allium.lua.api.http;
 import io.netty.buffer.ByteBuf;
 import io.netty.util.ReferenceCounted;
 import me.hugeblank.allium.lua.api.JsonLib;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.OptionalArg;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.OptionalArg;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaValue;
 

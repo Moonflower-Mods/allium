@@ -1,7 +1,7 @@
 package me.hugeblank.allium.lua.api;
 
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import me.hugeblank.allium.lua.type.UserdataFactory;
 import net.minecraft.nbt.*;
 import org.jetbrains.annotations.Nullable;

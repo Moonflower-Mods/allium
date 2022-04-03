@@ -1,6 +1,8 @@
 package me.hugeblank.allium.lua.type;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
+import me.hugeblank.allium.lua.type.annotation.LuaStateArg;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 
 public final class AnnotationUtils {
     private AnnotationUtils() {
