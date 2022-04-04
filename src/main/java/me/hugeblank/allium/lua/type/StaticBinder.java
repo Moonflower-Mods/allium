@@ -79,9 +79,7 @@ public final class StaticBinder {
 
                 String name = arg2.checkString(); // mapped name
 
-                if (name.equals("allium_java_class")) {
-                    return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
-                } else if (name.equals("getClass")) {
+                if (name.equals("getClass")) {
                     return getClassFunc;
                 }
 

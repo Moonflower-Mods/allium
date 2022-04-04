@@ -3,7 +3,6 @@ package me.hugeblank.allium.lua.type.property;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.hugeblank.allium.lua.type.UDFFunctions;
-import me.hugeblank.allium.lua.type.UserdataFactory;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;
 
