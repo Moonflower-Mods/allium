@@ -47,7 +47,7 @@ public class JavaLib implements WrappedLuaLibrary {
 
     @LuaWrapped(name = "import")
     public static LuaValue importClass(EClass<?> clazz) {
-        return StaticClassBinder.bindClass(clazz);
+        return StaticBinder.bindClass(clazz);
     }
 
     private static Varargs invokeStatic(EClass<?> clazz, String name, EMethod[] methods, LuaState state, Varargs args) throws LuaError {

@@ -16,8 +16,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public final class StaticClassBinder {
-    private StaticClassBinder() {
+public final class StaticBinder {
+    private StaticBinder() {
 
     }
 
