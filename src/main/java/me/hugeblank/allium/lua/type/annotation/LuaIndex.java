@@ -1,4 +1,4 @@
-package me.hugeblank.allium.lua.type;
+package me.hugeblank.allium.lua.type.annotation;
 
 import java.lang.annotation.*;
 

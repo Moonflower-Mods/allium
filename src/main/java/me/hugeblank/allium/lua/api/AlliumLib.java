@@ -1,13 +1,10 @@
 package me.hugeblank.allium.lua.api;
 
-import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.commands.CommandRegisterEntry;
-import me.hugeblank.allium.lua.type.CoerceToNative;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.annotation.CoerceToNative;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.jetbrains.annotations.Nullable;
-import org.squiddev.cobalt.LuaTable;
 
 import java.util.ArrayList;
 import java.util.List;

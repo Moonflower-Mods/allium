@@ -5,8 +5,8 @@ import com.mojang.brigadier.tree.CommandNode;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.api.WrappedLuaLibrary;
-import me.hugeblank.allium.lua.type.LuaIndex;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaIndex;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 

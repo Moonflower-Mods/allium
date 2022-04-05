@@ -1,6 +1,6 @@
 package me.hugeblank.allium.lua.api;
 
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import me.hugeblank.allium.util.text.TextParserUtils;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;

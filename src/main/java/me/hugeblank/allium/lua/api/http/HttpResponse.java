@@ -3,8 +3,8 @@ package me.hugeblank.allium.lua.api.http;
 import com.google.common.collect.Streams;
 import io.netty.handler.codec.http.FullHttpResponse;
 import io.netty.handler.codec.http.HttpUtil;
-import me.hugeblank.allium.lua.type.CoerceToNative;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.CoerceToNative;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Map;

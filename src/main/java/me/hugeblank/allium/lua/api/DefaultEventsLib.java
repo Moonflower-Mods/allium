@@ -1,7 +1,7 @@
 package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.lua.event.SimpleEventType;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.server.network.ServerPlayerEntity;

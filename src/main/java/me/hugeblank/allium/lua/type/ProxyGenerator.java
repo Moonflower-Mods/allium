@@ -96,7 +96,7 @@ public class ProxyGenerator {
             }
 
             fields.storeAndGet(m, method.parameters().get(i).parameterType().lowerBound().wrapPrimitive(), EClass.class);
-            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
+            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
             m.visitInsn(AASTORE);
 
             argIndex += args[i].getSize();
@@ -119,7 +119,7 @@ public class ProxyGenerator {
             m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);
             fields.storeAndGet(m, method.returnType().upperBound().wrapPrimitive(), EClass.class);
 
-            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Ljava/lang/Object;", false);
+            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Ljava/lang/Object;", false);
             m.visitTypeInsn(CHECKCAST, Type.getInternalName(method.returnType().upperBound().wrapPrimitive().raw()));
 
             if (ret.getSort() != Type.ARRAY && ret.getSort() != Type.OBJECT) {

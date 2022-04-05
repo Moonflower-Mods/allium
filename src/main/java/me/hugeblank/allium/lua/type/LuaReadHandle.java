@@ -1,6 +1,8 @@
 package me.hugeblank.allium.lua.type;
 
 import me.hugeblank.allium.loader.Script;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.OptionalArg;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaValue;
 import org.squiddev.cobalt.ValueFactory;

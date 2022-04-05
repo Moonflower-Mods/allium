@@ -2,6 +2,8 @@ package me.hugeblank.allium.lua.api;
 
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.lua.type.*;
+import me.hugeblank.allium.lua.type.annotation.CoerceToNative;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import me.hugeblank.allium.util.FileHelper;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaTable;

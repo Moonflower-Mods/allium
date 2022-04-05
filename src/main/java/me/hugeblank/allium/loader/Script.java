@@ -2,7 +2,7 @@ package me.hugeblank.allium.loader;
 
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.loader.resources.AlliumResourcePack;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.LuaError;

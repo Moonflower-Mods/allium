@@ -1,7 +1,7 @@
 package me.hugeblank.allium.lua.api;
 
-import me.hugeblank.allium.lua.type.CoerceToNative;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.CoerceToNative;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
 

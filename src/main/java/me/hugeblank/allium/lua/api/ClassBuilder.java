@@ -4,8 +4,9 @@ import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EConstructor;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.EParameter;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.TypeCoercions;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.property.PropertyResolver;
 import me.hugeblank.allium.util.AsmUtil;
 import me.hugeblank.allium.util.ClassFieldBuilder;
 import org.objectweb.asm.ClassWriter;
@@ -80,7 +81,7 @@ public class ClassBuilder {
     public void overrideMethod(String methodName, EClass<?>[] parameters, LuaFunction func) {
         var methods = new ArrayList<EMethod>();
 
-        UserdataFactory.collectMethods(this.superClass, this.methods, methodName, methods::add);
+        PropertyResolver.collectMethods(this.superClass, this.methods, methodName, false, methods::add);
 
         for (var method : methods) {
             var methParams = method.parameters();
@@ -143,7 +144,7 @@ public class ClassBuilder {
             m.visitLdcInsn(0);
             m.visitVarInsn(ALOAD, 0);
             fields.storeAndGetComplex(m, EClass::fromJava, EClass.class, className);
-            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
+            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
             m.visitInsn(AASTORE);
         }
 
@@ -159,7 +160,7 @@ public class ClassBuilder {
             }
 
             fields.storeAndGet(m, params[i].real.wrapPrimitive(), EClass.class);
-            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
+            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
             m.visitInsn(AASTORE);
 
             argIndex += args[i].getSize();
@@ -178,7 +179,7 @@ public class ClassBuilder {
         if (!isVoid) {
             m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);
             fields.storeAndGet(m, returnClass.real.wrapPrimitive(), EClass.class);
-            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(UserdataFactory.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Ljava/lang/Object;", false);
+            m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toJava", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Ljava/lang/Object;", false);
             m.visitTypeInsn(CHECKCAST, Type.getInternalName(returnClass.real.wrapPrimitive().raw()));
 
             if (returnType.getSort() != Type.ARRAY && returnType.getSort() != Type.OBJECT) {

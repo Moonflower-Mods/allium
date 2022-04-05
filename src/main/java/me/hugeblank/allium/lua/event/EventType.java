@@ -2,8 +2,8 @@ package me.hugeblank.allium.lua.event;
 
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.loader.ScriptResource;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.OptionalArg;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.OptionalArg;
 
 import java.util.*;
 

@@ -1,8 +1,8 @@
 package me.hugeblank.allium.lua.api;
 
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
-import me.hugeblank.allium.lua.type.LuaWrapped;
-import me.hugeblank.allium.lua.type.UserdataFactory;
+import me.hugeblank.allium.lua.type.TypeCoercions;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import net.minecraft.nbt.*;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.Constants;
@@ -42,8 +42,8 @@ public class NbtLib implements WrappedLuaLibrary {
 
                 yield table;
             }
-            case NbtElement.INT_ARRAY_TYPE -> UserdataFactory.toLuaValue(((NbtIntArray) element).getIntArray());
-            case NbtElement.LONG_ARRAY_TYPE -> UserdataFactory.toLuaValue(((NbtLongArray) element).getLongArray());
+            case NbtElement.INT_ARRAY_TYPE -> TypeCoercions.toLuaValue(((NbtIntArray) element).getIntArray());
+            case NbtElement.LONG_ARRAY_TYPE -> TypeCoercions.toLuaValue(((NbtLongArray) element).getLongArray());
             default -> Constants.NIL;
         };
     }

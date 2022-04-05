@@ -1,7 +1,7 @@
 package me.hugeblank.allium.lua.api.http;
 
 import me.hugeblank.allium.lua.api.WrappedLuaLibrary;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 
 import java.net.URI;
 

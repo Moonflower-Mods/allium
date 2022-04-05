@@ -3,8 +3,8 @@ package me.hugeblank.allium.lua.api.commands;
 import com.mojang.brigadier.arguments.ArgumentType;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.lua.api.JavaLib;
-import me.hugeblank.allium.lua.type.LuaIndex;
-import me.hugeblank.allium.lua.type.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.LuaIndex;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaValue;
 
