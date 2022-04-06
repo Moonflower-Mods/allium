@@ -1,7 +1,11 @@
 package me.hugeblank.allium.lua.api.recipe;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+import me.hugeblank.allium.lua.api.JsonLib;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import net.minecraft.recipe.Recipe;
+import net.minecraft.recipe.RecipeManager;
 import net.minecraft.recipe.RecipeType;
 import net.minecraft.util.Identifier;
 import org.squiddev.cobalt.LuaError;
@@ -17,14 +21,22 @@ public class AddRecipesContext extends RecipeContext {
     }
 
     @LuaWrapped
-    public void addRecipe(Identifier id, LuaValue value) throws LuaError {
-        Recipe<?> recipe;
+    public void addRecipe(Identifier id, String json) throws LuaError {
+        addRecipe(id, JsonParser.parseString(json).getAsJsonObject());
+    }
 
-        if (value.isUserdata(Recipe.class))
-            recipe = value.checkUserdata(Recipe.class);
-        else
-            recipe = RecipeLib.fromJson(id, value);
+    @LuaWrapped
+    public void addRecipe(Identifier id, JsonObject el) throws LuaError {
+        addRecipe(id, RecipeManager.deserialize(id, el));
+    }
 
+    @LuaWrapped
+    public void addRecipe(Identifier id, LuaValue val) throws LuaError {
+        addRecipe(id, JsonLib.toJsonElement(val).getAsJsonObject());
+    }
+
+    @LuaWrapped
+    public void addRecipe(Identifier id, Recipe<?> recipe) throws LuaError {
         if (recipesById.put(id, recipe) != null) {
             throw new LuaError("recipe '" + id + "' already exists");
         }

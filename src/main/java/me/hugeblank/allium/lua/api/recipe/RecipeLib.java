@@ -30,21 +30,6 @@ public class RecipeLib implements WrappedLuaLibrary {
     @LuaWrapped(name = "types")
     public static final @CoerceToBound RecipeTypeLib TYPES = new RecipeTypeLib();
 
-    @LuaWrapped
-    public static Recipe<?> fromJson(Identifier id, JsonObject object) {
-        return RecipeManager.deserialize(id, object);
-    }
-
-    @LuaWrapped
-    public static Recipe<?> fromJson(Identifier id, String json) {
-        return RecipeManager.deserialize(id, JsonParser.parseString(json).getAsJsonObject());
-    }
-
-    @LuaWrapped
-    public static Recipe<?> fromJson(Identifier id, LuaValue value) throws LuaError {
-        return RecipeManager.deserialize(id, JsonLib.toJsonElement(value).getAsJsonObject());
-    }
-
     public static void runRecipeEvents(Map<RecipeType<?>, Map<Identifier, Recipe<?>>> recipes, Map<Identifier, Recipe<?>> recipesById) {
         AddRecipesContext addCtx = new AddRecipesContext(recipes, recipesById);
 
