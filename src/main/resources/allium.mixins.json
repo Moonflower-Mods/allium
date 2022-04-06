@@ -17,6 +17,12 @@
     "entity.ServerPlayerEntityMixin",
     "network.ServerPlayerEntityMixin",
     "network.ServerPlayNetworkHandlerMixin",
-    "resource.ResourcePackManagerMixin"
+    "resource.ResourcePackManagerMixin",
+    "recipe.RecipeManagerMixin",
+    "recipe.ShapedRecipeAccessor",
+    "recipe.ShapelessRecipeAccessor",
+    "recipe.SmithingRecipeAccessor",
+    "recipe.AbstractCookingRecipeAccessor",
+    "recipe.CuttingRecipeAccessor"
   ]
 }

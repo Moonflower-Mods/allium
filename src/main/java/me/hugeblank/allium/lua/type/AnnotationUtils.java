@@ -4,6 +4,8 @@ import me.basiqueevangelist.enhancedreflection.api.*;
 import me.hugeblank.allium.lua.type.annotation.LuaStateArg;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 
+import java.util.List;
+
 public final class AnnotationUtils {
     private AnnotationUtils() {
 
@@ -24,6 +26,15 @@ public final class AnnotationUtils {
         }
 
         return count;
+    }
+
+    public static int getPriority(EMember element) {
+        LuaWrapped luaWrapped = element.annotation(LuaWrapped.class);
+
+        if (luaWrapped == null)
+            return 1000;
+
+        return luaWrapped.priority();
     }
 
     public static String[] findNames(EAnnotated element) {

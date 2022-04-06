@@ -12,4 +12,6 @@ import java.lang.annotation.*;
 @Inherited
 public @interface LuaWrapped {
     String[] name() default {};
+
+    int priority() default 1000;
 }

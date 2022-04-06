@@ -1,6 +1,7 @@
 package me.hugeblank.allium.lua.type.property;
 
 import me.basiqueevangelist.enhancedreflection.api.EField;
+import me.hugeblank.allium.lua.type.InvalidArgumentException;
 import me.hugeblank.allium.lua.type.TypeCoercions;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaState;
@@ -12,6 +13,20 @@ public record FieldData<I>(EField field) implements PropertyData<I> {
         try {
             return TypeCoercions.toLuaValue(field.get(instance), field.fieldTypeUse().upperBound());
         } catch (IllegalAccessException e) {
+            throw new LuaError(e);
+        }
+    }
+
+    @Override
+    public void set(String name, LuaState state, I instance, LuaValue value) throws LuaError {
+        if (field.isFinal()) {
+            PropertyData.super.set(name, state, instance, value);
+            return;
+        }
+
+        try {
+            field.set(instance, TypeCoercions.toJava(state, value, field.fieldType().upperBound()));
+        } catch (InvalidArgumentException | IllegalAccessException e) {
             throw new LuaError(e);
         }
     }

@@ -4,6 +4,7 @@ import me.basiqueevangelist.enhancedreflection.api.*;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import me.hugeblank.allium.lua.api.JavaLib;
 import me.hugeblank.allium.lua.type.annotation.*;
+import net.minecraft.util.Identifier;
 import org.squiddev.cobalt.*;
 
 import java.lang.reflect.Array;
@@ -166,21 +167,51 @@ public class TypeCoercions {
                 return UserdataFactory.of(klass).create(klass.cast(out));
             }
         } else if (klass.raw().isAssignableFrom(out.getClass())) {
-            if (klass.isGeneric()) {
-                if (ret.hasAnnotation(CoerceToBound.class))
-                    return UserdataFactory.of(klass).createBound(klass.cast(out));
-                else
-                    return UserdataFactory.of(klass).create(klass.cast(out));
-            } else {
-                EClass<?> trueRet = EClass.fromJava(out.getClass());
+            EClass<?> trueRet = EClass.fromJava(out.getClass());
+
+            if (canMatch(trueRet, klass)) {
                 if (ret.hasAnnotation(CoerceToBound.class))
                     return UserdataFactory.of(trueRet).createBound(out);
                 else
                     return UserdataFactory.of(trueRet).create(out);
+            } else {
+                if (ret.hasAnnotation(CoerceToBound.class))
+                    return UserdataFactory.of(klass).createBound(klass.cast(out));
+                else
+                    return UserdataFactory.of(klass).create(klass.cast(out));
             }
         } else {
             return Constants.NIL;
         }
+    }
+
+    private static boolean canMatch(EType type, EType other) {
+        if (type.equals(other)) return true;
+
+        if (type instanceof EClass<?> klass) {
+            if (other instanceof EWildcard otherWildcard) {
+                return otherWildcard.upperBounds().stream().allMatch(x -> canMatch(klass, x))
+                    && otherWildcard.lowerBounds().stream().noneMatch(x -> canMatch(klass, x));
+            } else if (other instanceof EClass<?> otherKlass) {
+                if (otherKlass.raw().equals(klass.raw())) {
+                    for (int i = 0; i < otherKlass.typeVariableValues().size(); i++)  {
+                        var val = klass.typeVariableValues().get(i);
+                        var otherVal = otherKlass.typeVariableValues().get(i);
+
+                        if (otherVal instanceof EWildcard && canMatch(val, otherVal))
+                            return true;
+                    }
+                }
+            }
+
+            if (klass.allSuperclasses().stream().anyMatch(x -> canMatch(x, other)))
+                return true;
+
+            if (klass.interfaces().stream().anyMatch(x -> canMatch(x, other)))
+                return true;
+        }
+
+        return false;
     }
 
     static {
@@ -282,6 +313,12 @@ public class TypeCoercions {
 
                 return map;
             };
+        });
+
+        TypeCoercions.registerLuaToJava(Identifier.class, (state, value) -> {
+            if (!value.isString()) return null;
+
+            return new Identifier(value.checkString());
         });
     }
 

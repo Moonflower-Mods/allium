@@ -29,7 +29,7 @@ public class UserdataFactory<T> {
 
     protected UserdataFactory(EClass<T> clazz) {
         this.clazz = clazz;
-        this.indexImpl = tryFindOp(LuaIndex.class, 1,"get");
+        this.indexImpl = tryFindOp(LuaIndex.class, 1);
         this.newIndexImpl = tryFindOp(null, 2, "set", "put");
         this.metatable = createMetatable(false);
     }
