@@ -29,7 +29,7 @@ public class UserdataFactory<T> {
 
     protected UserdataFactory(EClass<T> clazz) {
         this.clazz = clazz;
-        this.indexImpl = tryFindOp(LuaIndex.class, 1,"get");
+        this.indexImpl = tryFindOp(LuaIndex.class, 1, "get");
         this.newIndexImpl = tryFindOp(null, 2, "set", "put");
         this.metatable = createMetatable(false);
     }
@@ -69,7 +69,21 @@ public class UserdataFactory<T> {
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-                if (indexImpl != null) {
+                String name = arg2.checkString(); // mapped name
+
+                if (name.equals("allium_java_class")) {
+                    return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
+                }
+
+                PropertyData<? super T> cachedProperty = cachedProperties.get(name);
+
+                if (cachedProperty == null) {
+                    cachedProperty = PropertyResolver.resolveProperty(clazz, name, false);
+
+                    cachedProperties.put(name, cachedProperty);
+                }
+
+                if (cachedProperty == EmptyData.INSTANCE && indexImpl != null) {
                     var parameters = indexImpl.parameters();
                     try {
                         var jargs = ArgumentUtils.toJavaArguments(state, arg2, 1, parameters);
@@ -79,8 +93,6 @@ public class UserdataFactory<T> {
                                 var instance = TypeCoercions.toJava(state, arg1, clazz);
                                 EClassUse<?> ret = indexImpl.returnTypeUse().upperBound();
                                 Object out = indexImpl.invoke(instance, jargs);
-                                // If out is null, we can assume the index is nil
-                                if (out == null) throw new InvalidArgumentException();
                                 return TypeCoercions.toLuaValue(out, ret);
                             } catch (IllegalAccessException e) {
                                 throw new LuaError(e);
@@ -100,12 +112,14 @@ public class UserdataFactory<T> {
                         // Continue.
                     }
                 }
+                return cachedProperty.get(name, state, arg1.checkUserdata(clazz.raw()), isBound);
+            }
+        });
 
+        metatable.rawset("__newindex", new ThreeArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
                 String name = arg2.checkString(); // mapped name
-
-                if (name.equals("allium_java_class")) {
-                    return UserdataFactory.of(EClass.fromJava(EClass.class)).create(clazz);
-                }
 
                 PropertyData<? super T> cachedProperty = cachedProperties.get(name);
 
@@ -115,14 +129,7 @@ public class UserdataFactory<T> {
                     cachedProperties.put(name, cachedProperty);
                 }
 
-                return cachedProperty.get(name, state, arg1.checkUserdata(clazz.raw()), isBound);
-            }
-        });
-
-        metatable.rawset("__newindex", new ThreeArgFunction() {
-            @Override
-            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
-                if (newIndexImpl != null) {
+                if (cachedProperty == EmptyData.INSTANCE && newIndexImpl != null) {
                     var parameters = newIndexImpl.parameters();
                     try {
                         var jargs = ArgumentUtils.toJavaArguments(state, ValueFactory.varargsOf(arg1, arg2), 1, parameters);
@@ -130,9 +137,8 @@ public class UserdataFactory<T> {
                         if (jargs.length == parameters.size()) {
                             try {
                                 var instance = TypeCoercions.toJava(state, arg1, clazz);
-                                EClassUse<?> ret = newIndexImpl.returnTypeUse().upperBound();
                                 Object out = newIndexImpl.invoke(instance, jargs);
-                                return TypeCoercions.toLuaValue(out, ret);
+                                return Constants.NIL;
                             } catch (IllegalAccessException e) {
                                 throw new LuaError(e);
                             } catch (InvocationTargetException e) {
@@ -146,17 +152,6 @@ public class UserdataFactory<T> {
                         // Continue.
                     }
                 }
-
-                String name = arg2.checkString(); // mapped name
-
-                PropertyData<? super T> cachedProperty = cachedProperties.get(name);
-
-                if (cachedProperty == null) {
-                    cachedProperty = PropertyResolver.resolveProperty(clazz, name, false);
-
-                    cachedProperties.put(name, cachedProperty);
-                }
-
                 cachedProperty.set(name, state, arg1.checkUserdata(clazz.raw()), arg3);
 
                 return Constants.NIL;

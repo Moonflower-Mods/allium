@@ -27,11 +27,6 @@ public final class PropertyResolver {
         if (foundMethods.size() > 0)
             return new MethodData<>(clazz, foundMethods, name, isStatic);
 
-        EField field = findField(clazz, clazz.fields(), name, isStatic);
-
-        if (field != null)
-            return new FieldData<>(field);
-
         EMethod getter = findMethod(clazz, clazz.methods(), "get" + StringUtils.capitalize(name),
             method -> AnnotationUtils.countLuaArguments(method) == 0 && (!isStatic || method.isStatic()));
 
@@ -41,6 +36,11 @@ public final class PropertyResolver {
 
             return new PropertyMethodData<>(getter, setter);
         }
+
+        EField field = findField(clazz, clazz.fields(), name, isStatic);
+
+        if (field != null)
+            return new FieldData<>(field);
 
         return EmptyData.INSTANCE;
     }

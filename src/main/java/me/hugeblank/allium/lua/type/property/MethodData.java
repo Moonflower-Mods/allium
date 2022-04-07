@@ -2,10 +2,15 @@ package me.hugeblank.allium.lua.type.property;
 
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
+import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.lua.type.AnnotationUtils;
 import me.hugeblank.allium.lua.type.UDFFunctions;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;
 
+import java.text.MessageFormat;
+import java.util.Comparator;
 import java.util.List;
 
 public class MethodData<I> implements PropertyData<I> {
@@ -17,6 +22,8 @@ public class MethodData<I> implements PropertyData<I> {
         this.sourceClass = sourceClass;
         this.methods = methods;
         this.unboundFunction = new UDFFunctions<>(sourceClass, methods, name, null, isStatic);
+
+        methods.sort(MethodSorter.INSTANCE);
     }
 
     @Override

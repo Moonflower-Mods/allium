@@ -5,6 +5,7 @@ import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import me.hugeblank.allium.lua.api.JavaLib;
 import me.hugeblank.allium.lua.type.annotation.LuaIndex;
+import me.hugeblank.allium.lua.type.property.EmptyData;
 import me.hugeblank.allium.lua.type.property.PropertyData;
 import me.hugeblank.allium.lua.type.property.PropertyResolver;
 import org.squiddev.cobalt.*;
@@ -30,6 +31,25 @@ public final class StaticBinder {
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
             public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
+                if (arg2.isString()) {
+                    String name = arg2.checkString(); // mapped name
+
+                    if (name.equals("getClass")) {
+                        return getClassFunc;
+                    }
+
+                    PropertyData<?> cachedProperty = cachedProperties.get(name);
+
+                    if (cachedProperty == null) {
+                        cachedProperty = PropertyResolver.resolveProperty(clazz, name, true);
+
+                        cachedProperties.put(name, cachedProperty);
+                    }
+
+                    if (cachedProperty != EmptyData.INSTANCE)
+                        return cachedProperty.get(name, state, null, false);
+                }
+
                 if (indexImpl != null) {
                     var parameters = indexImpl.parameters();
                     try {
@@ -77,21 +97,7 @@ public final class StaticBinder {
                     }
                 }
 
-                String name = arg2.checkString(); // mapped name
-
-                if (name.equals("getClass")) {
-                    return getClassFunc;
-                }
-
-                PropertyData<?> cachedProperty = cachedProperties.get(name);
-
-                if (cachedProperty == null) {
-                    cachedProperty = PropertyResolver.resolveProperty(clazz, name, true);
-
-                    cachedProperties.put(name, cachedProperty);
-                }
-
-                return cachedProperty.get(name, state, null, false);
+                return Constants.NIL;
             }
         });
 
