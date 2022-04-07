@@ -18,6 +18,8 @@ import java.util.Map;
 
 @LuaWrapped(name = "recipe")
 public class RecipeLib implements WrappedLuaLibrary {
+    private static boolean IN_MODIFY_PHASE = false;
+
     @LuaWrapped
     public static final SimpleEventType<AddRecipesContext.Handler> ADD = new SimpleEventType<>(new Identifier("allium:recipe/adding_recipes"));
 
@@ -30,6 +32,12 @@ public class RecipeLib implements WrappedLuaLibrary {
     @LuaWrapped(name = "types")
     public static final @CoerceToBound RecipeTypeLib TYPES = new RecipeTypeLib();
 
+    public static void assertInModifyPhase() throws LuaError {
+        if (!IN_MODIFY_PHASE) {
+            throw new LuaError("tried to modify recipe not in modify phase");
+        }
+    }
+
     public static void runRecipeEvents(Map<RecipeType<?>, Map<Identifier, Recipe<?>>> recipes, Map<Identifier, Recipe<?>> recipesById) {
         AddRecipesContext addCtx = new AddRecipesContext(recipes, recipesById);
 
@@ -37,7 +45,9 @@ public class RecipeLib implements WrappedLuaLibrary {
 
         ModifyRecipesContext modifyCtx = new ModifyRecipesContext(recipes, recipesById);
 
+        IN_MODIFY_PHASE = true;
         MODIFY.invoker().modifyRecipes(modifyCtx);
+        IN_MODIFY_PHASE = false;
 
         RemoveRecipesContext removeCtx = new RemoveRecipesContext(recipes, recipesById);
 
