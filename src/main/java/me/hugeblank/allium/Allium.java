@@ -15,6 +15,7 @@ import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.util.FileHelper;
 import me.hugeblank.allium.util.Mappings;
 import me.hugeblank.allium.util.YarnLoader;
+import me.hugeblank.allium.util.docs.Generator;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.minecraft.block.Block;
@@ -49,8 +50,13 @@ public class Allium implements ModInitializer {
     public static final Path DUMP_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve("allium-dump");
     public static final String VERSION = FabricLoader.getInstance().getModContainer("allium").orElseThrow().getMetadata().getVersion().getFriendlyString();
 
+    private static final boolean GEN_DOCS = false;
+
     @Override
     public void onInitialize() {
+        if (GEN_DOCS) {
+            Generator.generate();
+        }
         if (DEVELOPMENT) {
             try {
                 if (Files.isDirectory(DUMP_DIRECTORY))
@@ -94,7 +100,8 @@ public class Allium implements ModInitializer {
 
         LOGGER.info("Loading Scripts");
 
-        if (DEVELOPMENT) CANDIDATES.addAll(FileHelper.getValidDirScripts( // Load example scripts if in development
+        if (DEVELOPMENT) CANDIDATES.addAll(FileHelper.getValidDirScripts(
+                // Load example scripts if in development environment
                 FabricLoader.getInstance().getGameDir().resolve("../examples")
         ));
         CANDIDATES.addAll(FileHelper.getValidDirScripts(FileHelper.getScriptsDirectory()));

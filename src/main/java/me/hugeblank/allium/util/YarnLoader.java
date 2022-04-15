@@ -81,7 +81,7 @@ public class YarnLoader {
         try (BufferedReader mappingReader = Files.newBufferedReader(CACHED_MAPPINGS)) {
             TinyV2Factory.visit(mappingReader, new TinyVisitor() {
                 private final Map<String, Integer> namespaceIndex = new HashMap<>();
-                private Map<String, String> currentClass = new HashMap<>();
+                private final Map<String, String> currentClass = new HashMap<>();
 
                 @Override
                 public void start(TinyMetadata metadata) {
