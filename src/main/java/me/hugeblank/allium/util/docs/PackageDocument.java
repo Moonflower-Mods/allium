@@ -5,7 +5,6 @@ import me.hugeblank.allium.util.docs.html.HTMLDocument;
 import me.hugeblank.allium.util.docs.html.HTMLElement;
 import me.hugeblank.allium.util.docs.html.HTMLHelper;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
@@ -22,63 +21,69 @@ public class PackageDocument extends HTMLDocument {
     public PackageDocument(Path path, List<Path> packagePaths, List<EClass<?>> classPaths) {
         super();
         this.path = path;
-        this.packagePaths = packagePaths;
-        this.classPaths = classPaths;
-        addHeadElement(new HTMLElement("link", true)
-                .addAttribute("rel", "stylesheet")
-                .addAttribute("type", "text/css")
-                .addAttribute("href", relativePathToFile(Generator.ROOT.resolve("style.css")))
-        );
-        navigation
-                .addChild(new HTMLElement("br", true))
-                .addChild(HTMLElement.of("h1", "MCLua"));
-        HTMLElement container = HTMLElement.of("div").addAttribute("id", "main");
-        HTMLElement content = new HTMLElement("div").addAttribute("id", "content");
-        container.addChild(navigation);
-        container.addChild(content);
-        addBodyElement(new HTMLElement("div").addAttribute("id", "container").addChild(container));
-        List<HTMLElement> cats = new ArrayList<>();
+        this.classPaths = classPaths
+                .stream()
+                .filter((eClass) -> path.equals(Path.of(eClass.packageName().replace(".", "/")))
+                ).toList();
+        // If there's no classes in the package, ignore. Unless it's root.
+        if (!this.classPaths.isEmpty() || path.equals(Generator.ROOT)) {
+            this.packagePaths = packagePaths
+                    .stream()
+                    .filter((p) -> {
+                        String test = path.relativize(p).toString();
+                        return test.length() > 0 && !test.contains("..");
+                    }).toList();
+            addHeadElement(new HTMLElement("link", true)
+                    .addAttribute("rel", "stylesheet")
+                    .addAttribute("type", "text/css")
+                    .addAttribute("href", relativePathToFile(Path.of("style.css")))
+            );
+            navigation
+                    .addChild(new HTMLElement("br", true))
+                    .addChild(HTMLElement.of("a")
+                            .addAttribute("href", relativePathToFile(Path.of("index.html")))
+                            .addChild(HTMLElement.of("h1", Generator.NAME))
+                    );
+            HTMLElement container = HTMLElement.of("div").addAttribute("id", "main");
+            HTMLElement content = new HTMLElement("div").addAttribute("id", "content");
+            container.addChild(navigation);
+            container.addChild(content);
+            addBodyElement(new HTMLElement("div").addAttribute("id", "container").addChild(container));
 
-        final boolean[] hasPackages = {false};
-        packages.addChild(HTMLHelper.toTable(packagePaths, (row, p) -> {
-            HTMLElement key = HTMLElement.of("td").addClassAttribute("name");
-            String test = path.relativize(p).toString();
-            if (Files.isDirectory(p) && test.length() > 0 && !test.contains("..")) {
-                hasPackages[0] = true;
-                key.addChild(HTMLElement.of("a", p.toString().substring(1).replace("/", "."))
+            List<HTMLElement> cats = new ArrayList<>();
+
+            packages.addChild(HTMLHelper.toTable(this.packagePaths, (row, p) -> {
+                HTMLElement key = HTMLElement.of("td").addClassAttribute("name");
+                key.addChild(HTMLElement.of("a", p.toString().replace("/", "."))
                         .addAttribute("href", relativePathToFile(p.resolve("index.html")))
                 );
                 row.addChild(key);
-            }
-        }));
-        if (hasPackages[0]) {
+            }));
             content.addChild(HTMLElement.of("a").addAttribute("name", categories[1]));
             content.addChild(HTMLElement.of("h2").addChild(HTMLElement.of("a", categories[1]).addAttribute("href", "#" + categories[1])));
             content.addChild(packages);
             cats.add(HTMLElement.of("a", categories[1]).addAttribute("href", "#" + categories[1]));
-        }
 
-        final boolean[] hasClasses = {false};
-        classes.addChild(HTMLHelper.toTable(classPaths, (row, eClass) -> {
-            if (path.equals(path.getFileSystem().getPath("/" + eClass.packageName().replace(".", "/")))) {
-                hasClasses[0] = true;
-                HTMLElement key = HTMLElement.of("td").addClassAttribute("name");
-                HTMLElement value = HTMLElement.of("td").addClassAttribute("summary");
-                key.addChild(HTMLElement.of("a", eClass.toString().replace("/", "."))
-                        .addAttribute("href", relativePathToClass(eClass))
-                );
-                row.addChild(key).addChild(value);
-                value.addContent("This description should be content pulled from the first comments of a lua file.");
+            if (!this.classPaths.isEmpty()) { // Don't add the classes sub-category, in the event this is the root.
+                classes.addChild(HTMLHelper.toTable(this.classPaths, (row, eClass) -> {
+                    HTMLElement key = HTMLElement.of("td").addClassAttribute("name");
+                    HTMLElement value = HTMLElement.of("td").addClassAttribute("summary");
+                    key.addChild(HTMLElement.of("a", eClass.toString().replace("/", "."))
+                            .addAttribute("href", relativePathToClass(eClass))
+                    );
+                    row.addChild(key).addChild(value);
+                    value.addContent("This description should be content pulled from the first comments of a lua file.");
+                }));
+                content.addChild(HTMLElement.of("a").addAttribute("name", categories[0]));
+                content.addChild(HTMLElement.of("h2").addChild(HTMLElement.of("a", categories[0]).addAttribute("href", "#" + categories[0])));
+                content.addChild(classes);
+                cats.add(HTMLElement.of("a", categories[0]).addAttribute("href", "#" + categories[0]));
             }
-        }));
-        if (hasClasses[0]) {
-            content.addChild(HTMLElement.of("a").addAttribute("name", categories[0]));
-            content.addChild(HTMLElement.of("h2").addChild(HTMLElement.of("a", categories[0]).addAttribute("href", "#" + categories[0])));
-            content.addChild(classes);
-            cats.add(HTMLElement.of("a", categories[0]).addAttribute("href", "#" + categories[0]));
-        }
 
-        addCategoriesToNavbar("Categories", cats.toArray(new HTMLElement[1]));
+            addCategoriesToNavbar("Categories", cats.toArray(new HTMLElement[1]));
+        } else {
+            this.packagePaths = null;
+        }
     }
 
     public void addCategoriesToNavbar(String name, HTMLElement... element) {
@@ -86,13 +91,15 @@ public class PackageDocument extends HTMLDocument {
     }
 
     public boolean isEmpty() {
-        return classPaths.isEmpty() && packagePaths.isEmpty();
+        return classPaths.isEmpty();
     }
 
     private String relativePathToClass(EClass<?> reference) {
         reference = reference.raw().isArray() ? reference.arrayComponent() : reference;
-        //noinspection ConstantConditions
-        return path.relativize(HTMLHelper.classToPath(reference, path.getFileSystem())).toString().replace(".class", ".html");
+        return path
+                .relativize(HTMLHelper.classToPath(reference))
+                .toString()
+                .replace(".class", ".html");
     }
 
     private String relativePathToFile(Path reference) {

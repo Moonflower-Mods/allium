@@ -2,7 +2,6 @@ package me.hugeblank.allium.util.docs.html;
 
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 
-import java.nio.file.FileSystem;
 import java.nio.file.Path;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -34,8 +33,8 @@ public class HTMLHelper {
         return body;
     }
 
-    public static Path classToPath(EClass<?> eClass, FileSystem system) {
-        return system.getPath("/" + eClass.name()
+    public static Path classToPath(EClass<?> eClass) {
+        return Path.of(eClass.name()
                 .replace(".class", "")
                 .replace(".", "/")
                 + ".class");

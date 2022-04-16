@@ -1,6 +1,7 @@
 package me.hugeblank.allium.util.docs;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import me.hugeblank.allium.util.docs.html.HTMLDocument;
 import me.hugeblank.allium.util.docs.html.HTMLElement;
 import me.hugeblank.allium.util.docs.html.HTMLHelper;
@@ -17,13 +18,15 @@ public class ClassDocument extends HTMLDocument {
     protected final HTMLElement navigation = new HTMLElement("div").addAttribute("id", "navigation");
     private final List<HTMLElement> navList = new ArrayList<>();
     private final EClass<?> clazz;
+    // Cached class list for *efficiency*
+    private static final List<? extends EClass<?>> classes = Generator.CLASSES.values().stream().map(Pair::getRight).toList();
 
     public ClassDocument(EClass<?> clazz, Path path) {
         super();
         addHeadElement(new HTMLElement("link", true)
                 .addAttribute("rel", "stylesheet")
                 .addAttribute("type", "text/css")
-                .addAttribute("href", path.resolve("..").normalize().relativize(Generator.ROOT.resolve("style.css")).toString())
+                .addAttribute("href", path.getParent().normalize().relativize(Path.of("style.css")).toString())
         );
         this.path = path;
         this.clazz = clazz;
@@ -40,7 +43,10 @@ public class ClassDocument extends HTMLDocument {
         categories.forEach((pair) -> pair.getRight().forEach(content::addChild));
         navigation
                 .addChild(new HTMLElement("br", true))
-                .addChild(HTMLElement.of("h1", "MCLua"));
+                .addChild(HTMLElement.of("a")
+                        .addAttribute("href", relativePathToFile(Path.of("index.html")))
+                        .addChild(HTMLElement.of("h1", Generator.NAME))
+                );
         if (navList.isEmpty()) {
             addCategoriesToNavbar("Content", HTMLElement.of("br"));
         } else {
@@ -90,7 +96,7 @@ public class ClassDocument extends HTMLDocument {
     private Pair<List<HTMLElement>, List<HTMLElement>> listInstanceMethods() {
         List<EMethod> methods = clazz.methods()
                 .stream()
-                .filter((eMethod) -> !eMethod.isStatic() && eMethod.isPublic())
+                .filter((eMethod) -> !eMethod.isStatic() && isPublic(eMethod))
                 .toList();
         return listCallable("Instance Methods", methods);
     }
@@ -98,9 +104,13 @@ public class ClassDocument extends HTMLDocument {
     private Pair<List<HTMLElement>, List<HTMLElement>> listStaticMethods() {
         List<EMethod> methods = clazz.methods()
                 .stream()
-                .filter((eMethod) -> eMethod.isStatic() && eMethod.isPublic())
+                .filter((eMethod) -> eMethod.isStatic() && isPublic(eMethod))
                 .toList();
         return listCallable("Static Methods", methods);
+    }
+
+    private static boolean isPublic(EMethod method) {
+        return method.isPublic() && !method.name().contains("allium_private$");
     }
 
     private Pair<List<HTMLElement>, List<HTMLElement>> listFields(String category, List<EField> fields) {
@@ -115,7 +125,7 @@ public class ClassDocument extends HTMLDocument {
             String fieldDetails = "This description should be content pulled from the comments above a method in a lua file. Format: \"--- @method m_id DESCRIPTION\"";
             String header;
             if (field.isStatic()) {
-                header = clazz.simpleName() + "." + field.name();
+                header = getClassName() + "." + field.name();
             } else {
                 header = "instance." + field.name();
             }
@@ -141,8 +151,8 @@ public class ClassDocument extends HTMLDocument {
                 HTMLElement.of("a").addAttribute("name", category),
                 HTMLElement.of("h2")
                         .addChild(HTMLElement.of("a", category)
-                        .addAttribute("href", "#" + category)
-                ),
+                                .addAttribute("href", "#" + category)
+                        ),
                 HTMLElement.of("table")
                         .addClassAttribute("function_list")
                         .addChild(summary)
@@ -163,53 +173,59 @@ public class ClassDocument extends HTMLDocument {
                 .addClassAttribute("section-header")
         );
 
-        executables.stream().sorted(Comparator.comparing(EMember::name)).forEach((executable) -> {
-            String methodInfo = "This description should be content pulled from the comments above a method in a lua file. Format: \"--- @method m_id DESCRIPTION\"";
-            String header = getMethodHeader(executable);
-            summary.addChild(HTMLElement.of("tr")
-                    .addChild(HTMLElement.of("td")
-                            .addClassAttribute("name")
-                            .addAttribute("nowrap", "")
-                            .addChild(HTMLElement.of("a")
-                                    .addAttribute("href", "#" + header)
-                                    .addContent(header)
+        executables.stream()
+                .filter((executable) ->
+                        clazz.hasAnnotation(LuaWrapped.class) && executable.hasAnnotation(LuaWrapped.class)
+                        || !clazz.hasAnnotation(LuaWrapped.class)
+                )
+                .sorted(Comparator.comparing(EMember::name))
+                .forEach((executable) -> {
+                    String methodInfo = "This description should be content pulled from the comments above a method in a lua file. Format: \"--- @method m_id DESCRIPTION\"";
+                    String header = getCallableHeader(executable);
+                    summary.addChild(HTMLElement.of("tr")
+                            .addChild(HTMLElement.of("td")
+                                    .addClassAttribute("name")
+                                    .addAttribute("nowrap", "")
+                                    .addChild(HTMLElement.of("a")
+                                            .addAttribute("href", "#" + header)
+                                            .addContent(header)
+                                    )
                             )
-                    )
-                    .addChild(HTMLElement.of("td")
-                            .addClassAttribute("summary")
-                            .addContent(methodInfo)
-                    )
-            );
-            HTMLElement inoutDetails = HTMLElement.of("dd") // DETAILS
-                    .addContent(methodInfo);
-            if (executable.parameters().size() > 0) {
-                inoutDetails.addChild(HTMLElement.of("h3", "Parameters:"));
-            }
-            inoutDetails.addChild(HTMLHelper.toUnnamedList(executable.parameters(), (li, param) -> { // PARAMETERS
-                li // PARAM DETAILS
-                        .addChild(HTMLElement.of("span")
-                                .addClassAttribute("parameter")
-                                .addContent(param.name())
-                        )
-                        .addChild(createTypesTag(param.rawParameterType()))
-                        .addContent("This description should be content pulled from the comments above a method in a lua file. Format: \"-- @param varName DESCRIPTION\"");
-            }));
+                            .addChild(HTMLElement.of("td")
+                                    .addClassAttribute("summary")
+                                    .addContent(methodInfo)
+                            )
+                    );
+                    HTMLElement inoutDetails = HTMLElement.of("dd") // DETAILS
+                            .addContent(methodInfo);
+                    if (executable.parameters().size() > 0) {
+                        inoutDetails.addChild(HTMLElement.of("h3", "Parameters:"));
+                    }
+                    inoutDetails.addChild(HTMLHelper.toUnnamedList(executable.parameters(), (li, param) -> { // PARAMETERS
+                        li // PARAM DETAILS
+                                .addChild(HTMLElement.of("span")
+                                        .addClassAttribute("parameter")
+                                        .addContent(param.name())
+                                )
+                                .addChild(createTypesTag(param.rawParameterType()))
+                                .addContent("This description should be content pulled from the comments above a method in a lua file. Format: \"-- @param varName DESCRIPTION\"");
+                    }));
 
-            if (executable instanceof EMethod eMethod && !eMethod.rawReturnType().raw().equals(void.class)) {
-                inoutDetails
-                        .addChild(HTMLElement.of("h3", "Returns:"))
-                        .addChild(createTypesTag(eMethod.rawReturnType()))
-                        .addContent("This description should be content pulled from the comments above a method in a lua file. Format: \"-- @return DESCRIPTION\"");
-            }
+                    if (executable instanceof EMethod eMethod && !eMethod.rawReturnType().raw().equals(void.class)) {
+                        inoutDetails
+                                .addChild(HTMLElement.of("h3", "Returns:"))
+                                .addChild(createTypesTag(eMethod.rawReturnType()))
+                                .addContent("This description should be content pulled from the comments above a method in a lua file. Format: \"-- @return DESCRIPTION\"");
+                    }
 
-            details.add(HTMLElement.of("dl")
-                    .addClassAttribute("function")
-                    .addChild(HTMLElement.of("dt")
-                            .addChild(HTMLElement.of("a").addAttribute("name", header))
-                            .addChild(HTMLElement.of("strong", header))
-                    ).addChild(inoutDetails)
-            );
-        });
+                    details.add(HTMLElement.of("dl")
+                            .addClassAttribute("function")
+                            .addChild(HTMLElement.of("dt")
+                                    .addChild(HTMLElement.of("a").addAttribute("name", header))
+                                    .addChild(HTMLElement.of("strong", header))
+                            ).addChild(inoutDetails)
+                    );
+                });
 
         return new Pair<>(List.of(
                 HTMLElement.of("a").addAttribute("name", category),
@@ -223,32 +239,63 @@ public class ClassDocument extends HTMLDocument {
         ), details);
     }
 
-    private String getMethodHeader(EExecutable executable) {
+    private String getCallableHeader(EExecutable executable) {
         StringBuilder header = new StringBuilder();
         if (executable instanceof EMethod) {
-            if (executable.isStatic()) {
-                header.append(clazz.simpleName()).append(".");
-            } else {
-                header.append("instance:");
-            }
-            header.append(executable.name()).append("(");
+
+            header.append(getCallableName(executable)).append("(");
         } else if (executable instanceof EConstructor<?>) {
-            header.append(clazz.simpleName()).append("(");
+            header.append(getClassName()).append("(");
         }
         List<EParameter> params = executable.parameters();
         for (int i = 0; i < params.size(); i++) {
             header.append(params.get(i).name());
-            if (i < params.size()-1) {
+            if (i < params.size() - 1) {
                 header.append(", ");
             }
         }
         return header.append(")").toString();
     }
 
+    private String getCallableName(EExecutable executable) {
+        String defName = executable.name().replace("allium$", "");
+        String out = "";
+        if (executable.isStatic()) {
+            out += getClassName() + ".";
+        } else {
+            out += "instance:";
+        }
+        if (executable.hasAnnotation(LuaWrapped.class)) {
+            LuaWrapped luaWrapped = executable.annotation(LuaWrapped.class);
+            if (luaWrapped != null && luaWrapped.name().length > 0) {
+                out += luaWrapped.name()[0];
+            } else {
+                out += defName;
+            }
+        } else {
+            out += defName;
+        }
+        return out;
+    }
+
+    private String getClassName() {
+        String defName = clazz.simpleName().replace("allium$", "");
+        if (clazz.hasAnnotation(LuaWrapped.class)) {
+            LuaWrapped luaWrapped = clazz.annotation(LuaWrapped.class);
+            if (luaWrapped != null && luaWrapped.name().length > 0) {
+                return luaWrapped.name()[0];
+            } else {
+                return defName;
+            }
+        } else {
+            return defName;
+        }
+    }
+
     private HTMLElement createTypesTag(EClass<?> eClass) { // Parameter and return type generation
         HTMLElement ptype = HTMLElement.of("span").addClassAttribute("type");
 
-        if (eClass.packageName().contains("net.minecraft")) { // Class is in the scope of the game
+        if (classes.contains(eClass)) {
             ptype
                     .addContent("userdata, ")
                     .addChild(
@@ -272,7 +319,7 @@ public class ClassDocument extends HTMLDocument {
             ) {
                 builder.append("number, ");
                 found = true;
-            } else if (rawType.equals(int.class)|| rawType.equals(Integer.class) || rawType.equals(boolean.class) || rawType.equals(Boolean.class) || rawType.equals(String.class)) {
+            } else if (rawType.equals(int.class) || rawType.equals(Integer.class) || rawType.equals(boolean.class) || rawType.equals(Boolean.class) || rawType.equals(String.class)) {
                 found = true; // No additional information, the java and lua types are essentially the same.
             } else { // It's not a primitive, so it's a class not in the scope of the project. (java.*, lwjgl, gson, etc.)
                 builder.append("userdata, ");
@@ -295,12 +342,14 @@ public class ClassDocument extends HTMLDocument {
 
     private String relativePathToClass(EClass<?> reference) {
         reference = reference.raw().isArray() ? reference.arrayComponent() : reference;
-        //noinspection ConstantConditions
-        return path.getParent().relativize(HTMLHelper.classToPath(reference, path.getFileSystem())).toString().replace(".class", ".html");
+        return path.getParent()
+                .relativize(HTMLHelper.classToPath(reference))
+                .toString()
+                .replace(".class", ".html");
     }
 
-    private String getName() {
-        return getName(clazz);
+    private String relativePathToFile(Path reference) {
+        return path.getParent().relativize(reference).toString();
     }
 
     private String getName(EClass<?> eClass) {

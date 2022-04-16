@@ -11,6 +11,7 @@
 // See LICENSE for more information
 package me.hugeblank.allium;
 
+import com.mojang.brigadier.CommandDispatcher;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.util.FileHelper;
 import me.hugeblank.allium.util.Mappings;
@@ -18,6 +19,7 @@ import me.hugeblank.allium.util.YarnLoader;
 import me.hugeblank.allium.util.docs.Generator;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
+import net.minecraft.SharedConstants;
 import net.minecraft.block.Block;
 import net.minecraft.item.Item;
 import net.minecraft.server.MinecraftServer;
@@ -55,7 +57,7 @@ public class Allium implements ModInitializer {
     @Override
     public void onInitialize() {
         if (GEN_DOCS) {
-            Generator.generate();
+            Generator.generate(SharedConstants.class, Allium.class, CommandDispatcher.class);
         }
         if (DEVELOPMENT) {
             try {
