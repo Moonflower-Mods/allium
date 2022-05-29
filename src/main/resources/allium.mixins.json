@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "me.hugeblank.allium.mixin",
   "compatibilityLevel": "JAVA_17",
+  "plugin": "me.hugeblank.allium.mixin.AlliumMixinPlugin",
   "injectors": {
     "defaultRequire": 1
   },
@@ -18,6 +19,7 @@
     "network.ServerPlayerEntityMixin",
     "network.ServerPlayNetworkHandlerMixin",
     "resource.ResourcePackManagerMixin",
+    "recipe.fabric.RecipeManagerMixin",
     "recipe.RecipeManagerMixin",
     "recipe.ShapedRecipeMixin",
     "recipe.ShapelessRecipeMixin",
