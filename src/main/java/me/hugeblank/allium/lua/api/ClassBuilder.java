@@ -89,7 +89,7 @@ public class ClassBuilder {
             if (methParams.size() == parameters.length) {
                 boolean match = true;
                 for (int i = 0; i < parameters.length; i++) {
-                    if (!methParams.get(i).parameterType().equals(parameters[i])) {
+                    if (!methParams.get(i).parameterType().upperBound().raw().equals(parameters[i].raw())) {
                         match = false;
                         break;
                     }
@@ -108,6 +108,8 @@ public class ClassBuilder {
                 }
             }
         }
+
+        throw new IllegalArgumentException("Couldn't find method!");
     }
 
     @LuaWrapped
