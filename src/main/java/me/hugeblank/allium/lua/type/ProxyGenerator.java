@@ -124,8 +124,6 @@ public class ProxyGenerator {
 
             if (ret.getSort() != Type.ARRAY && ret.getSort() != Type.OBJECT) {
                 AsmUtil.unwrapPrimitive(m, ret);
-            } else {
-                m.visitTypeInsn(CHECKCAST, ret.getInternalName());
             }
         }
 
