@@ -109,7 +109,7 @@ public class ClassBuilder {
             }
         }
 
-        throw new IllegalArgumentException("Couldn't find method!");
+        throw new IllegalArgumentException("Couldn't find method " + methodName + " in parent class " + superClass.name() + "!");
     }
 
     @LuaWrapped
