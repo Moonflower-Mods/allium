@@ -89,7 +89,7 @@ public class ClassBuilder {
             if (methParams.size() == parameters.length) {
                 boolean match = true;
                 for (int i = 0; i < parameters.length; i++) {
-                    if (!methParams.get(i).parameterType().equals(parameters[i])) {
+                    if (!methParams.get(i).parameterType().upperBound().raw().equals(parameters[i].raw())) {
                         match = false;
                         break;
                     }
@@ -108,6 +108,8 @@ public class ClassBuilder {
                 }
             }
         }
+
+        throw new IllegalArgumentException("Couldn't find method " + methodName + " in parent class " + superClass.name() + "!");
     }
 
     @LuaWrapped
@@ -130,12 +132,13 @@ public class ClassBuilder {
         var desc = Type.getMethodDescriptor(returnType, paramsType);
         var m = c.visitMethod(access, methodName, desc, null, null);
         int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
+        int thisVarOffset = isStatic ? 0 : 1;
 
         m.visitCode();
 
         if (isStatic) varPrefix -= 1;
 
-        m.visitLdcInsn(params.length + 1);
+        m.visitLdcInsn(params.length + thisVarOffset);
         m.visitTypeInsn(ANEWARRAY, Type.getInternalName(LuaValue.class));
         m.visitVarInsn(ASTORE, varPrefix);
 
@@ -148,11 +151,11 @@ public class ClassBuilder {
             m.visitInsn(AASTORE);
         }
 
-        int argIndex = 1;
+        int argIndex = thisVarOffset;
         var args = Type.getArgumentTypes(desc);
         for (int i = 0; i < args.length; i++) {
             m.visitVarInsn(ALOAD, varPrefix);
-            m.visitLdcInsn(i + 1);
+            m.visitLdcInsn(i + thisVarOffset);
             m.visitVarInsn(args[i].getOpcode(ILOAD), argIndex);
 
             if (args[i].getSort() != Type.OBJECT || args[i].getSort() != Type.ARRAY) {
@@ -184,8 +187,6 @@ public class ClassBuilder {
 
             if (returnType.getSort() != Type.ARRAY && returnType.getSort() != Type.OBJECT) {
                 AsmUtil.unwrapPrimitive(m, returnType);
-            } else {
-                m.visitTypeInsn(CHECKCAST, returnType.getInternalName());
             }
         }
 
