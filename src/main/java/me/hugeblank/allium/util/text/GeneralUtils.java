@@ -12,14 +12,14 @@ import java.util.List;
 @ApiStatus.Internal
 public class GeneralUtils {
     public static String textToString(Text text) {
-        StringBuffer string = new StringBuffer(text.asString());
+        StringBuffer string = new StringBuffer(text.copyContentOnly().toString());
         recursiveParsing(string, text.getSiblings());
         return string.toString();
     }
 
     private static void recursiveParsing(StringBuffer string, List<Text> textList) {
         for (Text text : textList) {
-            string.append(text.asString());
+            string.append(text.getContent().toString());
 
             List<Text> siblings = text.getSiblings();
             if (siblings.size() != 0) {
@@ -39,7 +39,7 @@ public class GeneralUtils {
             input.setStyle(input.getStyle().withHoverEvent(null).withClickEvent(null));
         }
 
-        if (input instanceof TranslatableText text) {
+        if (input.getContent() instanceof TranslatableTextContent text) {
             for (int i = 0; i < text.getArgs().length; i++) {
                 var arg = text.getArgs()[i];
                 if (arg instanceof MutableText argText) {
@@ -56,7 +56,7 @@ public class GeneralUtils {
 
     public static MutableText cloneText(Text input) {
         MutableText baseText;
-        if (input instanceof TranslatableText translatable) {
+        if (input.getContent() instanceof TranslatableTextContent translatable) {
             var obj = new ArrayList<>();
 
             for (var arg : translatable.getArgs()) {
@@ -67,9 +67,9 @@ public class GeneralUtils {
                 }
             }
 
-            baseText = new TranslatableText(translatable.getKey(), obj.toArray());
+            baseText = Text.translatable(translatable.getKey(), obj.toArray());
         } else {
-           baseText = input.copy();
+            baseText = input.copyContentOnly();
         }
 
         for (var sibling : input.getSiblings()) {

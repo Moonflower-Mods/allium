@@ -21,7 +21,7 @@ import java.util.regex.Pattern;
 /**
  * Modified version of TextPlaceholderAPI's (https://github.com/Patbox/TextPlaceholderAPI) TextParser implementation
  */
-public class TextParserUtils {
+/*public class TextParserUtils {
     // Based on minimessage's regex, modified to fit more parsers needs
     public static final Pattern STARTING_PATTERN = Pattern.compile("<(?<id>[^<>/]+)(?<data>(:([']?([^'](\\\\\\\\['])?)+[']?))*)>");
     public static final List<Pair<String, String>> ESCAPED_CHARS = new ArrayList<>();
@@ -100,7 +100,7 @@ public class TextParserUtils {
 
     public static GeneralUtils.TextLengthPair recursiveParsing(String input, Map<String, TextFormatterHandler> handlers, String endAt) {
         if (input.isEmpty()) {
-            return new GeneralUtils.TextLengthPair(new LiteralText(""), 0);
+            return new GeneralUtils.TextLengthPair(Text.empty(), 0);
         }
 
         MutableText text = null;
@@ -486,4 +486,4 @@ public class TextParserUtils {
         return builder.toString();
     }
 
-}
+}*/

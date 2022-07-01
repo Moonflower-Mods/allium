@@ -1,6 +1,8 @@
 package me.hugeblank.allium.mixin.network;
 
 import me.hugeblank.allium.lua.api.DefaultEventsLib;
+import net.minecraft.network.message.SignedMessage;
+import net.minecraft.server.filter.FilteredMessage;
 import net.minecraft.server.filter.TextStream;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -15,9 +17,9 @@ public class ServerPlayNetworkHandlerMixin {
     @Shadow
     public ServerPlayerEntity player;
 
-    @Inject(at = @At(value = "INVOKE", shift = At.Shift.AFTER, target = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/text/Text;Ljava/util/function/Function;Lnet/minecraft/network/MessageType;Ljava/util/UUID;)V"), method = "handleMessage(Lnet/minecraft/server/filter/TextStream$Message;)V")
-    private void onChatMessage(TextStream.Message message, CallbackInfo ci) {
-        String msg = message.getFiltered();
-        DefaultEventsLib.CHAT_MESSAGE.invoker().onChatMessage(player, msg);
+    @Inject(at = @At(value = "INVOKE", shift = At.Shift.BEFORE, target = "Lnet/minecraft/server/PlayerManager;broadcast(Lnet/minecraft/server/filter/FilteredMessage;Lnet/minecraft/server/network/ServerPlayerEntity;Lnet/minecraft/util/registry/RegistryKey;)V"), method = "handleDecoratedMessage")
+    private void onChatMessage(FilteredMessage<SignedMessage> message, CallbackInfo ci) {
+        var msg = message.raw().getContent();
+        DefaultEventsLib.CHAT_MESSAGE.invoker().onChatMessage(player, msg.getString());
     }
 }

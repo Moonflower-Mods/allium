@@ -26,20 +26,19 @@ repositories {
 
 	mavenCentral()
 
+	//maven { url 'https://jitpack.io' }
+
+
 	maven {
 		name "NucleMaven™"
 		url "https://maven.nucleoid.xyz"
 	}
 
+	// Seems dead?
 	maven {
 		name "Basique's Maven"
-		url "https://porez.ml/maven"
+		url "https://basique.top/maven"
 	}
-}
-
-configurations {
-	embedAPI // Things we depend on that we want *in* the built allium JAR
-	api.extendsFrom embedAPI
 }
 
 dependencies {
@@ -47,14 +46,17 @@ dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
-	embedAPI "org.squiddev:Cobalt:${project.cobalt}"
-	embedAPI "net.fabricmc:tiny-mappings-parser:${project.tiny_parser}"
-	embedAPI "me.basiqueevangelist:enhanced-reflection:${project.enhanced_reflections}"
+	modImplementation include("org.squiddev:Cobalt:${project.cobalt}")
+	modImplementation include("net.fabricmc:tiny-mappings-parser:${project.tiny_parser}")
+	modImplementation include("me.basiqueevangelist:enhanced-reflection:${project.enhanced_reflections}")
+	//modImplementation include("com.github.BasiqueEvangelist:EnhancedReflection:${project.enhanced_reflections}")
+	modImplementation include("io.netty:netty-codec-http:4.1.77.Final")
+	modImplementation "eu.pb4:placeholder-api:${project.placeholder_api}"
+
 
 	// Used for testing Scripts. No code in the repo should depend on these
 	//modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api}"
-	//modImplementation "eu.pb4:placeholder-api:${project.placeholder_api}"
-	//modImplementation "eu.pb4:polymer:${project.polymer}+${project.minecraft_version}"
+	//modImplementation "eu.pb4:polymer:${project.polymer}"
 }
 
 processResources {
@@ -81,8 +83,6 @@ jar {
 	from("LICENSE") {
 		rename { "${it}_${project.archives_base_name}"}
 	}
-
-	from configurations.embedAPI.collect { it.isDirectory() ? it : zipTree(it) }
 }
 
 // configure the maven publication
