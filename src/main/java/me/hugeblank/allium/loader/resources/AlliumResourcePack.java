@@ -182,7 +182,7 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
     }
 
     @Override
-    public Collection<Identifier> findResources(ResourceType type, String namespace, String path, int depth, Predicate<String> predicate) {
+    public Collection<Identifier> findResources(ResourceType type, String namespace, String path, Predicate<Identifier> predicate) {
         if (!namespaces.getOrDefault(type, Collections.emptySet()).contains(namespace)) {
             return Collections.emptyList();
         }
@@ -200,11 +200,12 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                         String fileName = file.getFileName().toString();
+                        var id = new Identifier(namespace, nsPath.relativize(file).toString().replace(separator, "/"));
 
                         if (!fileName.endsWith(".mcmeta")
-                                && predicate.test(fileName)) {
+                                && predicate.test(id)) {
                             try {
-                                ids.add(new Identifier(namespace, nsPath.relativize(file).toString().replace(separator, "/")));
+                                ids.add(id);
                             } catch (InvalidIdentifierException e) {
                                 LOGGER.error(e.getMessage());
                             }

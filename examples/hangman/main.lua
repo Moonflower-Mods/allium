@@ -6,7 +6,7 @@
 
 local words = require "words"
 local CommandManager = java.import("CommandManager") -- We need the java command manager for creating commands.
-local MessageType = java.import("network.MessageType") -- "net.minecraft." among other packages are auto-filled for you!
+local MessageType = java.import("network.message.MessageType") -- "net.minecraft." among other packages are auto-filled for you!
 local Util = java.import("Util")
 local arguments = command.arguments -- Create shortcut for command argument types
 
@@ -35,7 +35,7 @@ local function broadcast(context, text) -- easily broadcast a message to all pla
             :getWorld()
             :getServer()
             :getPlayerManager()
-            :broadcast(texts.parseSafe(text), MessageType.CHAT, Util.NIL_UUID)
+            :broadcast(texts.parseSafe(text), MessageType.SYSTEM)
 end
 
 local builder = CommandManager.literal("hangman") -- Create the builder for the hangman command
@@ -72,7 +72,7 @@ end)
 
 builder:m_then(CommandManager.argument("guess", arguments.string.word()):executes(function(context)
     -- The part of the command that handles guesses
-    local playerName = context:getSource():getPlayer():getName():asString()
+    local playerName = context:getSource():getPlayer():getName():getString()
     local broadcastWin = function() -- easily broadcast win message
         broadcast(context, string.format(
                         "<green>%s guessed the word! It was: <bold>%s</bold></green>",
