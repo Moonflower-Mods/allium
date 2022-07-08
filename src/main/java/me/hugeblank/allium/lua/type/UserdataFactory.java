@@ -4,19 +4,30 @@
 // If someone wants to SCP this, please by all means do so.
 package me.hugeblank.allium.lua.type;
 
-import me.basiqueevangelist.enhancedreflection.api.*;
+import me.basiqueevangelist.enhancedreflection.api.EClass;
+import me.basiqueevangelist.enhancedreflection.api.EMember;
+import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
-import me.hugeblank.allium.lua.type.annotation.*;
-import me.hugeblank.allium.lua.type.property.*;
+import me.hugeblank.allium.Allium;
+import me.hugeblank.allium.lua.type.annotation.LuaIndex;
+import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.property.EmptyData;
+import me.hugeblank.allium.lua.type.property.PropertyData;
+import me.hugeblank.allium.lua.type.property.PropertyResolver;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.function.OneArgFunction;
 import org.squiddev.cobalt.function.ThreeArgFunction;
 import org.squiddev.cobalt.function.TwoArgFunction;
+import org.squiddev.cobalt.function.VarArgFunction;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
-import java.util.*;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.stream.Stream;
 
 public class UserdataFactory<T> {
     private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
@@ -65,6 +76,68 @@ public class UserdataFactory<T> {
 
     private LuaTable createMetatable(boolean isBound) {
         LuaTable metatable = new LuaTable();
+
+        metatable.rawset("__pairs", new OneArgFunction() {
+            // Technically, pairs is kinda cringe. In order to properly deliver all key-value pairs, we have to parse
+            // the ENTIRE class. At least we cache everything along the way? Still not ideal.
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg) throws LuaError {
+                Stream.Builder<EMember> memberBuilder = Stream.builder();
+                clazz.methods().forEach(memberBuilder);
+                clazz.fields().forEach(memberBuilder);
+                try {
+                    var instance = clazz.cast(TypeCoercions.toJava(state, arg, clazz));
+                    Stream<Varargs> valueStream = memberBuilder.build()
+                            .filter((member)->
+                                    !clazz.hasAnnotation(LuaWrapped.class) ||
+                                            (
+                                                    clazz.hasAnnotation(LuaWrapped.class) &&
+                                                    member.hasAnnotation(LuaWrapped.class)
+                                            )
+                            )
+                            .map((member)-> {
+                                String memberName = member.name();
+                                if (member.hasAnnotation(LuaWrapped.class)) {
+                                    String[] names = AnnotationUtils.findNames(member);
+                                    if (names != null && names.length > 0) {
+                                        memberName = names[0];
+                                    }
+                                }
+                                PropertyData<? super T> propertyData = cachedProperties.get(memberName);
+
+                                if (propertyData == null) { // caching
+                                    propertyData = PropertyResolver.resolveProperty(clazz, memberName, member.isStatic());
+                                    cachedProperties.put(memberName, propertyData);
+                                }
+
+                                if (!Allium.DEVELOPMENT) memberName = Allium.MAPPINGS.getYarn(memberName);
+                                try {
+                                    return ValueFactory.varargsOf(LuaString.valueOf(memberName), propertyData.get(
+                                            memberName,
+                                            state,
+                                            isBound ? instance : null,
+                                            isBound
+                                    ));
+                                } catch (LuaError e) {
+                                    // I have no idea how this could happen, so it'll be interesting if we get an issue
+                                    // report in the future with it...
+                                    Allium.LOGGER.warn("Could not get property data for " + memberName, e);
+                                    return Constants.NIL;
+                                }
+                            });
+
+                    Iterator<Varargs> iterator = valueStream.iterator();
+                    return new VarArgFunction() { // next
+                        public Varargs invoke(LuaState state, Varargs varargs) throws LuaError, UnwindThrowable {
+                            if (!iterator.hasNext()) return Constants.NIL;
+                            return iterator.next();
+                        }
+                    };
+                } catch (InvalidArgumentException e) {
+                    throw new LuaError(e);
+                }
+            }
+        });
 
         metatable.rawset("__index", new TwoArgFunction() {
             @Override
@@ -222,5 +295,4 @@ public class UserdataFactory<T> {
             return ValueFactory.valueOf(cmp.compareTo(cmp2) < 0 || cmp.equals(cmp2));
         }
     }
-
 }

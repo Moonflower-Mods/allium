@@ -11,7 +11,6 @@
 // See LICENSE for more information
 package me.hugeblank.allium;
 
-import com.mojang.brigadier.CommandDispatcher;
 import me.hugeblank.allium.loader.Script;
 import me.hugeblank.allium.util.FileHelper;
 import me.hugeblank.allium.util.Mappings;
@@ -57,7 +56,7 @@ public class Allium implements ModInitializer {
     @Override
     public void onInitialize() {
         if (GEN_DOCS) {
-            Generator.generate(SharedConstants.class, Allium.class, CommandDispatcher.class);
+            Generator.generate(SharedConstants.class, Allium.class);
         }
         if (DEVELOPMENT) {
             try {

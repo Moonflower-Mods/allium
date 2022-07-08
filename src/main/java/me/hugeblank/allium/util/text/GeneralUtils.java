@@ -1,9 +1,8 @@
 package me.hugeblank.allium.util.text;
 
-import it.unimi.dsi.fastutil.ints.Int2ObjectFunction;
-import net.minecraft.item.ItemStack;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableTextContent;
 import org.jetbrains.annotations.ApiStatus;
 
 import java.util.ArrayList;
@@ -80,9 +79,9 @@ public class GeneralUtils {
         return baseText;
     }
 
-    public static record TextLengthPair(MutableText text, int length) {
+    public record TextLengthPair(MutableText text, int length) {
         public static final TextLengthPair EMPTY = new TextLengthPair(null, 0);
     }
 
-    public static record Pair<L, R>(L left, R right) {}
+    public record Pair<L, R>(L left, R right) {}
 }
