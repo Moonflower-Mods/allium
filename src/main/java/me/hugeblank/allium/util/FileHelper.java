@@ -32,7 +32,9 @@ public class FileHelper {
 
     public static final Path SCRIPT_DIR = FabricLoader.getInstance().getGameDir().resolve(Allium.ID);
     public static final Path CONFIG_DIR = FabricLoader.getInstance().getConfigDir().resolve(Allium.ID);
-    public static final Path DOCS_DIR = FabricLoader.getInstance().getGameDir().resolve(Allium.ID + "-docs");
+    public static final Path DOCS_BASE_DIR = FabricLoader.getInstance().getGameDir().resolve(Allium.ID + "-docs");
+    public static final Path HTML_DOCS_DIR = DOCS_BASE_DIR.resolve("html");
+    public static final Path LUA_DOCS_DIR = DOCS_BASE_DIR.resolve("lua");
     public static final Path PERSISTENCE_DIR = FabricLoader.getInstance().getConfigDir().resolve(Allium.ID + "_persistence");
     public static final Path MAPPINGS_CFG_DIR = FabricLoader.getInstance().getConfigDir().resolve(Allium.ID + "_mappings");
     public static final String MANIFEST_FILE_NAME = "manifest.json";

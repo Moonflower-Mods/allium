@@ -1,15 +1,16 @@
-package me.hugeblank.allium.util.docs;
+package me.hugeblank.allium.util.docs.html;
 
 import me.basiqueevangelist.enhancedreflection.api.EClass;
-import me.hugeblank.allium.util.docs.html.HTMLDocument;
-import me.hugeblank.allium.util.docs.html.HTMLElement;
-import me.hugeblank.allium.util.docs.html.HTMLHelper;
+import me.hugeblank.allium.util.docs.Generator;
+import me.hugeblank.allium.util.docs.html.base.HTMLDocument;
+import me.hugeblank.allium.util.docs.html.base.HTMLElement;
+import me.hugeblank.allium.util.docs.html.base.HTMLHelper;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-public class PackageDocument extends HTMLDocument {
+public class HTMLPackageDocument extends HTMLDocument {
     protected final Path path;
     protected final HTMLElement navigation = new HTMLElement("div").addAttribute("id", "navigation");
     protected final List<Path> packagePaths;
@@ -18,16 +19,16 @@ public class PackageDocument extends HTMLDocument {
     protected final HTMLElement classes = new HTMLElement("table").addClassAttribute("module_list");
     private static final String[] categories = {"Classes", "Packages"};
 
-    public PackageDocument(Path path, List<Path> packagePaths, List<EClass<?>> classPaths) {
+    public HTMLPackageDocument(Path path, List<Path> packagePaths, List<EClass<?>> classPaths) {
         super();
         this.path = path;
-        this.classPaths = classPaths
+        this.classPaths = classPaths // Find classes that are contained in this package
                 .stream()
                 .filter((eClass) -> path.equals(Path.of(eClass.packageName().replace(".", "/")))
                 ).toList();
         // If there's no classes in the package, ignore. Unless it's root.
         if (!this.classPaths.isEmpty() || path.equals(Generator.ROOT)) {
-            this.packagePaths = packagePaths
+            this.packagePaths = packagePaths // Find packages that are contained in this package
                     .stream()
                     .filter((p) -> {
                         String test = path.relativize(p).toString();

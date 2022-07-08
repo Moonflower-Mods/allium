@@ -3,7 +3,9 @@ package me.hugeblank.allium.util.docs;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.util.FileHelper;
-import net.minecraft.util.Pair;
+import me.hugeblank.allium.util.docs.html.HTMLClassDocument;
+import me.hugeblank.allium.util.docs.html.HTMLPackageDocument;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.net.URI;
@@ -11,13 +13,16 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 public class Generator {
     // Path to class, Pair with Path to html file and Enhanced Class
-    public static final Map<Path, Pair<Path, EClass<?>>> CLASSES = new HashMap<>();
+    public static final List<ClassData> CLASS_DATA = new ArrayList<>();
     public static final List<Path> PACKAGES = new ArrayList<>();
     public static final Path ROOT = Path.of("");
     public static final String NAME = "Allium Docs";
@@ -53,19 +58,23 @@ public class Generator {
                             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
                                 file = Path.of(trueRoot.relativize(file).normalize().toString());
                                 if (!Pattern.compile("\\.class$").matcher(file.getFileName().toString()).find())
-                                    return FileVisitResult.CONTINUE;
+                                    return FileVisitResult.CONTINUE; // We're only looking for .class files...
                                 if (Pattern.compile("\\$\\d*\\.class$").matcher(file.getFileName().toString()).find())
-                                    return FileVisitResult.CONTINUE;
+                                    return FileVisitResult.CONTINUE; // ...That aren't generated
                                 String className = file.toString()
                                         .replace("/", ".")
                                         .replaceFirst("\\.class$", "");
                                 try {
                                     if (file.getParent() != null) {
-                                        Files.createDirectories(FileHelper.DOCS_DIR.resolve(file.getParent().toString()));
-                                        Path out = FileHelper.DOCS_DIR.resolve(file.toString().replace(".class", ".html"));
-                                        if (!Files.exists(out)) Files.createFile(out);
                                         EClass<?> clazz = EClass.fromJava(Class.forName(className));
-                                        CLASSES.put(file, new Pair<>(out, clazz));
+                                        CLASS_DATA.add(
+                                                new ClassData(
+                                                        file,
+                                                        getPath(FileHelper.HTML_DOCS_DIR, file, ".html"),
+                                                        getPath(FileHelper.LUA_DOCS_DIR, file, ".lua"),
+                                                        clazz
+                                                )
+                                        );
 
                                         if (fileCount % 10 == 0) {
                                             System.out.print(".");
@@ -80,6 +89,16 @@ public class Generator {
                                 }
                                 return FileVisitResult.CONTINUE;
                             }
+
+                            // Create necessary files on the lua and HTML side of things
+                            @NotNull
+                            private Path getPath(Path docFile, Path classFile, String extension) throws IOException {
+                                Files.createDirectories(docFile.resolve(classFile.getParent().toString()));
+                                Path out = docFile.resolve(classFile.toString().replace(".class", extension));
+                                if (!Files.exists(out)) Files.createFile(out);
+                                return out;
+                            }
+
 
                             @Override
                             public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
@@ -102,42 +121,47 @@ public class Generator {
             }
             System.out.println();
             Allium.LOGGER.info("Docgen complete, saving...");
+            complete();
         } catch (URISyntaxException e) {
             Allium.LOGGER.error("URI error", e);
         } catch (IOException e) {
             Allium.LOGGER.error("IO error - generate", e);
         }
-        complete();
     }
 
     private static void complete() {
         int i = 0;
-        List<EClass<?>> sortedClasses = CLASSES.values()
+        List<EClass<?>> sortedClasses = CLASS_DATA
                 .stream()
-                .<EClass<?>>map(Pair::getRight)
+                .<EClass<?>>map(ClassData::clazz)
                 .sorted(Comparator.comparing(EClass::simpleName))
                 .toList();
         List<Path> sortedPackages = PACKAGES.stream().sorted(Comparator.comparing(Path::toString)).toList();
-        int size = CLASSES.size() + sortedPackages.size();
+        int size = CLASS_DATA.size() + sortedPackages.size();
         try {
+            Path stylesheet = FileHelper.HTML_DOCS_DIR.resolve("style.css");
+            Files.createFile(stylesheet); // Copy stylesheet
+            Files.write(stylesheet,
+                    Objects.requireNonNull(Generator.class.getResourceAsStream("/docs/style.css"))
+                            .readAllBytes()
+            );
             for (Path p : sortedPackages) {
                 int percent = (int) (((double) i / size) * 100);
                 System.out.print("\r\033[JFinalizing docgen - packages: " + percent + "% ");
 
-                PackageDocument doc = new PackageDocument(p, sortedPackages, sortedClasses);
+                HTMLPackageDocument doc = new HTMLPackageDocument(p, sortedPackages, sortedClasses);
                 if (!doc.isEmpty() || p.equals(ROOT)) {
-                    Files.writeString(FileHelper.DOCS_DIR.resolve(p.toString()).resolve("index.html"), doc.toString());
+                    Files.writeString(FileHelper.HTML_DOCS_DIR.resolve(p.toString()).resolve("index.html"), doc.toString());
                 }
                 i++;
             }
-            for (Map.Entry<Path, Pair<Path, EClass<?>>> entry : CLASSES.entrySet()) {
-                Pair<Path, EClass<?>> pair = entry.getValue();
-                ClassDocument doc = new ClassDocument(pair.getRight(), entry.getKey());
+            for (ClassData entry : CLASS_DATA) {
+                HTMLClassDocument doc = new HTMLClassDocument(entry.clazz, entry.classPath);
                 int percent = (int) (((double) i / size) * 100);
                 if (i % 50 == 0) System.out.print("\r\033[JFinalizing docgen - classes : " + percent + "% ");
 
                 doc.addClassesToNavbar("Classes", sortedClasses);
-                Files.writeString(pair.getLeft(), doc.toString());
+                Files.writeString(entry.htmlPath, doc.toString());
                 i++;
             }
             System.out.println();
@@ -153,4 +177,7 @@ public class Generator {
             return Path.of(Path.of(uri).toString().replace(eClass.name().replace(".", "/") + ".class", ""));
         }
     }
+
+    public record ClassData(Path classPath, Path htmlPath, Path luaPath, EClass<?> clazz) {}
+
 }

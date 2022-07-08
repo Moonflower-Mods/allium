@@ -1,4 +1,4 @@
-package me.hugeblank.allium.util.docs.html;
+package me.hugeblank.allium.util.docs.html.base;
 
 public class HTMLContent extends HTMLElement {
 

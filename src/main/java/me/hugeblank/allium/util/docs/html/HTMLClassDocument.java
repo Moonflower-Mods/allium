@@ -1,10 +1,11 @@
-package me.hugeblank.allium.util.docs;
+package me.hugeblank.allium.util.docs.html;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
-import me.hugeblank.allium.util.docs.html.HTMLDocument;
-import me.hugeblank.allium.util.docs.html.HTMLElement;
-import me.hugeblank.allium.util.docs.html.HTMLHelper;
+import me.hugeblank.allium.util.docs.Generator;
+import me.hugeblank.allium.util.docs.html.base.HTMLDocument;
+import me.hugeblank.allium.util.docs.html.base.HTMLElement;
+import me.hugeblank.allium.util.docs.html.base.HTMLHelper;
 import net.minecraft.util.Pair;
 
 import java.nio.file.Path;
@@ -12,16 +13,16 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 
-public class ClassDocument extends HTMLDocument {
+public class HTMLClassDocument extends HTMLDocument {
     protected final Path path;
     protected final HTMLElement content = new HTMLElement("div").addAttribute("id", "content");
     protected final HTMLElement navigation = new HTMLElement("div").addAttribute("id", "navigation");
     private final List<HTMLElement> navList = new ArrayList<>();
     private final EClass<?> clazz;
     // Cached class list for *efficiency*
-    private static final List<? extends EClass<?>> classes = Generator.CLASSES.values().stream().map(Pair::getRight).toList();
+    private static final List<? extends EClass<?>> classes = Generator.CLASS_DATA.stream().map(Generator.ClassData::clazz).toList();
 
-    public ClassDocument(EClass<?> clazz, Path path) {
+    public HTMLClassDocument(EClass<?> clazz, Path path) {
         super();
         addHeadElement(new HTMLElement("link", true)
                 .addAttribute("rel", "stylesheet")
