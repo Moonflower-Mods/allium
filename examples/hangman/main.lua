@@ -40,11 +40,11 @@ end
 
 local builder = CommandManager.literal("hangman") -- Create the builder for the hangman command
 
-events.COMMAND_REGISTER:register(script, function(_, _, success)
+events.COMMAND_REGISTER:register(script, function(_, name, success)
     -- Let us know if the command was successfully registered
-    if success then
+    if success and name:find("hangman") then
         print("/hangman command registered!")
-    else
+    elseif not success and name:find("hangman") then
         print("/hangman command failed to register!")
     end
 end)

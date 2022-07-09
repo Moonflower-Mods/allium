@@ -14,7 +14,7 @@ public class ServerPlayerEntityMixin{
 
     @Inject(at = @At("HEAD"), method = "playerTick()V")
     private void tick(CallbackInfo ci) {
-        DefaultEventsLib.PLAYER_TICK.invoker().onPlayerTick((ServerPlayerEntity)(Object) this);
+        DefaultEventsLib.SERVER_PLAYER_TICK.invoker().onPlayerTick((ServerPlayerEntity)(Object) this);
     }
 
     @Inject(at = @At("HEAD"), method = "onDisconnect")

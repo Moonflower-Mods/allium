@@ -18,13 +18,17 @@
     "entity.ServerPlayerEntityMixin",
     "network.ServerPlayerEntityMixin",
     "network.ServerPlayNetworkHandlerMixin",
-    "resource.ResourcePackManagerMixin",
-    "recipe.fabric.RecipeManagerMixin",
+    "recipe.AbstractCookingRecipeMixin",
+    "recipe.CuttingRecipeMixin",
     "recipe.RecipeManagerMixin",
     "recipe.ShapedRecipeMixin",
     "recipe.ShapelessRecipeMixin",
     "recipe.SmithingRecipeMixin",
-    "recipe.AbstractCookingRecipeMixin",
-    "recipe.CuttingRecipeMixin"
+    "recipe.fabric.RecipeManagerMixin",
+    "resource.ResourcePackManagerMixin"
+  ],
+  "client": [
+    "client.gui.hud.InGameHudMixin",
+    "entity.ClientPlayerEntityMixin"
   ]
 }
