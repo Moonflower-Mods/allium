@@ -1,7 +1,5 @@
 package me.hugeblank.allium.mixin;
 
-import com.mojang.authlib.GameProfileRepository;
-import com.mojang.authlib.minecraft.MinecraftSessionService;
 import com.mojang.datafixers.DataFixer;
 import me.hugeblank.allium.Allium;
 import me.hugeblank.allium.lua.api.DefaultEventsLib;
@@ -12,7 +10,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.SaveLoader;
 import net.minecraft.server.WorldGenerationProgressListenerFactory;
 import net.minecraft.util.ApiServices;
-import net.minecraft.util.UserCache;
 import net.minecraft.util.collection.IndexedIterable;
 import net.minecraft.util.registry.Registry;
 import net.minecraft.util.registry.RegistryEntry;

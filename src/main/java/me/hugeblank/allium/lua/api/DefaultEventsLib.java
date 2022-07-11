@@ -1,34 +1,26 @@
 package me.hugeblank.allium.lua.api;
 
+import me.hugeblank.allium.lua.event.ClientEventHandlers;
+import me.hugeblank.allium.lua.event.CommonEventHandlers;
 import me.hugeblank.allium.lua.event.SimpleEventType;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.util.math.MatrixStack;
-import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
-import net.minecraft.util.Hand;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
 
 @LuaWrapped(name = "events")
 public class DefaultEventsLib implements WrappedLuaLibrary {
-    @LuaWrapped public static final SimpleEventType<ChatMessageHandler> CHAT_MESSAGE; // player sends a chat message
-    @LuaWrapped public static final SimpleEventType<ServerPlayerTickHandler> SERVER_PLAYER_TICK; // player gets ticked on the server
-    @LuaWrapped public static final SimpleEventType<ClientPlayerTickHandler> CLIENT_PLAYER_TICK; // player gets ticked on the client
-    @LuaWrapped public static final SimpleEventType<PlayerJoinHandler> PLAYER_JOIN; // player joins the game
-    @LuaWrapped public static final SimpleEventType<PlayerQuitHandler> PLAYER_QUIT; // player leaves the game
-    @LuaWrapped public static final SimpleEventType<PlayerBlockCollisionHandler> PLAYER_BLOCK_COLLISION; // player collides with a block
-    @LuaWrapped public static final SimpleEventType<PlayerDeathHandler> PLAYER_DEATH; // player dies
-    @LuaWrapped public static final SimpleEventType<PlayerBlockInteractHandler> BLOCK_INTERACT; // player interacts (right clicks) with a block
-    @LuaWrapped public static final SimpleEventType<ServerTickHandler> SERVER_TICK; // server gets ticked
-    @LuaWrapped public static final SimpleEventType<CommandRegistrationHandler> COMMAND_REGISTER; // the result of a registered command
-    @LuaWrapped public static final SimpleEventType<ClientGuiRenderHandler> CLIENT_RENDER_HEAD; // The end of the client render cycle (renders below everything in the gui)
-    @LuaWrapped public static final SimpleEventType<ClientGuiRenderHandler> CLIENT_RENDER_TAIL; // The end of the client render cycle (renders above everything in the gui)
+    // TODO: Consider a better naming scheme for events.
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.ChatMessage> CHAT_MESSAGE; // player sends a chat message
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerTick> SERVER_PLAYER_TICK; // player gets ticked on the server
+    @LuaWrapped public static final SimpleEventType<ClientEventHandlers.PlayerTick> CLIENT_PLAYER_TICK; // player gets ticked on the client
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerJoin> PLAYER_JOIN; // player joins the game
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerQuit> PLAYER_QUIT; // player leaves the game
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerBlockCollision> PLAYER_BLOCK_COLLISION; // player collides with a block
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerDeath> PLAYER_DEATH; // player dies
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerBlockInteract> BLOCK_INTERACT; // player interacts (right clicks) with a block
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.Tick> SERVER_TICK; // server gets ticked
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.CommandRegistration> COMMAND_REGISTER; // the result of a registered command
+    @LuaWrapped public static final SimpleEventType<ClientEventHandlers.GuiRender> CLIENT_RENDER_HEAD; // The end of the client render cycle (renders below everything in the gui)
+    @LuaWrapped public static final SimpleEventType<ClientEventHandlers.GuiRender> CLIENT_RENDER_TAIL; // The end of the client render cycle (renders above everything in the gui)
 
     static {
         CHAT_MESSAGE = new SimpleEventType<>(new Identifier("allium:chat_message"));
@@ -45,47 +37,4 @@ public class DefaultEventsLib implements WrappedLuaLibrary {
         CLIENT_RENDER_TAIL = new SimpleEventType<>(new Identifier("allium:client_render_tail"));
     }
 
-    public interface ChatMessageHandler {
-        void onChatMessage(ServerPlayerEntity player, String message);
-    }
-
-    public interface ServerPlayerTickHandler {
-        void onPlayerTick(ServerPlayerEntity player);
-    }
-
-    public interface ClientPlayerTickHandler {
-        void onPlayerTick(ClientPlayerEntity player);
-    }
-
-    public interface PlayerJoinHandler {
-        void onPlayerJoin(ServerPlayerEntity player);
-    }
-
-    public interface PlayerQuitHandler {
-        void onPlayerQuit(ServerPlayerEntity player);
-    }
-
-    public interface PlayerBlockCollisionHandler {
-        void onPlayerBlockCollision(ServerPlayerEntity player, BlockState state);
-    }
-
-    public interface PlayerDeathHandler {
-        void onPlayerDeath(ServerPlayerEntity player, DamageSource damageSource);
-    }
-
-    public interface PlayerBlockInteractHandler {
-        void onPlayerBlockInteraction(BlockState state, ServerWorld world, BlockPos pos, ServerPlayerEntity player, Hand hand, BlockHitResult hitResult);
-    }
-
-    public interface ServerTickHandler {
-        void onServerTick();
-    }
-
-    public interface CommandRegistrationHandler {
-        void onCommandRegistration(String scriptId, String commandName, boolean successful);
-    }
-
-    public interface ClientGuiRenderHandler {
-        void onGuiRender(MinecraftClient client, MatrixStack matrices, float tickDelta, int scaledWidth, int scaledHeight, TextRenderer textRenderer);
-    }
 }
