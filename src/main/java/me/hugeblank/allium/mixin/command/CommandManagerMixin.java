@@ -5,7 +5,6 @@ import me.hugeblank.allium.lua.api.AlliumLib;
 import me.hugeblank.allium.lua.api.commands.CommandRegisterEntry;
 import me.hugeblank.allium.lua.api.DefaultEventsLib;
 import me.hugeblank.allium.util.DebugLoggerWrapper;
-import net.minecraft.command.CommandRegistryAccess;
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
 import org.slf4j.Logger;
@@ -31,7 +30,7 @@ public class CommandManagerMixin {
     private CommandDispatcher<ServerCommandSource> dispatcher;
 
     @Inject(at = @At("TAIL"), method = "<init>")
-    private void init(CommandManager.RegistrationEnvironment environment, CommandRegistryAccess commandRegistryAccess, CallbackInfo ci) {
+    private void init(CommandManager.RegistrationEnvironment environment, CallbackInfo ci) {
         AlliumLib.COMMANDS.forEach((entry) -> {
             if (
                     (

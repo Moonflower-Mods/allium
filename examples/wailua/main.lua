@@ -2,7 +2,7 @@
 -- By hugeblank - Jul 9, 2022
 -- WAILA-like (What Am I Looking At) script exclusively for the client-side.
 -- This is a demonstration of how allium is not just for server sided use cases.
-local Text = java.import("net.minecraft.text.Text")
+local TranslatableText = java.import("net.minecraft.text.TranslatableText")
 local BlockPos = java.import("net.minecraft.util.math.BlockPos")
 local Registry = java.import("Registry")
 
@@ -32,6 +32,6 @@ events.CLIENT_PLAYER_TICK:register(script, function(player)
     if namespace == "minecraft" and path == "air" then -- If we're just looking at air, don't create a text object.
         renderText = nil
     else -- Otherwise, pull the name of the block from the language.
-        renderText = Text.translatable("block."..namespace.."."..path)
+        renderText = TranslatableText("block."..namespace.."."..path)
     end
 end)

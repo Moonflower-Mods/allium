@@ -1,34 +1,23 @@
 package me.hugeblank.allium.lua.api;
 
-import eu.pb4.placeholders.api.TextParserUtils;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.util.text.TextParserUtils;
+import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 
 @LuaWrapped(name = "texts")
 public class TextLib implements WrappedLuaLibrary {
     @LuaWrapped(name = "empty")
-    public Text EMPTY = Text.empty();
+    public Text EMPTY = LiteralText.EMPTY;
 
     @LuaWrapped
-    @Deprecated
     public Text parse(String input) {
-        return format(input);
+        return TextParserUtils.parse(input);
     }
 
     @LuaWrapped
-    @Deprecated
     public Text parseSafe(String input) {
-        return formatSafe(input);
-    }
-
-    @LuaWrapped
-    public Text format(String input) {
-        return TextParserUtils.formatText(input);
-    }
-
-    @LuaWrapped
-    public Text formatSafe(String input) {
-        return TextParserUtils.formatTextSafe(input);
+        return TextParserUtils.parseSafe(input);
     }
 
     @LuaWrapped
@@ -41,13 +30,13 @@ public class TextLib implements WrappedLuaLibrary {
         return Text.Serializer.toJson(text);
     }
 
-    /*@LuaWrapped
+    @LuaWrapped
     public String escapeForParser(String string) {
-        return TextParserImpl.escapeCharacters(string);
+        return TextParserUtils.escapeCharacters(string);
     }
 
     @LuaWrapped
     public String unescape(String string) {
-        return TextParserImpl.removeEscaping(string);
-    }*/
+        return TextParserUtils.removeEscaping(string);
+    }
 }
