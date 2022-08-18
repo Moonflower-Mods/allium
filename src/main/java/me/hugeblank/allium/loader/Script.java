@@ -5,10 +5,7 @@ import me.hugeblank.allium.loader.resources.AlliumResourcePack;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.squiddev.cobalt.LuaError;
-import org.squiddev.cobalt.LuaState;
-import org.squiddev.cobalt.LuaValue;
-import org.squiddev.cobalt.UnwindThrowable;
+import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.function.LuaFunction;
 
@@ -26,7 +23,7 @@ public class Script {
     // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
-    private final ScriptExecutor executor;
+    private final ScriptEnvironment executor;
     // Whether this script was able to register itself
     private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
@@ -38,7 +35,7 @@ public class Script {
     public Script(Manifest manifest, Path path) {
         this.manifest = manifest;
         this.path = path;
-        this.executor = new ScriptExecutor(this);
+        this.executor = new ScriptEnvironment(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
         try {
             if (SCRIPTS.containsKey(manifest.id()))
@@ -56,18 +53,17 @@ public class Script {
 
         // Re-run dynamic entrypoint again
         try {
-            InputStream dynamicEntrypoint = manifest.entrypoints().containsDynamic() ?
+            InputStream dynamicEntrypoint = manifest.entrypoints().hasDynamic() ?
                     Files.newInputStream(path.resolve(manifest.entrypoints().getDynamic())) :
                     null;
             // Reload and set the module if all that's provided is a dynamic script
-            this.module = manifest.entrypoints().getType().equals(Entrypoint.Type.DYNAMIC) ?
+            this.module = manifest.entrypoints().hasDynamic() ?
                     executor.reload(dynamicEntrypoint).arg(1) :
                     this.module;
         } catch (Throwable e) {
             getLogger().error("Could not reload allium script " + getId(), e);
             unload();
         }
-
     }
 
     @LuaWrapped
@@ -119,18 +115,40 @@ public class Script {
         AlliumResourcePack.drop(this);
     }
 
+    public void initializeMixin() {
+
+    }
+
     public void initialize() {
         if (isInitialized()) return;
         try {
+            Entrypoint entrypoints = getManifest().entrypoints();
             // Create InputStreams for each entrypoint, if it exists
-            InputStream staticEntrypoint = manifest.entrypoints().containsStatic() ?
-                    Files.newInputStream(path.resolve(manifest.entrypoints().getStatic())) :
+            InputStream staticEntrypoint = entrypoints.hasStatic() ?
+                    Files.newInputStream(path.resolve(entrypoints.getStatic())) :
                     null;
-            InputStream dynamicEntrypoint = manifest.entrypoints().containsDynamic() ?
-                    Files.newInputStream(path.resolve(manifest.entrypoints().getDynamic())) :
+            InputStream dynamicEntrypoint = entrypoints.hasDynamic() ?
+                    Files.newInputStream(path.resolve(entrypoints.getDynamic())) :
                     null;
             // Initialize and set module used by require
-            this.module = getExecutor().initialize(staticEntrypoint, dynamicEntrypoint).arg(1);
+
+            ScriptEnvironment env = getEnvironment();
+            LuaState state = env.getState();
+
+            env.onInitialize();
+            state.setupThread(new LuaTable());
+            Varargs out = null;
+            if (entrypoints.hasStatic())
+                out = env.run(staticEntrypoint, getId() + ":static");
+
+            if (entrypoints.hasDynamic()) {
+                Varargs temp = env.run(dynamicEntrypoint, getId() + ":dynamic");
+                if (out == null) out = temp;
+            }
+
+            if (out == null) throw new Exception("Expected either static or dynamic entrypoint, got none");
+
+            this.module = out.arg(1);
             this.initialized = true; // If all these steps are successful, we can set initialized to true
         } catch (Throwable e) {
             getLogger().error("Could not initialize allium script " + getId(), e);
@@ -146,7 +164,7 @@ public class Script {
     public LuaValue loadLibrary(LuaState state, Path mod) throws UnwindThrowable, LuaError {
         // Ensure the modules parent path is the root path, and that the module exists before loading
         try {
-            LuaFunction loadValue = getExecutor().load(Files.newInputStream(mod), mod.getFileName().toString());
+            LuaFunction loadValue = getEnvironment().load(Files.newInputStream(mod), mod.getFileName().toString());
             return loadValue.call(state);
         } catch (FileNotFoundException e) {
             // This should never happen, but if it does, boy do I want to know.
@@ -190,7 +208,7 @@ public class Script {
         return logger;
     }
 
-    public ScriptExecutor getExecutor() {
+    public ScriptEnvironment getEnvironment() {
         return executor;
     }
 

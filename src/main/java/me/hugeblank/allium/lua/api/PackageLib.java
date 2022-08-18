@@ -47,10 +47,10 @@ public class PackageLib {
                 // Do not allow entrypoints to get loaded from the path.
                 Entrypoint entrypoint = script.getManifest().entrypoints();
                 boolean loadingEntrypoint = (
-                        entrypoint.containsDynamic() &&
+                        entrypoint.hasDynamic() &&
                         Files.isSameFile(path, script.getPath().resolve(entrypoint.getDynamic()))
                 ) || (
-                        entrypoint.containsStatic() &&
+                        entrypoint.hasStatic() &&
                         Files.isSameFile(path, script.getPath().resolve(entrypoint.getStatic()))
                 );
 
@@ -150,8 +150,8 @@ public class PackageLib {
             Entrypoint entrypoint = script.getManifest().entrypoints();
             for (Path path : getPathsFromModule(script, modStr)) {
                 try {
-                    if ( // If the script is requiring its own static entrypoint from the dynamic one, give the value.
-                            entrypoint.hasType(Entrypoint.Type.STATIC) &&
+                    if ( // If the script is requiring its own static entrypoint from the dynamic one, give the static path.
+                            entrypoint.hasStatic() &&
                                     Files.isSameFile( path, script.getPath().resolve(entrypoint.getStatic()))
                     ) return ValueFactory.varargsOf(script.getModule(), ValueFactory.valueOf(path.toString()));
                 } catch (IOException ignored) {}

@@ -180,7 +180,8 @@ public class FileHelper {
         if (entrypoint != null && entrypoint.containsKey("static")) {
             String eStatic = entrypoint.containsKey("static") ? entrypoint.get("static").getAsString() : null;
             String eDynamic = entrypoint.containsKey("dynamic") ? entrypoint.get("dynamic").getAsString() : null;
-            return new Manifest(id, version, name, new Entrypoint(eStatic, eDynamic));
+            String eMixin = entrypoint.containsKey("mixin") ? entrypoint.get("mixin").getAsString() : null;
+            return new Manifest(id, version, name, new Entrypoint(eStatic, eDynamic, eMixin));
         } else {
             return null;
         }

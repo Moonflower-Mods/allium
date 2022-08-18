@@ -1,7 +1,6 @@
 package me.hugeblank.allium.loader;
 
 import com.google.gson.*;
-import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.JsonAdapter;
 import com.google.gson.annotations.SerializedName;
 
@@ -12,40 +11,29 @@ public class Entrypoint {
     private String eStatic;
     @SerializedName("dynamic")
     private String eDynamic;
-    @Expose(deserialize = false)
-    private final Type type;
+    @SerializedName("mixin")
+    private String eMixin;
 
-    public Entrypoint( String eStatic, String eDynamic) {
+    public Entrypoint( String eStatic, String eDynamic, String eMixin) {
         this.eStatic = eStatic;
         this.eDynamic = eDynamic;
-        if (eStatic != null) {
-            this.type = Type.STATIC;
-        } else if (eDynamic != null) {
-            this.type = Type.DYNAMIC;
-        } else {
-            this.type = Type.BOTH;
-        }
+        this.eMixin = eMixin;
     }
 
     public boolean valid() {
-        return containsStatic() || containsDynamic();
+        return hasStatic() || hasDynamic();
     }
 
-    public boolean hasType(Type t) {
-        if (this.type == Type.BOTH) return true;
-        return this.type == t;
-    }
-
-    public Type getType() {
-        return type;
-    }
-
-    public boolean containsStatic() {
+    public boolean hasStatic() {
         return eStatic != null;
     }
 
-    public boolean containsDynamic() {
+    public boolean hasDynamic() {
         return eDynamic != null;
+    }
+
+    public boolean hasMixin() {
+        return eMixin != null;
     }
 
     public String getStatic() {
@@ -56,10 +44,8 @@ public class Entrypoint {
         return eDynamic;
     }
 
-    public enum Type {
-        STATIC,
-        DYNAMIC,
-        BOTH
+    public String getMixin() {
+        return eMixin;
     }
 
     public static class Adapter implements JsonDeserializer<Entrypoint> {
@@ -69,8 +55,9 @@ public class Entrypoint {
             JsonObject json = element.getAsJsonObject();
             String eStatic = json.has("static") ? json.getAsJsonPrimitive("static").getAsString() : null;
             String eDynamic = json.has("dynamic") ? json.getAsJsonPrimitive("dynamic").getAsString() : null;
+            String eMixin = json.has("mixin") ? json.getAsJsonPrimitive("mixin").getAsString() : null;
 
-            return new Entrypoint(eStatic, eDynamic);
+            return new Entrypoint(eStatic, eDynamic, eMixin);
         }
     }
 }

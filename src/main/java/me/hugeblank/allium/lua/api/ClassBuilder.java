@@ -4,17 +4,16 @@ import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EConstructor;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.EParameter;
+import me.hugeblank.allium.lua.type.InvalidArgumentException;
 import me.hugeblank.allium.lua.type.TypeCoercions;
 import me.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.hugeblank.allium.lua.type.annotation.OptionalArg;
 import me.hugeblank.allium.lua.type.property.PropertyResolver;
 import me.hugeblank.allium.util.AsmUtil;
 import me.hugeblank.allium.util.ClassFieldBuilder;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
-import org.squiddev.cobalt.LuaState;
-import org.squiddev.cobalt.LuaValue;
-import org.squiddev.cobalt.ValueFactory;
-import org.squiddev.cobalt.Varargs;
+import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.util.*;
@@ -31,10 +30,13 @@ public class ClassBuilder {
     private final ClassFieldBuilder fields;
 
     @LuaWrapped
-    public ClassBuilder(EClass<?> superClass, List<EClass<?>> interfaces, LuaState state) {
+    public ClassBuilder(EClass<?> superClass, @OptionalArg List<EClass<?>> interfaces, LuaState state) {
         this.state = state;
         this.className = AsmUtil.getUniqueClassName();
         this.fields = new ClassFieldBuilder(className, c);
+        if (interfaces == null) {
+            interfaces = new ArrayList<>();
+        }
 
         this.c.visit(
                 V17,
@@ -124,7 +126,7 @@ public class ClassBuilder {
 
     }
 
-    private void writeMethod(String methodName, WrappedType[] params, WrappedType returnClass, int access, LuaFunction func) {
+    protected void writeMethod(String methodName, WrappedType[] params, WrappedType returnClass, int access, LuaFunction func) {
         var paramsType = Arrays.stream(params).map(x -> x.raw).map(EClass::raw).map(Type::getType).toArray(Type[]::new);
         var returnType = returnClass == null ? Type.VOID_TYPE : Type.getType(returnClass.raw.raw());
         var isStatic = (access & ACC_STATIC) != 0;
@@ -194,6 +196,19 @@ public class ClassBuilder {
 
         m.visitMaxs(0, 0);
         m.visitEnd();
+    }
+
+    protected void writeField(String fieldName, WrappedType type, int access, LuaValue value) throws LuaError, InvalidArgumentException {
+
+        EClass<?> clazz = JavaLib.asClass(value);
+        var interfaces = clazz.allInterfaces();
+        var f = c.visitField(
+                access,
+                fieldName,
+                Type.getDescriptor(clazz.raw()),
+                interfaces.isEmpty() ? null : Arrays.toString(interfaces.toArray()),
+                TypeCoercions.toJava(state, value, clazz)
+        );
     }
 
     public byte[] getByteArray() {
