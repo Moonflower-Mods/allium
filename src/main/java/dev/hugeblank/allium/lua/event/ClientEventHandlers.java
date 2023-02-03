@@ -17,7 +17,7 @@ public class ClientEventHandlers {
         void onPlayerTick(ClientPlayerEntity player);
 
         @Environment(EnvType.SERVER)
-        void onPlayerTick();
+        void onPlayerTick(); // TODO: Throw an exception here and in ServerEventHandlers
     }
 
     public interface GuiRender {
