@@ -3,32 +3,32 @@
   "minVersion": "0.8",
   "package": "me.hugeblank.allium.mixin",
   "compatibilityLevel": "JAVA_17",
-  "plugin": "me.hugeblank.allium.mixin.AlliumMixinPlugin",
+  "plugin": "dev.hugeblank.allium.mixin.AlliumMixinPlugin",
   "injectors": {
     "defaultRequire": 1
   },
   "mixins": [
-    "MinecraftServerMixin",
-    "PlayerManagerMixin",
-    "block.AbstractBlockMixin",
-    "command.CommandManagerMixin",
-    "command.ReloadCommandMixin",
-    "command.argument.ArgumentTypesMixin",
-    "entity.EntityMixin",
-    "entity.ServerPlayerEntityMixin",
-    "network.ServerPlayerEntityMixin",
-    "network.ServerPlayNetworkHandlerMixin",
-    "recipe.AbstractCookingRecipeMixin",
-    "recipe.CuttingRecipeMixin",
-    "recipe.RecipeManagerMixin",
-    "recipe.ShapedRecipeMixin",
-    "recipe.ShapelessRecipeMixin",
-    "recipe.SmithingRecipeMixin",
-    "recipe.fabric.RecipeManagerMixin",
-    "resource.ResourcePackManagerMixin"
+    "dev.hugeblank.allium.mixin.MinecraftServerMixin",
+    "dev.hugeblank.allium.mixin.PlayerManagerMixin",
+    "dev.hugeblank.allium.mixin.block.AbstractBlockMixin",
+    "dev.hugeblank.allium.mixin.command.CommandManagerMixin",
+    "dev.hugeblank.allium.mixin.command.ReloadCommandMixin",
+    "dev.hugeblank.allium.mixin.command.argument.ArgumentTypesMixin",
+    "dev.hugeblank.allium.mixin.entity.EntityMixin",
+    "dev.hugeblank.allium.mixin.entity.ServerPlayerEntityMixin",
+    "dev.hugeblank.allium.mixin.network.ServerPlayerEntityMixin",
+    "dev.hugeblank.allium.mixin.network.ServerPlayNetworkHandlerMixin",
+    "dev.hugeblank.allium.mixin.recipe.AbstractCookingRecipeMixin",
+    "dev.hugeblank.allium.mixin.recipe.CuttingRecipeMixin",
+    "dev.hugeblank.allium.mixin.recipe.RecipeManagerMixin",
+    "dev.hugeblank.allium.mixin.recipe.ShapedRecipeMixin",
+    "dev.hugeblank.allium.mixin.recipe.ShapelessRecipeMixin",
+    "dev.hugeblank.allium.mixin.recipe.SmithingRecipeMixin",
+    "dev.hugeblank.allium.mixin.recipe.fabric.RecipeManagerMixin",
+    "dev.hugeblank.allium.mixin.resource.ResourcePackManagerMixin"
   ],
   "client": [
-    "client.gui.hud.InGameHudMixin",
-    "entity.ClientPlayerEntityMixin"
+    "dev.hugeblank.allium.mixin.client.gui.hud.InGameHudMixin",
+    "dev.hugeblank.allium.mixin.entity.ClientPlayerEntityMixin"
   ]
 }
