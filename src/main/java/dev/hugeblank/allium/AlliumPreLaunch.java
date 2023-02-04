@@ -1,7 +1,7 @@
-package me.hugeblank.allium;
+package dev.hugeblank.allium;
 
-import me.hugeblank.allium.util.FileHelper;
-import me.hugeblank.allium.util.YarnLoader;
+import dev.hugeblank.allium.util.FileHelper;
+import dev.hugeblank.allium.util.YarnLoader;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 

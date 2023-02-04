@@ -23,7 +23,7 @@ public class Script {
     // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
-    private final ScriptEnvironment executor;
+    private final ScriptExecutor executor;
     // Whether this script was able to register itself
     private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
@@ -35,7 +35,7 @@ public class Script {
     public Script(Manifest manifest, Path path) {
         this.manifest = manifest;
         this.path = path;
-        this.executor = new ScriptEnvironment(this);
+        this.executor = new ScriptExecutor(this);
         this.logger = LoggerFactory.getLogger('@' + manifest.id());
         try {
             if (SCRIPTS.containsKey(manifest.id()))
@@ -131,24 +131,7 @@ public class Script {
                     Files.newInputStream(path.resolve(entrypoints.getDynamic())) :
                     null;
             // Initialize and set module used by require
-
-            ScriptEnvironment env = getEnvironment();
-            LuaState state = env.getState();
-
-            env.onInitialize();
-            state.setupThread(new LuaTable());
-            Varargs out = null;
-            if (entrypoints.hasStatic())
-                out = env.run(staticEntrypoint, getId() + ":static");
-
-            if (entrypoints.hasDynamic()) {
-                Varargs temp = env.run(dynamicEntrypoint, getId() + ":dynamic");
-                if (out == null) out = temp;
-            }
-
-            if (out == null) throw new Exception("Expected either static or dynamic entrypoint, got none");
-
-            this.module = out.arg(1);
+            this.module = getExecutor().initialize(staticEntrypoint, dynamicEntrypoint).arg(1);
             this.initialized = true; // If all these steps are successful, we can set initialized to true
         } catch (Throwable e) {
             getLogger().error("Could not initialize allium script " + getId(), e);
@@ -164,7 +147,7 @@ public class Script {
     public LuaValue loadLibrary(LuaState state, Path mod) throws UnwindThrowable, LuaError {
         // Ensure the modules parent path is the root path, and that the module exists before loading
         try {
-            LuaFunction loadValue = getEnvironment().load(Files.newInputStream(mod), mod.getFileName().toString());
+            LuaFunction loadValue = getExecutor().load(Files.newInputStream(mod), mod.getFileName().toString());
             return loadValue.call(state);
         } catch (FileNotFoundException e) {
             // This should never happen, but if it does, boy do I want to know.
@@ -208,7 +191,7 @@ public class Script {
         return logger;
     }
 
-    public ScriptEnvironment getEnvironment() {
+    public ScriptExecutor getExecutor() {
         return executor;
     }
 

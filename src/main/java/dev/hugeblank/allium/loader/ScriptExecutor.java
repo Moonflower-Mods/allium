@@ -1,15 +1,14 @@
 package dev.hugeblank.allium.loader;
 
-import dev.hugeblank.allium.lua.api.*;
-import dev.hugeblank.allium.lua.api.PackageLib;
-import me.basiqueevangelist.enhancedreflection.api.EClass;
 import dev.hugeblank.allium.Allium;
-import me.hugeblank.allium.lua.api.*;
+import dev.hugeblank.allium.lua.api.PackageLib;
+import dev.hugeblank.allium.lua.api.*;
 import dev.hugeblank.allium.lua.api.commands.CommandLib;
 import dev.hugeblank.allium.lua.api.commands.CommandsLib;
 import dev.hugeblank.allium.lua.api.http.HttpLib;
 import dev.hugeblank.allium.lua.api.recipe.RecipeLib;
 import dev.hugeblank.allium.lua.type.TypeCoercions;
+import me.basiqueevangelist.enhancedreflection.api.EClass;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -89,22 +88,18 @@ public class ScriptExecutor {
         LuaFunction staticFunction;
         LuaFunction dynamicFunction;
         state.setupThread(new LuaTable());
-        switch (entrypoints.getType()) {
-            case STATIC -> {
-                staticFunction = this.load(sMain, script.getId());
-                return LuaThread.runMain(state, staticFunction);
-            }
-            case DYNAMIC -> {
-                dynamicFunction = this.load(dMain, script.getId());
-                return LuaThread.runMain(state, dynamicFunction);
-            }
-            case BOTH -> {
-                staticFunction = this.load(sMain, script.getId() + ":static");
-                dynamicFunction = this.load(dMain, script.getId() + ":dynamic");
-                Varargs out = LuaThread.runMain(state, staticFunction);
-                LuaThread.runMain(state, dynamicFunction);
-                return out;
-            }
+        if (entrypoints.hasStatic() && entrypoints.hasDynamic()) {
+            staticFunction = this.load(sMain, script.getId());
+            dynamicFunction = this.load(dMain, script.getId());
+            Varargs out = LuaThread.runMain(state, staticFunction);
+            LuaThread.runMain(state, dynamicFunction);
+            return out;
+        } else if (entrypoints.hasStatic()) {
+            staticFunction = this.load(sMain, script.getId());
+            return LuaThread.runMain(state, staticFunction);
+        } else if (entrypoints.hasDynamic()) {
+            dynamicFunction = this.load(dMain, script.getId());
+            return LuaThread.runMain(state, dynamicFunction);
         }
         // This should be caught sooner, but who knows maybe a dev (hugeblank) will come along and mess something up
         throw new Exception("Expected either static or dynamic entrypoint, got none");
@@ -112,7 +107,7 @@ public class ScriptExecutor {
 
     public Varargs reload(InputStream dynamic) throws LuaError, InterruptedException, CompileException, IOException {
         Entrypoint entrypoint = script.getManifest().entrypoints();
-        if (entrypoint.hasType(Entrypoint.Type.DYNAMIC)) {
+        if (entrypoint.hasDynamic()) {
             LuaFunction dynamicFunction = this.load(dynamic, script.getId());
             return LuaThread.runMain(state, dynamicFunction);
         }
