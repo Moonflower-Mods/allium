@@ -7,7 +7,6 @@
 local words = require "words"
 local CommandManager = java.import("CommandManager") -- We need the java command manager for creating commands.
 local MessageType = java.import("network.message.MessageType") -- "net.minecraft." among other packages are auto-filled for you!
-local Util = java.import("Util")
 local arguments = command.arguments -- Create shortcut for command argument types
 
 local word

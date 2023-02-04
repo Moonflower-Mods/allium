@@ -1,9 +1,9 @@
 {
   "required": true,
   "minVersion": "0.8",
-  "package": "me.hugeblank.allium.mixin",
+  "package": "dev.hugeblank.allium.mixin",
   "compatibilityLevel": "JAVA_17",
-  "plugin": "me.hugeblank.allium.mixin.AlliumMixinPlugin",
+  "plugin": "dev.hugeblank.allium.mixin.AlliumMixinPlugin",
   "injectors": {
     "defaultRequire": 1
   },

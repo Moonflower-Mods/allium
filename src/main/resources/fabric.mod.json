@@ -19,10 +19,7 @@
   "environment": "*",
   "entrypoints": {
     "main": [
-      "me.hugeblank.allium.Allium"
-    ],
-    "preLaunch": [
-      "me.hugeblank.allium.AlliumPreLaunch"
+      "dev.hugeblank.allium.Allium"
     ]
   },
   "mixins": [
@@ -30,7 +27,7 @@
   ],
 
   "depends": {
-    "minecraft": ">=1.18.2",
+    "minecraft": ">=1.19",
     "java": ">=17"
   },
 
