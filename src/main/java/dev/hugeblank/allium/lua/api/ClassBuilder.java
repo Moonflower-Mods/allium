@@ -1,14 +1,14 @@
 package dev.hugeblank.allium.lua.api;
 
-import me.basiqueevangelist.enhancedreflection.api.EClass;
-import me.basiqueevangelist.enhancedreflection.api.EConstructor;
-import me.basiqueevangelist.enhancedreflection.api.EMethod;
-import me.basiqueevangelist.enhancedreflection.api.EParameter;
 import dev.hugeblank.allium.lua.type.TypeCoercions;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.lua.type.property.PropertyResolver;
 import dev.hugeblank.allium.util.AsmUtil;
 import dev.hugeblank.allium.util.ClassFieldBuilder;
+import me.basiqueevangelist.enhancedreflection.api.EClass;
+import me.basiqueevangelist.enhancedreflection.api.EConstructor;
+import me.basiqueevangelist.enhancedreflection.api.EMethod;
+import me.basiqueevangelist.enhancedreflection.api.EParameter;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Type;
 import org.squiddev.cobalt.LuaState;
@@ -17,7 +17,10 @@ import org.squiddev.cobalt.ValueFactory;
 import org.squiddev.cobalt.Varargs;
 import org.squiddev.cobalt.function.LuaFunction;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.function.Consumer;
 
 import static org.objectweb.asm.Opcodes.*;
 
@@ -28,10 +31,9 @@ public class ClassBuilder {
     protected final LuaState state;
     protected final ClassWriter c = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
     private final List<EMethod> methods = new ArrayList<>();
-    private final ClassFieldBuilder fields;
+    protected final ClassFieldBuilder fields;
 
-    @LuaWrapped
-    public ClassBuilder(EClass<?> superClass, List<EClass<?>> interfaces, LuaState state) {
+    protected ClassBuilder(EClass<?> superClass, List<EClass<?>> interfaces, Consumer<ClassWriter> classWriterAnnotator, LuaState state) {
         this.state = state;
         this.className = AsmUtil.getUniqueClassName();
         this.fields = new ClassFieldBuilder(className, c);
@@ -44,6 +46,10 @@ public class ClassBuilder {
                 superClass.name().replace('.', '/'),
                 interfaces.stream().map(x -> x.name().replace('.', '/')).toArray(String[]::new)
         );
+
+        if (classWriterAnnotator != null) {
+            classWriterAnnotator.accept(this.c);
+        }
 
         for (EConstructor<?> superCtor : superClass.constructors()) {
             if (!superCtor.isPublic()) continue;
@@ -62,7 +68,6 @@ public class ClassBuilder {
 
                 argIndex += arg.getSize();
             }
-
             m.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(superClass.raw()), "<init>", desc, false);
             m.visitInsn(RETURN);
 
@@ -75,6 +80,11 @@ public class ClassBuilder {
         for (var inrf : interfaces) {
             this.methods.addAll(inrf.methods());
         }
+    }
+
+    @LuaWrapped
+    public ClassBuilder(EClass<?> superClass, List<EClass<?>> interfaces, LuaState state) {
+        this(superClass, interfaces, null, state);
     }
 
     @LuaWrapped
@@ -121,7 +131,6 @@ public class ClassBuilder {
             isStatic ? (ACC_PUBLIC | ACC_STATIC) : ACC_PUBLIC,
             func
         );
-
     }
 
     private void writeMethod(String methodName, WrappedType[] params, WrappedType returnClass, int access, LuaFunction func) {

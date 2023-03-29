@@ -11,8 +11,7 @@ import java.util.List;
 
 @LuaWrapped(name = "allium")
 public class AlliumLib implements WrappedLuaLibrary {
-    public static final List<CommandRegisterEntry>
-            COMMANDS = new ArrayList<>();
+    public static final List<CommandRegisterEntry> COMMANDS = new ArrayList<>();
 
 
     public AlliumLib() {

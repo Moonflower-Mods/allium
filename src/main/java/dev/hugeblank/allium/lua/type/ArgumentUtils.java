@@ -20,7 +20,7 @@ public class ArgumentUtils {
         for (EParameter param : parameters) { // For each parameter in the matched call
             if (param.hasAnnotation(LuaStateArg.class)) {
                 if (!param.parameterType().upperBound().raw().equals(LuaState.class))
-                    throw new InvalidArgumentException("@ProvideLuaState parameter must take LuaState!");
+                    throw new InvalidArgumentException("@LuaStateArg parameter must take LuaState!");
 
                 arguments[filledJavaArguments] = state;
             } else if (param.hasAnnotation(LuaArgs.class)) {

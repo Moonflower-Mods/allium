@@ -5,6 +5,7 @@ import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaState;
+import org.squiddev.cobalt.UnwindThrowable;
 import org.squiddev.cobalt.Varargs;
 import org.squiddev.cobalt.function.VarArgFunction;
 
@@ -28,7 +29,7 @@ public final class UDFFunctions<T> extends VarArgFunction {
     }
 
     @Override
-    public Varargs invoke(LuaState state, Varargs args) throws LuaError {
+    public Varargs invoke(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
         List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
         StringBuilder error = new StringBuilder("Could not find parameter match for called function \"" +
             name + "\" for \"" + clazz.name() + "\"" +
@@ -61,6 +62,7 @@ public final class UDFFunctions<T> extends VarArgFunction {
                     }
                 } catch (InvalidArgumentException e) {
                     paramList.add(ArgumentUtils.paramsToPrettyString(parameters));
+                    e.printStackTrace();
                 }
             }
         } catch (Exception e) {

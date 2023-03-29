@@ -1,0 +1,9 @@
+{
+  "id": "temp",
+  "version": "1.0.0",
+  "name": "TEMP",
+  "entrypoints": {
+    "mixin":"mixin.lua",
+    "static":"main.lua"
+  }
+}

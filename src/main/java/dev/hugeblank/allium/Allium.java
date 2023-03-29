@@ -12,7 +12,6 @@
 package dev.hugeblank.allium;
 
 import dev.hugeblank.allium.loader.Script;
-import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.Mappings;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
@@ -45,21 +44,12 @@ public class Allium implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        Allium.LOGGER.info("Loading Scripts");
-
-        if (Allium.DEVELOPMENT) Allium.CANDIDATES.addAll(FileHelper.getValidDirScripts(
-                // Load example scripts if in development environment
-                FabricLoader.getInstance().getGameDir().resolve("../examples")
-        ));
-        Allium.CANDIDATES.addAll(FileHelper.getValidDirScripts(FileHelper.getScriptsDirectory()));
-        Allium.CANDIDATES.addAll(FileHelper.getValidModScripts());
-        Allium.list(new StringBuilder("Found: "), (script) -> true);
 
         CANDIDATES.forEach(Script::initialize);
         list(new StringBuilder("Initialized: "), Script::isInitialized);
     }
 
-    private static void list(StringBuilder sb, Function<Script, Boolean> func) {
+    public static void list(StringBuilder sb, Function<Script, Boolean> func) {
         CANDIDATES.forEach((script) -> {
             if (func.apply(script)) sb.append(script.getId()).append(", ");
         });

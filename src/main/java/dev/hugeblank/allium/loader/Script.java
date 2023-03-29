@@ -20,11 +20,11 @@ import java.util.*;
 public class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
 
-    // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
     private final ScriptExecutor executor;
     // Whether this script was able to register itself
+    private boolean preInitialized = false; // Whether this scripts Lua side (mixin) was able to execute
     private boolean initialized = false; // Whether this scripts Lua side (static and dynamic) was able to execute
     protected LuaValue module;
     private final Path path;
@@ -115,8 +115,18 @@ public class Script {
         AlliumResourcePack.drop(this);
     }
 
-    public void initializeMixin() {
-
+    public void preInitialize() {
+        if (isPreInitialized()) return;
+        try {
+            Entrypoint entrypoints = getManifest().entrypoints();
+            InputStream mixinEntrypoint = entrypoints.hasMixin() ?
+                    Files.newInputStream(path.resolve(entrypoints.getMixin())) :
+                    null;
+            getExecutor().preInitialize(mixinEntrypoint);
+            this.preInitialized = true;
+        } catch (Throwable e) {
+            getLogger().error("Could not pre-initialize allium script " + getId(), e);
+        }
     }
 
     public void initialize() {
@@ -141,6 +151,9 @@ public class Script {
 
     public boolean isInitialized() {
         return initialized;
+    }
+    public boolean isPreInitialized() {
+        return preInitialized;
     }
 
     // return null if file isn't contained within Scripts path, or if it doesn't exist.
@@ -207,6 +220,4 @@ public class Script {
     public String toString() {
         return manifest.name();
     }
-
-    //  if ( i % 2 == 0) break;
 }

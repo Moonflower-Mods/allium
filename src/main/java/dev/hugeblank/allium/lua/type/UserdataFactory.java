@@ -17,10 +17,7 @@ import dev.hugeblank.allium.lua.type.property.PropertyResolver;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.function.OneArgFunction;
-import org.squiddev.cobalt.function.ThreeArgFunction;
-import org.squiddev.cobalt.function.TwoArgFunction;
-import org.squiddev.cobalt.function.VarArgFunction;
+import org.squiddev.cobalt.function.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -76,6 +73,13 @@ public class UserdataFactory<T> {
 
     private LuaTable createMetatable(boolean isBound) {
         LuaTable metatable = new LuaTable();
+
+        metatable.rawset("__tostring", new ZeroArgFunction() {
+            @Override
+            public LuaValue call(LuaState state) {
+                return ValueFactory.valueOf("userdata <" + clazz.name() + ">");
+            }
+        });
 
         metatable.rawset("__pairs", new OneArgFunction() {
             // Technically, pairs is kinda cringe. In order to properly deliver all key-value pairs, we have to parse
