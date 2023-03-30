@@ -62,7 +62,7 @@ public final class UDFFunctions<T> extends VarArgFunction {
                     }
                 } catch (InvalidArgumentException e) {
                     paramList.add(ArgumentUtils.paramsToPrettyString(parameters));
-                    e.printStackTrace();
+                    //e.printStackTrace();
                 }
             }
         } catch (Exception e) {

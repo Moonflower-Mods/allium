@@ -39,6 +39,7 @@ import static org.objectweb.asm.Opcodes.*;
 
 @LuaWrapped
 public class MixinClassBuilder {
+    public static final Map<String, byte[]> GENERATED_MIXINS = new HashMap<>();
     public static final Map<String, List<SimpleEventType<?>>> GENERATED_EVENTS = new HashMap<>();
     protected static final Map<String, Map<String, VisitedMethod>> CLASS_VISITED_METHODS = new HashMap<>();
 
@@ -93,7 +94,7 @@ public class MixinClassBuilder {
     }
 
     @LuaWrapped
-    public SimpleEventType<?> inject(String eventName, LuaTable annotations) throws LuaError, InvalidMixinException, InvalidArgumentException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    public SimpleEventType<EventInvoker> inject(String eventName, LuaTable annotations) throws LuaError, InvalidMixinException, InvalidArgumentException, NoSuchMethodException, InstantiationException, IllegalAccessException {
         String descriptor = annotations.rawget("method").checkString();
         if (visitedMethods.containsKey(descriptor)) {
             VisitedMethod visitedMethod = visitedMethods.get(descriptor);
@@ -101,7 +102,7 @@ public class MixinClassBuilder {
             params.add(Type.getType(CallbackInfo.class));
 
             Pair<String, Class<?>> eventInvoker = this.writeEventInterface(params);
-            SimpleEventType<? extends EventInvoker> eventType = new SimpleEventType<>(new Identifier(script.getId(), eventName));
+            SimpleEventType<EventInvoker> eventType = new SimpleEventType<>(new Identifier(script.getId(), eventName));
             GENERATED_EVENTS.get(className).add(eventType);
 
             this.writeInjectMethod(
@@ -223,8 +224,8 @@ public class MixinClassBuilder {
         clinit.visitMaxs(0,0);
         clinit.visitEnd();
 
-        byte[] classBytes = c.toByteArray();
         if (Allium.DEVELOPMENT) {
+        byte[] classBytes = c.toByteArray();
             Path classPath = Allium.DUMP_DIRECTORY.resolve(className + ".class");
 
             try {
@@ -237,6 +238,8 @@ public class MixinClassBuilder {
             ClassReader cr = new ClassReader(classBytes);
             cr.accept(new CheckClassAdapter(new ClassVisitor(Opcodes.ASM9) { }), 0);
         }
+
+        GENERATED_MIXINS.put(className.replace("/", "."), c.toByteArray());
     }
 
 }

@@ -1,12 +1,23 @@
 package dev.hugeblank.allium;
 
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import dev.hugeblank.allium.loader.Script;
+import dev.hugeblank.allium.lua.api.mixin.MixinClassBuilder;
+import dev.hugeblank.allium.util.EldritchURLStreamHandler;
 import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.YarnLoader;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
+import org.spongepowered.asm.mixin.Mixins;
 
 import java.io.IOException;
+import java.lang.invoke.MethodHandle;
+import java.lang.invoke.MethodHandles;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.FileVisitor;
 import java.nio.file.Files;
@@ -71,5 +82,44 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
 
         Allium.CANDIDATES.forEach(Script::preInitialize);
         list(new StringBuilder("Pre-initialized: "), Script::isPreInitialized);
+
+        // Create a new mixin config
+        URL packageUrl = EldritchURLStreamHandler.create(MixinClassBuilder.GENERATED_MIXINS);
+        JsonObject config = new JsonObject();
+        config.addProperty("required", true);
+        config.addProperty("minVersion", "0.8");
+        config.addProperty("package", "allium");
+        JsonObject injectors = new JsonObject();
+        injectors.addProperty("defaultRequire", 1);
+        config.add("injectors", injectors);
+        JsonArray mixins = new JsonArray();
+        MixinClassBuilder.GENERATED_MIXINS.forEach((key, value) -> mixins.add(key.replace("allium.", "")));
+        config.add("mixins", mixins);
+        String configJson = (new Gson()).toJson(config);
+        URL configUrl = EldritchURLStreamHandler.create("generated.mixin.json", configJson.getBytes(StandardCharsets.UTF_8));
+
+        // Stuff those files into class loader
+        ClassLoader loader = AlliumPreLaunch.class.getClassLoader();
+        Method addUrlMethod = null;
+        for (Method method : loader.getClass().getDeclaredMethods()) {
+            if (method.getReturnType() == Void.TYPE && method.getParameterCount() == 1 && method.getParameterTypes()[0] == URL.class) {
+                addUrlMethod = method;
+                break;
+            }
+        }
+        if (addUrlMethod == null) throw new IllegalStateException("Could not find URL loader in ClassLoader " + loader);
+        try {
+            addUrlMethod.setAccessible(true);
+            MethodHandle handle = MethodHandles.lookup().unreflect(addUrlMethod);
+            handle.invoke(loader, packageUrl);
+            handle.invoke(loader, configUrl);
+        } catch (IllegalAccessException e) {
+            throw new RuntimeException("Couldn't get handle for " + addUrlMethod, e);
+        } catch (Throwable e) {
+            throw new RuntimeException("Error invoking URL handler", e);
+        }
+
+        Mixins.addConfiguration("generated.mixin.json");
+
     }
 }
