@@ -1,7 +1,7 @@
 package dev.hugeblank.allium.lua.api.mixin;
 
+import dev.hugeblank.allium.Allium;
 import dev.hugeblank.allium.loader.Script;
-import dev.hugeblank.allium.lua.api.ClassBuilder;
 import dev.hugeblank.allium.lua.event.SimpleEventType;
 import dev.hugeblank.allium.lua.type.InvalidArgumentException;
 import dev.hugeblank.allium.lua.type.InvalidMixinException;
@@ -9,12 +9,14 @@ import dev.hugeblank.allium.lua.type.TypeCoercions;
 import dev.hugeblank.allium.lua.type.annotation.LuaStateArg;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.util.AsmUtil;
+import dev.hugeblank.allium.util.ClassFieldBuilder;
 import dev.hugeblank.allium.util.EventInvoker;
 import dev.hugeblank.allium.util.VisitedMethod;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import org.objectweb.asm.*;
+import org.objectweb.asm.util.CheckClassAdapter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -25,32 +27,31 @@ import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaTable;
 
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Consumer;
 
 import static org.objectweb.asm.Opcodes.*;
 
 @LuaWrapped
-public class MixinClassBuilder extends ClassBuilder {
-    private final Script script;
-    private final String targetClass;
+public class MixinClassBuilder {
+    public static final Map<String, List<SimpleEventType<?>>> GENERATED_EVENTS = new HashMap<>();
     protected static final Map<String, Map<String, VisitedMethod>> CLASS_VISITED_METHODS = new HashMap<>();
-    protected final Map<String, VisitedMethod> visitedMethods;
 
+    private final String className = AsmUtil.getUniqueClassName();
+    private final ClassWriter c = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
+    private final List<Consumer<MethodVisitor>> clinit = new ArrayList<>();
+    private final Script script;
+    private final LuaState state;
+    private final Map<String, VisitedMethod> visitedMethods;
 
     public MixinClassBuilder(String targetClass, Script script, @LuaStateArg LuaState state) throws IOException {
-        super(EClass.fromJava(Object.class), List.of(), (ClassWriter template) -> {
-            AnnotationVisitor ma = template.visitAnnotation(Mixin.class.descriptorString(), true);
-            AnnotationVisitor aa = ma.visitArray("value");
-            aa.visit(null, Type.getObjectType(targetClass));
-            aa.visitEnd();
-            ma.visitEnd();
-        }, state);
-
+        this.state = state;
         this.script = script;
-        this.targetClass = targetClass;
         // Get the methods and fields of this class without static init-ing it.
         if (CLASS_VISITED_METHODS.containsKey(targetClass)) {
             this.visitedMethods = CLASS_VISITED_METHODS.get(targetClass);
@@ -72,6 +73,23 @@ public class MixinClassBuilder extends ClassBuilder {
                 }
             }, ClassReader.SKIP_FRAMES);
         }
+        //this.clinit = new ClassFieldBuilder(className, c);
+        GENERATED_EVENTS.put(className, new ArrayList<>());
+        EClass<?> superClass = EClass.fromJava(Object.class);
+        this.c.visit(
+                V17,
+                ACC_PUBLIC,
+                className,
+                null,
+                superClass.name().replace('.', '/'),
+                null
+        );
+
+        AnnotationVisitor ma = this.c.visitAnnotation(Mixin.class.descriptorString(), true);
+        AnnotationVisitor aa = ma.visitArray("value");
+        aa.visit(null, Type.getObjectType(targetClass));
+        aa.visitEnd();
+        ma.visitEnd();
     }
 
     @LuaWrapped
@@ -84,6 +102,7 @@ public class MixinClassBuilder extends ClassBuilder {
 
             Pair<String, Class<?>> eventInvoker = this.writeEventInterface(params);
             SimpleEventType<? extends EventInvoker> eventType = new SimpleEventType<>(new Identifier(script.getId(), eventName));
+            GENERATED_EVENTS.get(className).add(eventType);
 
             this.writeInjectMethod(
                     visitedMethod,
@@ -163,7 +182,23 @@ public class MixinClassBuilder extends ClassBuilder {
 
         methodVisitor.visitCode();
 
-        fields.storeAndGet(methodVisitor, eventType, SimpleEventType.class); // Store then get the event type
+        // Write all the stuff needed to get the EventInvoker from the mixin.
+        int ind = GENERATED_EVENTS.get(className).size();
+        clinit.add((mv) -> { // Add
+            mv.visitFieldInsn(GETSTATIC, Type.getInternalName(MixinClassBuilder.class), "GENERATED_EVENTS", Type.getDescriptor(Map.class));
+            mv.visitLdcInsn(eventInvoker.getLeft());
+            mv.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Map.class), "get", "(Ljava/lang/String;)Ljava/util/List;", false);
+            mv.visitLdcInsn(ind);
+            mv.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(List.class), "get", "(I)L"+Type.getInternalName(SimpleEventType.class)+";", false);
+            mv.visitFieldInsn(Opcodes.PUTSTATIC, className, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class));
+        });
+        FieldVisitor fv = c.visitField(ACC_PRIVATE | ACC_STATIC, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class), null, null);
+        var a = fv.visitAnnotation(ClassFieldBuilder.GeneratedFieldValue.DESCRIPTOR, true);
+        a.visit("value", SimpleEventType.class.getName());
+        a.visitEnd();
+        fv.visitEnd();
+
+        methodVisitor.visitFieldInsn(GETSTATIC, className, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class));
         methodVisitor.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(SimpleEventType.class), "invoker", "()L"+eventInvoker.getLeft() + ";", false);
         // eventType.invoker()
         var args = Type.getArgumentTypes(desc);
@@ -179,5 +214,30 @@ public class MixinClassBuilder extends ClassBuilder {
         methodVisitor.visitMaxs(0, 0);
         methodVisitor.visitEnd();
     }
+
+    @LuaWrapped
+    public void build() {
+        MethodVisitor clinit = c.visitMethod(ACC_STATIC ,"<clinit>", "()V", null, null);
+        this.clinit.forEach((consumer) -> consumer.accept(clinit));
+        clinit.visitInsn(RETURN);
+        clinit.visitMaxs(0,0);
+        clinit.visitEnd();
+
+        byte[] classBytes = c.toByteArray();
+        if (Allium.DEVELOPMENT) {
+            Path classPath = Allium.DUMP_DIRECTORY.resolve(className + ".class");
+
+            try {
+                Files.createDirectories(classPath.getParent());
+                Files.write(classPath, classBytes);
+            } catch (IOException e) {
+                throw new RuntimeException("Couldn't dump class", e);
+            }
+
+            ClassReader cr = new ClassReader(classBytes);
+            cr.accept(new CheckClassAdapter(new ClassVisitor(Opcodes.ASM9) { }), 0);
+        }
+    }
+
 }
 
