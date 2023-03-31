@@ -16,7 +16,6 @@ import me.basiqueevangelist.enhancedreflection.api.EClass;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import org.objectweb.asm.*;
-import org.objectweb.asm.util.CheckClassAdapter;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -39,11 +38,12 @@ import static org.objectweb.asm.Opcodes.*;
 
 @LuaWrapped
 public class MixinClassBuilder {
-    public static final Map<String, byte[]> GENERATED_MIXINS = new HashMap<>();
+    public static final Map<String, byte[]> GENERATED_MIXIN_BYTES = new HashMap<>();
+    public static final Map<String, byte[]> GENERATED_EVENT_BYTES = new HashMap<>();
     public static final Map<String, List<SimpleEventType<?>>> GENERATED_EVENTS = new HashMap<>();
     protected static final Map<String, Map<String, VisitedMethod>> CLASS_VISITED_METHODS = new HashMap<>();
 
-    private final String className = AsmUtil.getUniqueClassName();
+    private final String className = AsmUtil.getUniqueMixinClassName();
     private final ClassWriter c = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
     private final List<Consumer<MethodVisitor>> clinit = new ArrayList<>();
     private final Script script;
@@ -86,7 +86,7 @@ public class MixinClassBuilder {
                 null
         );
 
-        AnnotationVisitor ma = this.c.visitAnnotation(Mixin.class.descriptorString(), true);
+        AnnotationVisitor ma = this.c.visitAnnotation(Mixin.class.descriptorString(), false);
         AnnotationVisitor aa = ma.visitArray("value");
         aa.visit(null, Type.getObjectType(targetClass));
         aa.visitEnd();
@@ -109,7 +109,6 @@ public class MixinClassBuilder {
                     visitedMethod,
                     params,
                     ACC_PRIVATE | (visitedMethod.access() & ACC_STATIC),
-                    eventType,
                     eventInvoker,
                     annotations
             );
@@ -132,17 +131,16 @@ public class MixinClassBuilder {
         var desc = Type.getMethodDescriptor(Type.VOID_TYPE, params.toArray(Type[]::new));
         classWriter.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, "invoke", desc, null, null);
         byte[] classBytes = classWriter.toByteArray();
+        GENERATED_EVENT_BYTES.put(className + ".class", classBytes);
         return new Pair<>(className, AsmUtil.defineClass(className, classBytes));
     }
 
-    private void writeInjectMethod(VisitedMethod visitedMethod, List<Type> params, int access, SimpleEventType<?> eventType, Pair<String, Class<?>> eventInvoker, LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException, NoSuchMethodException {
+    private void writeInjectMethod(VisitedMethod visitedMethod, List<Type> params, int access, Pair<String, Class<?>> eventInvoker, LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException, NoSuchMethodException {
         var isStatic = (access & ACC_STATIC) != 0;
 
         var desc = Type.getMethodDescriptor(Type.VOID_TYPE, params.toArray(Type[]::new));
         var methodVisitor = c.visitMethod(access, visitedMethod.name(), desc, visitedMethod.signature(), null);
-        int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
         int thisVarOffset = isStatic ? 0 : 1;
-        if (isStatic) varPrefix -= 1;
 
         AnnotationVisitor injectAnnotationVisitor = methodVisitor.visitAnnotation(Inject.class.descriptorString(), true);
 
@@ -187,10 +185,13 @@ public class MixinClassBuilder {
         int ind = GENERATED_EVENTS.get(className).size();
         clinit.add((mv) -> { // Add
             mv.visitFieldInsn(GETSTATIC, Type.getInternalName(MixinClassBuilder.class), "GENERATED_EVENTS", Type.getDescriptor(Map.class));
-            mv.visitLdcInsn(eventInvoker.getLeft());
-            mv.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Map.class), "get", "(Ljava/lang/String;)Ljava/util/List;", false);
-            mv.visitLdcInsn(ind);
-            mv.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(List.class), "get", "(I)L"+Type.getInternalName(SimpleEventType.class)+";", false);
+            mv.visitLdcInsn(className);
+            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(Map.class), "get", "(Ljava/lang/Object;)Ljava/lang/Object;", true);
+            mv.visitTypeInsn(CHECKCAST, Type.getInternalName(List.class));
+            mv.visitLdcInsn(ind-1);
+            mv.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(List.class), "get", "(I)Ljava/lang/Object;", true);
+            mv.visitTypeInsn(CHECKCAST, Type.getInternalName(SimpleEventType.class));
+
             mv.visitFieldInsn(Opcodes.PUTSTATIC, className, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class));
         });
         FieldVisitor fv = c.visitField(ACC_PRIVATE | ACC_STATIC, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class), null, null);
@@ -200,7 +201,8 @@ public class MixinClassBuilder {
         fv.visitEnd();
 
         methodVisitor.visitFieldInsn(GETSTATIC, className, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class));
-        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(SimpleEventType.class), "invoker", "()L"+eventInvoker.getLeft() + ";", false);
+        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(SimpleEventType.class), "invoker", "()Ljava/lang/Object;", false);
+        methodVisitor.visitTypeInsn(CHECKCAST, eventInvoker.getLeft());
         // eventType.invoker()
         var args = Type.getArgumentTypes(desc);
         for (int i = thisVarOffset; i < args.length+thisVarOffset; i++) {
@@ -224,8 +226,8 @@ public class MixinClassBuilder {
         clinit.visitMaxs(0,0);
         clinit.visitEnd();
 
-        if (Allium.DEVELOPMENT) {
         byte[] classBytes = c.toByteArray();
+        if (Allium.DEVELOPMENT) {
             Path classPath = Allium.DUMP_DIRECTORY.resolve(className + ".class");
 
             try {
@@ -234,12 +236,9 @@ public class MixinClassBuilder {
             } catch (IOException e) {
                 throw new RuntimeException("Couldn't dump class", e);
             }
-
-            ClassReader cr = new ClassReader(classBytes);
-            cr.accept(new CheckClassAdapter(new ClassVisitor(Opcodes.ASM9) { }), 0);
         }
 
-        GENERATED_MIXINS.put(className.replace("/", "."), c.toByteArray());
+        GENERATED_MIXIN_BYTES.put(className + ".class", classBytes);
     }
 
 }

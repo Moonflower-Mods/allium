@@ -23,6 +23,8 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.HashMap;
+import java.util.Map;
 
 import static dev.hugeblank.allium.Allium.list;
 
@@ -84,19 +86,22 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         list(new StringBuilder("Pre-initialized: "), Script::isPreInitialized);
 
         // Create a new mixin config
-        URL packageUrl = EldritchURLStreamHandler.create(MixinClassBuilder.GENERATED_MIXINS);
         JsonObject config = new JsonObject();
         config.addProperty("required", true);
         config.addProperty("minVersion", "0.8");
-        config.addProperty("package", "allium");
+        config.addProperty("package", "allium.mixin");
         JsonObject injectors = new JsonObject();
         injectors.addProperty("defaultRequire", 1);
         config.add("injectors", injectors);
         JsonArray mixins = new JsonArray();
-        MixinClassBuilder.GENERATED_MIXINS.forEach((key, value) -> mixins.add(key.replace("allium.", "")));
+        MixinClassBuilder.GENERATED_MIXIN_BYTES.forEach((key, value) -> mixins.add(key.substring(0, key.length()-6).replace("allium/mixin/", "")));
         config.add("mixins", mixins);
         String configJson = (new Gson()).toJson(config);
-        URL configUrl = EldritchURLStreamHandler.create("generated.mixin.json", configJson.getBytes(StandardCharsets.UTF_8));
+        Map<String, byte[]> mixinConfigMap = new HashMap<>(MixinClassBuilder.GENERATED_MIXIN_BYTES);
+        mixinConfigMap.put("generated.mixin.json", configJson.getBytes(StandardCharsets.UTF_8));
+        URL mixinUrl = EldritchURLStreamHandler.create("allium-mixin", mixinConfigMap);
+        URL eventUrl = EldritchURLStreamHandler.create("allium", MixinClassBuilder.GENERATED_EVENT_BYTES);
+
 
         // Stuff those files into class loader
         ClassLoader loader = AlliumPreLaunch.class.getClassLoader();
@@ -111,8 +116,8 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         try {
             addUrlMethod.setAccessible(true);
             MethodHandle handle = MethodHandles.lookup().unreflect(addUrlMethod);
-            handle.invoke(loader, packageUrl);
-            handle.invoke(loader, configUrl);
+            handle.invoke(loader, mixinUrl);
+            handle.invoke(loader, eventUrl);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Couldn't get handle for " + addUrlMethod, e);
         } catch (Throwable e) {

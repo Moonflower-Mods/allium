@@ -18,6 +18,9 @@ public class AsmUtil {
     public static String getUniqueClassName() {
         return "allium/GeneratedClass_" + NEXT_CLASS_ID.incrementAndGet();
     }
+    public static String getUniqueMixinClassName() {
+        return "allium/mixin/GeneratedClass_" + NEXT_CLASS_ID.incrementAndGet();
+    }
 
     public static Class<?> defineClass(String name, byte[] bytes) {
         if (Allium.DEVELOPMENT) {

@@ -6,7 +6,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLConnection;
 import java.net.URLStreamHandler;
-import java.util.Collections;
 import java.util.Map;
 
 // This class was directly inspired by Fabric-ASM. Thank you Chocohead for paving this path for me to walk down with my goofy Lua mod.
@@ -18,17 +17,9 @@ public class EldritchURLStreamHandler extends URLStreamHandler {
         this.providers = providers;
     }
 
-    public static URL create(String name, byte[] provider) {
+    public static URL create(String protocol, Map<String, byte[]> providers) {
         try {
-            return new URL("allium-mixin", null, -1, "/", new EldritchURLStreamHandler(Collections.singletonMap(name, provider)));
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static URL create(Map<String, byte[]> providers) {
-        try {
-            return new URL("allium-mixin", null, -1, "/", new EldritchURLStreamHandler(providers));
+            return new URL(protocol, null, -1, "/", new EldritchURLStreamHandler(providers));
         } catch (MalformedURLException e) {
             throw new RuntimeException(e);
         }
@@ -36,7 +27,8 @@ public class EldritchURLStreamHandler extends URLStreamHandler {
 
     @Override
     protected URLConnection openConnection(URL url) {
-        return providers.containsKey(url.getPath()) ? new EldritchConnection(url, providers.get(url.getPath())) : null;
+        String path = url.getPath().substring(1);
+        return providers.containsKey(path) ? new EldritchConnection(url, providers.get(path)) : null;
     }
 
     // Someone please name a game "Eldritch Connection"
