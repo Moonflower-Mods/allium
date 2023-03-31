@@ -101,7 +101,7 @@ public class MixinClassBuilder {
             List<Type> params = new ArrayList<>(List.of(Type.getArgumentTypes(visitedMethod.descriptor())));
             params.add(Type.getType(CallbackInfo.class));
 
-            Pair<String, Class<?>> eventInvoker = this.writeEventInterface(params);
+            //Pair<String, Class<?>> eventInvoker = this.writeEventInterface(params);
             SimpleEventType<EventInvoker> eventType = new SimpleEventType<>(new Identifier(script.getId(), eventName));
             GENERATED_EVENTS.get(className).add(eventType);
 
@@ -109,7 +109,6 @@ public class MixinClassBuilder {
                     visitedMethod,
                     params,
                     ACC_PRIVATE | (visitedMethod.access() & ACC_STATIC),
-                    eventInvoker,
                     annotations
             );
             return eventType;
@@ -135,12 +134,14 @@ public class MixinClassBuilder {
         return new Pair<>(className, AsmUtil.defineClass(className, classBytes));
     }
 
-    private void writeInjectMethod(VisitedMethod visitedMethod, List<Type> params, int access, Pair<String, Class<?>> eventInvoker, LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException, NoSuchMethodException {
+    private void writeInjectMethod(VisitedMethod visitedMethod, List<Type> params, int access, LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException, NoSuchMethodException {
         var isStatic = (access & ACC_STATIC) != 0;
 
         var desc = Type.getMethodDescriptor(Type.VOID_TYPE, params.toArray(Type[]::new));
         var methodVisitor = c.visitMethod(access, visitedMethod.name(), desc, visitedMethod.signature(), null);
         int thisVarOffset = isStatic ? 0 : 1;
+        int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
+        if (isStatic) varPrefix -= 1;
 
         AnnotationVisitor injectAnnotationVisitor = methodVisitor.visitAnnotation(Inject.class.descriptorString(), true);
 
@@ -202,14 +203,26 @@ public class MixinClassBuilder {
 
         methodVisitor.visitFieldInsn(GETSTATIC, className, "allium$simpleEventType"+ind, Type.getDescriptor(SimpleEventType.class));
         methodVisitor.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(SimpleEventType.class), "invoker", "()Ljava/lang/Object;", false);
-        methodVisitor.visitTypeInsn(CHECKCAST, eventInvoker.getLeft());
+        methodVisitor.visitTypeInsn(CHECKCAST, Type.getInternalName(EventInvoker.class));
         // eventType.invoker()
+
+        methodVisitor.visitLdcInsn(params.size());
+        methodVisitor.visitTypeInsn(ANEWARRAY, Type.getInternalName(Object.class));
+        methodVisitor.visitVarInsn(ASTORE, varPrefix);
+
         var args = Type.getArgumentTypes(desc);
         for (int i = thisVarOffset; i < args.length+thisVarOffset; i++) {
-            methodVisitor.visitVarInsn(ALOAD, i);
+            int index = i-thisVarOffset;
+            methodVisitor.visitVarInsn(ALOAD, varPrefix);
+            methodVisitor.visitLdcInsn(index);
+            methodVisitor.visitVarInsn(args[index].getOpcode(ILOAD), i);
+            if (args[index].getSort() != Type.OBJECT || args[index].getSort() != Type.ARRAY) {
+                AsmUtil.wrapPrimitive(methodVisitor, args[index]);
+            }
+            methodVisitor.visitInsn(AASTORE);
         }
-
-        methodVisitor.visitMethodInsn(INVOKEVIRTUAL, eventInvoker.getLeft(), "invoke", desc, false);
+        methodVisitor.visitVarInsn(ALOAD, varPrefix);
+        methodVisitor.visitMethodInsn(INVOKEINTERFACE, Type.getInternalName(EventInvoker.class), "invoke", Type.getMethodDescriptor(EventInvoker.class.getMethods()[0]), true);
         // eventInvoker.invoke(...)
 
         methodVisitor.visitInsn(RETURN);

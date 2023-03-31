@@ -20,7 +20,9 @@ SERVER_PLAYER_TICK:register(script, function()
     -- code
     print("tick "..tostring(i))
     i = i+1
-end, false)
+end)
+
+
 -- NOTE: For a simple implementation like this, we can compact things:
 --[[mixin
         .ofClass(ServerPlayerEntity)
