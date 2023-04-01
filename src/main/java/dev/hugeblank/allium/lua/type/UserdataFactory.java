@@ -24,10 +24,12 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
 
 public class UserdataFactory<T> {
-    private static final Map<EClass<?>, UserdataFactory<?>> FACTORIES = new HashMap<>();
+    private static final ConcurrentMap<EClass<?>, UserdataFactory<?>> FACTORIES = new ConcurrentHashMap<>();
     private final Map<String, PropertyData<? super T>> cachedProperties = new HashMap<>();
     private final EClass<T> clazz;
     private final LuaTable metatable;
@@ -73,13 +75,6 @@ public class UserdataFactory<T> {
 
     private LuaTable createMetatable(boolean isBound) {
         LuaTable metatable = new LuaTable();
-
-        metatable.rawset("__tostring", new ZeroArgFunction() {
-            @Override
-            public LuaValue call(LuaState state) {
-                return ValueFactory.valueOf("userdata <" + clazz.name() + ">");
-            }
-        });
 
         metatable.rawset("__pairs", new OneArgFunction() {
             // Technically, pairs is kinda cringe. In order to properly deliver all key-value pairs, we have to parse
