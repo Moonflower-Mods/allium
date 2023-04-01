@@ -35,10 +35,10 @@ public class Allium implements ModInitializer {
     public static final Logger LOGGER = LoggerFactory.getLogger(ID);
     public static final Map<Identifier, Block> BLOCKS = new HashMap<>();
     public static final Map<Identifier, Item> ITEMS = new HashMap<>();
-    public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
     public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
     public static Set<Script> CANDIDATES = new HashSet<>();
+    public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
     public static final Path DUMP_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve("allium-dump");
     public static final String VERSION = FabricLoader.getInstance().getModContainer("allium").orElseThrow().getMetadata().getVersion().getFriendlyString();
 

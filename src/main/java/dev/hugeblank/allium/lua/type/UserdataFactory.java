@@ -76,6 +76,17 @@ public class UserdataFactory<T> {
     private LuaTable createMetatable(boolean isBound) {
         LuaTable metatable = new LuaTable();
 
+        metatable.rawset("__tostring", new OneArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg) throws LuaError {
+                try {
+                    return TypeCoercions.toLuaValue(clazz.method("toString").invoke(TypeCoercions.toJava(state, arg, clazz)));
+                } catch (InvocationTargetException | IllegalAccessException | InvalidArgumentException e) {
+                    throw new LuaError(e);
+                }
+            }
+        });
+
         metatable.rawset("__pairs", new OneArgFunction() {
             // Technically, pairs is kinda cringe. In order to properly deliver all key-value pairs, we have to parse
             // the ENTIRE class. At least we cache everything along the way? Still not ideal.

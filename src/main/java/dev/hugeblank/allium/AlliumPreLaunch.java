@@ -29,6 +29,13 @@ import java.util.Map;
 import static dev.hugeblank.allium.Allium.list;
 
 public class AlliumPreLaunch implements PreLaunchEntrypoint {
+    public static final String MIXIN_CONFIG_NAME = "allium-generated.mixins.json";
+    private static boolean complete = false;
+
+    public static boolean isComplete() {
+        return complete;
+    }
+
     @Override
     public void onPreLaunch() {
         if (Allium.DEVELOPMENT) {
@@ -99,7 +106,7 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         String configJson = (new Gson()).toJson(config);
         Map<String, byte[]> mixinConfigMap = new HashMap<>(MixinClassBuilder.GENERATED_MIXIN_BYTES);
         MixinClassBuilder.cleanup();
-        mixinConfigMap.put("generated.mixin.json", configJson.getBytes(StandardCharsets.UTF_8));
+        mixinConfigMap.put(MIXIN_CONFIG_NAME, configJson.getBytes(StandardCharsets.UTF_8));
         URL mixinUrl = EldritchURLStreamHandler.create("allium-mixin", mixinConfigMap);
 
         // Stuff those files into class loader
@@ -122,7 +129,7 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
             throw new RuntimeException("Error invoking URL handler", e);
         }
 
-        Mixins.addConfiguration("generated.mixin.json");
-
+        Mixins.addConfiguration(MIXIN_CONFIG_NAME);
+        complete = true;
     }
 }

@@ -25,23 +25,31 @@ public class AnnotationHelpers {
             EClass<?> returnType = method.rawReturnType();
             if (!nextValue.isNil()) {
                 if (returnType.raw().isArray()) {
-                    AnnotationVisitor array = visitor.visitArray(name);
-                    if (nextValue.isString()) {
-                        visitValue(state, nextValue, array, returnType.arrayComponent(), null);
-                    } else {
-                        LuaTable nextTable = nextValue.checkTable();
-                        for (int i = 0; i < nextTable.length(); i++) {
-                            visitValue(state, nextTable.rawget(i + 1), array, returnType.arrayComponent(), null);
-                        }
-                    }
-                    array.visitEnd();
+                    annotateArray(state, visitor, name, nextValue, returnType);
                 } else {
                     visitValue(state, nextValue, visitor, returnType, name);
                 }
-            } else if (name.equals("value") && table.rawget(1).isString() && returnType.raw().equals(String.class)) {
-                visitValue(state, table.rawget(1), visitor, returnType, null);
+            } else if (name.equals("value") && !table.rawget(1).isNil()) {
+                if (returnType.raw().isArray()) {
+                    annotateArray(state, visitor, name, table.rawget(1), returnType);
+                } else {
+                    visitValue(state, table.rawget(1), visitor, returnType, "value");
+                }
             }
         }
+    }
+
+    private static void annotateArray(LuaState state, AnnotationVisitor visitor, String name, LuaValue nextValue, EClass<?> returnType) throws LuaError, InvalidArgumentException {
+        AnnotationVisitor array = visitor.visitArray(name);
+        if (nextValue.isString()) {
+            visitValue(state, nextValue, array, returnType.arrayComponent(), null);
+        } else {
+            LuaTable nextTable = nextValue.checkTable();
+            for (int i = 0; i < nextTable.length(); i++) {
+                visitValue(state, nextTable.rawget(i + 1), array, returnType.arrayComponent(), null);
+            }
+        }
+        array.visitEnd();
     }
 
     private static void visitValue(LuaState state, LuaValue value, AnnotationVisitor visitor, EClass<?> returnType, String name) throws LuaError, InvalidArgumentException {
@@ -64,6 +72,7 @@ public class AnnotationHelpers {
         }
     }
 
+    // I'm a hater of how ClassVisitor, MethodVisitor, FieldVisitor, etc. aren't all under a common interface.
     public static AnnotationVisitor attachAnnotation(MethodVisitor visitor, Class<?> annotation) {
         EClass<?> eAnnotation = EClass.fromJava(annotation);
         return visitor.visitAnnotation(

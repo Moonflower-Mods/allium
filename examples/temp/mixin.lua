@@ -15,7 +15,7 @@ local SERVER_PLAYER_TICK = ServerPlayerEntityMixin:inject("server_player_tick", 
 
 ServerPlayerEntityMixin:build()
 _G.later = {}
-later.AccessibleServerPlayer = ServerPlayerEntityInterfaceMixin:build()
+later.AccessibleServerPlayerHolder = ServerPlayerEntityInterfaceMixin:build()
 
 -- Create events AFTER mixin has been built.
 

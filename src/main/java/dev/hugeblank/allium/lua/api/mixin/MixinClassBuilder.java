@@ -193,8 +193,6 @@ public class MixinClassBuilder {
                     List.of(Type.getType(visitedField.descriptor())), // field type
                     Type.VOID_TYPE, // void
                     List.of((methodVisitor, desc, thisVarOffset) -> {
-                        //methodVisitor.visitInsn(RETURN);
-                        //methodVisitor.visitMaxs(0,0);
                         methodVisitor.visitEnd();
                     }), // Abstract method
                     (methodVisitor) -> AnnotationHelpers.annotateMethod(state, annotations, methodVisitor, EClass.fromJava(Accessor.class))
@@ -222,8 +220,6 @@ public class MixinClassBuilder {
                     List.of(), // No parameters
                     Type.getType(visitedField.descriptor()), // Return type of field
                     List.of((methodVisitor, desc, thisVarOffset) -> {
-                        //methodVisitor.visitInsn(Type.getType(visitedField.descriptor()).getOpcode(IRETURN));
-                        //methodVisitor.visitMaxs(0,0);
                         methodVisitor.visitEnd();
                     }), // Abstract method
                     (methodVisitor) -> AnnotationHelpers.annotateMethod(state, annotations, methodVisitor, EClass.fromJava(Accessor.class))
@@ -334,17 +330,18 @@ public class MixinClassBuilder {
     }
 
     @LuaWrapped
-    public Class<?> build() {
-        MethodVisitor clinit = c.visitMethod(ACC_STATIC ,"<clinit>", "()V", null, null);
-        this.fields.forEach((consumer) -> consumer.accept(clinit));
-        clinit.visitInsn(RETURN);
-        clinit.visitMaxs(0,0);
-        clinit.visitEnd();
+    public MixinClassHolder build() {
+        if (!this.fields.isEmpty()) {
+            MethodVisitor clinit = c.visitMethod(ACC_STATIC ,"<clinit>", "()V", null, null);
+            this.fields.forEach((consumer) -> consumer.accept(clinit));
+            clinit.visitInsn(RETURN);
+            clinit.visitMaxs(0,0);
+            clinit.visitEnd();
+        }
 
         byte[] classBytes = c.toByteArray();
-        if (Allium.DEVELOPMENT && !asInterface) {
+        if (Allium.DEVELOPMENT) {
             Path classPath = Allium.DUMP_DIRECTORY.resolve(className + ".class");
-
             try {
                 Files.createDirectories(classPath.getParent());
                 Files.write(classPath, classBytes);
@@ -355,7 +352,8 @@ public class MixinClassBuilder {
 
         GENERATED_MIXIN_BYTES.put(className + ".class", classBytes);
         // give the class back to the user for later use in the case of an interface.
-        return asInterface ? AsmUtil.defineClass(className, classBytes) : null;
+
+        return new MixinClassHolder(className.replace("/", "."));
     }
 
     public static void cleanup() {
