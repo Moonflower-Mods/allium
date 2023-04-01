@@ -5,22 +5,18 @@ import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.lua.event.SimpleEventType;
 import dev.hugeblank.allium.lua.type.InvalidArgumentException;
 import dev.hugeblank.allium.lua.type.InvalidMixinException;
-import dev.hugeblank.allium.lua.type.TypeCoercions;
+import dev.hugeblank.allium.lua.type.ProxyGenerator;
 import dev.hugeblank.allium.lua.type.annotation.LuaStateArg;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
-import dev.hugeblank.allium.util.AsmUtil;
-import dev.hugeblank.allium.util.ClassFieldBuilder;
-import dev.hugeblank.allium.util.EventInvoker;
-import dev.hugeblank.allium.util.VisitedMethod;
+import dev.hugeblank.allium.util.*;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import net.minecraft.util.Identifier;
 import net.minecraft.util.Pair;
 import org.objectweb.asm.*;
 import org.spongepowered.asm.mixin.Mixin;
-import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import org.spongepowered.asm.mixin.injection.callback.LocalCapture;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaTable;
@@ -39,7 +35,6 @@ import static org.objectweb.asm.Opcodes.*;
 @LuaWrapped
 public class MixinClassBuilder {
     public static final Map<String, byte[]> GENERATED_MIXIN_BYTES = new HashMap<>();
-    public static final Map<String, byte[]> GENERATED_EVENT_BYTES = new HashMap<>();
     public static final Map<String, List<SimpleEventType<?>>> GENERATED_EVENTS = new HashMap<>();
     protected static final Map<String, Map<String, VisitedMethod>> CLASS_VISITED_METHODS = new HashMap<>();
 
@@ -51,6 +46,7 @@ public class MixinClassBuilder {
     private final Map<String, VisitedMethod> visitedMethods;
 
     public MixinClassBuilder(String targetClass, Script script, @LuaStateArg LuaState state) throws IOException {
+        targetClass = Allium.DEVELOPMENT ? targetClass : Allium.MAPPINGS.getYarn(targetClass);
         this.state = state;
         this.script = script;
         // Get the methods and fields of this class without static init-ing it.
@@ -61,6 +57,7 @@ public class MixinClassBuilder {
             CLASS_VISITED_METHODS.put(targetClass, this.visitedMethods);
 
             ClassReader reader = new ClassReader(targetClass);
+            String finalTargetClass = targetClass;
             reader.accept(new ClassVisitor(ASM9) {
                 @Override
                 public FieldVisitor visitField(int access, String name, String descriptor, String signature, Object value) {
@@ -69,12 +66,16 @@ public class MixinClassBuilder {
 
                 @Override
                 public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
-                    visitedMethods.put(name+descriptor, new VisitedMethod(access, name, descriptor, signature, exceptions));
+                    String[] mapped = Allium.MAPPINGS.getYarn(Mappings.asMethod(Allium.MAPPINGS.getIntermediary(finalTargetClass).get(0), name)).split("#");
+                    if (!Allium.DEVELOPMENT && mapped.length == 2) {
+                        visitedMethods.put(name+descriptor, new VisitedMethod(access, mapped[1], descriptor, signature, exceptions));
+                    } else { // Covers unmapped names
+                        visitedMethods.put(name+descriptor, new VisitedMethod(access, name, descriptor, signature, exceptions));
+                    }
                     return super.visitMethod(access, name, descriptor, signature, exceptions);
                 }
             }, ClassReader.SKIP_FRAMES);
         }
-        //this.clinit = new ClassFieldBuilder(className, c);
         GENERATED_EVENTS.put(className, new ArrayList<>());
         EClass<?> superClass = EClass.fromJava(Object.class);
         this.c.visit(
@@ -94,29 +95,36 @@ public class MixinClassBuilder {
     }
 
     @LuaWrapped
-    public SimpleEventType<EventInvoker> inject(String eventName, LuaTable annotations) throws LuaError, InvalidMixinException, InvalidArgumentException, NoSuchMethodException, InstantiationException, IllegalAccessException {
+    public SimpleEventType<EventInvoker> inject(String eventName, LuaTable annotations) throws LuaError, InvalidMixinException, InvalidArgumentException {
+        return writeInjectable(eventName, annotations, EClass.fromJava(Inject.class));
+    }
+
+    @LuaWrapped
+    public SimpleEventType<EventInvoker> redirect(String eventName, LuaTable annotations) throws LuaError, InvalidMixinException, InvalidArgumentException {
+        return writeInjectable(eventName, annotations, EClass.fromJava(Redirect.class));
+    }
+
+    public SimpleEventType<EventInvoker> writeInjectable(String eventName, LuaTable annotations, EClass<?> clazz) throws LuaError, InvalidMixinException, InvalidArgumentException {
         String descriptor = annotations.rawget("method").checkString();
         if (visitedMethods.containsKey(descriptor)) {
             VisitedMethod visitedMethod = visitedMethods.get(descriptor);
             List<Type> params = new ArrayList<>(List.of(Type.getArgumentTypes(visitedMethod.descriptor())));
             params.add(Type.getType(CallbackInfo.class));
 
-            //Pair<String, Class<?>> eventInvoker = this.writeEventInterface(params);
             SimpleEventType<EventInvoker> eventType = new SimpleEventType<>(new Identifier(script.getId(), eventName));
             GENERATED_EVENTS.get(className).add(eventType);
 
-            this.writeInjectMethod(
+            this.writeMethod(
                     visitedMethod,
                     params,
-                    ACC_PRIVATE | (visitedMethod.access() & ACC_STATIC),
-                    annotations
+                    (methodVisitor) -> LuaMixinAnnotation.annotateMethod(state, annotations, methodVisitor, clazz)
             );
             return eventType;
         }
         throw new InvalidMixinException(InvalidMixinException.Type.INVALID_METHOD, descriptor);
     }
 
-    private Pair<String, Class<?>> writeEventInterface(List<Type> params) {
+    private Pair<String, Class<?>> writeEventInterface(List<Type> params) { // TODO: This can probably be converted to accessor/invoker.
         String className = AsmUtil.getUniqueClassName();
         ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
         classWriter.visit(
@@ -130,55 +138,18 @@ public class MixinClassBuilder {
         var desc = Type.getMethodDescriptor(Type.VOID_TYPE, params.toArray(Type[]::new));
         classWriter.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, "invoke", desc, null, null);
         byte[] classBytes = classWriter.toByteArray();
-        GENERATED_EVENT_BYTES.put(className + ".class", classBytes);
+        //GENERATED_EVENT_BYTES.put(className + ".class", classBytes);
         return new Pair<>(className, AsmUtil.defineClass(className, classBytes));
     }
 
-    private void writeInjectMethod(VisitedMethod visitedMethod, List<Type> params, int access, LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException, NoSuchMethodException {
-        var isStatic = (access & ACC_STATIC) != 0;
+    private void writeMethod(VisitedMethod visitedMethod, List<Type> params, AnnotationFactory factory) throws LuaError, InvalidArgumentException, InvalidMixinException {
 
         var desc = Type.getMethodDescriptor(Type.VOID_TYPE, params.toArray(Type[]::new));
-        var methodVisitor = c.visitMethod(access, visitedMethod.name(), desc, visitedMethod.signature(), null);
-        int thisVarOffset = isStatic ? 0 : 1;
-        int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
-        if (isStatic) varPrefix -= 1;
+        var methodVisitor = c.visitMethod(ACC_PRIVATE | (visitedMethod.access() & ACC_STATIC), visitedMethod.name(), desc, visitedMethod.signature(), null);
+        int thisVarOffset = (visitedMethod.access() & ACC_STATIC) != 0 ? 0 : 1;
+        int varPrefix = (Type.getArgumentsAndReturnSizes(desc) >> 2)-(1-thisVarOffset);
 
-        AnnotationVisitor injectAnnotationVisitor = methodVisitor.visitAnnotation(Inject.class.descriptorString(), true);
-
-        // method
-        AnnotationVisitor methodArrayAnnotationVisitor = injectAnnotationVisitor.visitArray("method");
-        methodArrayAnnotationVisitor.visit("method", annotations.rawget("method").checkString());
-        methodArrayAnnotationVisitor.visitEnd();
-
-        // cancellable
-        if (annotations.rawget("cancellable").isBoolean()) {
-            injectAnnotationVisitor.visit("cancellable", annotations.rawget("cancellable").checkBoolean());
-        }
-
-        // localcapture
-        // TODO FIX
-        if (annotations.rawget("locals").isUserdata()) {
-            injectAnnotationVisitor.visit("locals", TypeCoercions.toJava(this.state, annotations.rawget("locals"), LocalCapture.class));
-        }
-
-        // at
-        LuaTable target = annotations.rawget("at").checkTable();
-        AnnotationVisitor atArrayAnnotationVisitor = injectAnnotationVisitor.visitArray("at");
-        AnnotationVisitor atAnnotationVisitor = atArrayAnnotationVisitor.visitAnnotation(null, At.class.descriptorString());
-        if (target.rawget(1).isString()) {
-            atAnnotationVisitor.visit("value", target.rawget(1).checkString());
-        } else if (target.rawget("value").isString()) {
-            atAnnotationVisitor.visit("value", target.rawget("value").checkString());
-        } else {
-            throw new InvalidMixinException(InvalidMixinException.Type.MISSING_TARGET, null);
-        }
-        if (target.rawget("target").isString()) {
-            atAnnotationVisitor.visit("target", target.rawget("target").checkString());
-        }
-
-        atAnnotationVisitor.visitEnd();
-        atArrayAnnotationVisitor.visitEnd();
-        injectAnnotationVisitor.visitEnd();
+        factory.write(methodVisitor); // Apply annotations to this method
 
         methodVisitor.visitCode();
 
@@ -206,19 +177,14 @@ public class MixinClassBuilder {
         methodVisitor.visitTypeInsn(CHECKCAST, Type.getInternalName(EventInvoker.class));
         // eventType.invoker()
 
-        methodVisitor.visitLdcInsn(params.size());
+        var args = Type.getArgumentTypes(desc);
+        methodVisitor.visitLdcInsn(args.length-thisVarOffset+1);
         methodVisitor.visitTypeInsn(ANEWARRAY, Type.getInternalName(Object.class));
         methodVisitor.visitVarInsn(ASTORE, varPrefix);
 
-        var args = Type.getArgumentTypes(desc);
         for (int i = thisVarOffset; i < args.length+thisVarOffset; i++) {
             int index = i-thisVarOffset;
-            methodVisitor.visitVarInsn(ALOAD, varPrefix);
-            methodVisitor.visitLdcInsn(index);
-            methodVisitor.visitVarInsn(args[index].getOpcode(ILOAD), i);
-            if (args[index].getSort() != Type.OBJECT || args[index].getSort() != Type.ARRAY) {
-                AsmUtil.wrapPrimitive(methodVisitor, args[index]);
-            }
+            ProxyGenerator.loadAndWrapLocal(methodVisitor, varPrefix, args, i, index);
             methodVisitor.visitInsn(AASTORE);
         }
         methodVisitor.visitVarInsn(ALOAD, varPrefix);
@@ -254,5 +220,9 @@ public class MixinClassBuilder {
         GENERATED_MIXIN_BYTES.put(className + ".class", classBytes);
     }
 
+    @FunctionalInterface
+    private interface AnnotationFactory {
+        void write(MethodVisitor methodVisitor) throws InvalidArgumentException, LuaError, InvalidMixinException;
+    }
 }
 

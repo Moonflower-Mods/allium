@@ -100,8 +100,6 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         Map<String, byte[]> mixinConfigMap = new HashMap<>(MixinClassBuilder.GENERATED_MIXIN_BYTES);
         mixinConfigMap.put("generated.mixin.json", configJson.getBytes(StandardCharsets.UTF_8));
         URL mixinUrl = EldritchURLStreamHandler.create("allium-mixin", mixinConfigMap);
-        URL eventUrl = EldritchURLStreamHandler.create("allium", MixinClassBuilder.GENERATED_EVENT_BYTES);
-
 
         // Stuff those files into class loader
         ClassLoader loader = AlliumPreLaunch.class.getClassLoader();
@@ -117,7 +115,6 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
             addUrlMethod.setAccessible(true);
             MethodHandle handle = MethodHandles.lookup().unreflect(addUrlMethod);
             handle.invoke(loader, mixinUrl);
-            handle.invoke(loader, eventUrl);
         } catch (IllegalAccessException e) {
             throw new RuntimeException("Couldn't get handle for " + addUrlMethod, e);
         } catch (Throwable e) {

@@ -6,6 +6,7 @@ import dev.hugeblank.allium.util.AsmUtil;
 import dev.hugeblank.allium.util.ClassFieldBuilder;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.Handle;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;
@@ -87,13 +88,7 @@ public class ProxyGenerator {
         int argIndex = 1;
         var args = Type.getArgumentTypes(desc);
         for (int i = 0; i < args.length; i++) {
-            m.visitVarInsn(ALOAD, varPrefix);
-            m.visitLdcInsn(i);
-            m.visitVarInsn(args[i].getOpcode(ILOAD), argIndex);
-
-            if (args[i].getSort() != Type.OBJECT || args[i].getSort() != Type.ARRAY) {
-                AsmUtil.wrapPrimitive(m, args[i]);
-            }
+            loadAndWrapLocal(m, varPrefix, args, argIndex, i);
 
             fields.storeAndGet(m, method.parameters().get(i).parameterType().lowerBound().wrapPrimitive(), EClass.class);
             m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
@@ -154,6 +149,15 @@ public class ProxyGenerator {
             return (BiFunction<LuaState, LuaFunction, Object>) klass.getMethod("getFactoryMethod").invoke(null);
         } catch (ReflectiveOperationException e) {
             throw new RuntimeException("Couldn't get factory method", e);
+        }
+    }
+
+    public static void loadAndWrapLocal(MethodVisitor methodVisitor, int varPrefix, Type[] args, int i, int index) {
+        methodVisitor.visitVarInsn(ALOAD, varPrefix);
+        methodVisitor.visitLdcInsn(index);
+        methodVisitor.visitVarInsn(args[index].getOpcode(ILOAD), i);
+        if (args[index].getSort() != Type.OBJECT || args[index].getSort() != Type.ARRAY) {
+            AsmUtil.wrapPrimitive(methodVisitor, args[index]);
         }
     }
 }
