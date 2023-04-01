@@ -5,6 +5,7 @@ import dev.hugeblank.allium.lua.type.TypeCoercions;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import org.objectweb.asm.AnnotationVisitor;
+import org.objectweb.asm.FieldVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaState;
@@ -14,7 +15,7 @@ import org.squiddev.cobalt.LuaValue;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-public class LuaMixinAnnotation {
+public class AnnotationHelpers {
 
     private static void annotate(LuaState state, LuaValue value, AnnotationVisitor visitor, EClass<?> clazz) throws LuaError, InvalidArgumentException {
         LuaTable table = value.checkTable();
@@ -37,6 +38,8 @@ public class LuaMixinAnnotation {
                 } else {
                     visitValue(state, nextValue, visitor, returnType, name);
                 }
+            } else if (name.equals("value") && table.rawget(1).isString() && returnType.raw().equals(String.class)) {
+                visitValue(state, table.rawget(1), visitor, returnType, null);
             }
         }
     }
@@ -61,13 +64,27 @@ public class LuaMixinAnnotation {
         }
     }
 
+    public static AnnotationVisitor attachAnnotation(MethodVisitor visitor, Class<?> annotation) {
+        EClass<?> eAnnotation = EClass.fromJava(annotation);
+        return visitor.visitAnnotation(
+                annotation.descriptorString(),
+                !eAnnotation.hasAnnotation(Retention.class) ||
+                        eAnnotation.annotation(Retention.class).value().equals(RetentionPolicy.RUNTIME)
+        );
+    }
+
+    public static AnnotationVisitor attachAnnotation(FieldVisitor visitor, Class<?> annotation) {
+        EClass<?> eAnnotation = EClass.fromJava(annotation);
+        return visitor.visitAnnotation(
+                annotation.descriptorString(),
+                !eAnnotation.hasAnnotation(Retention.class) ||
+                        eAnnotation.annotation(Retention.class).value().equals(RetentionPolicy.RUNTIME)
+        );
+    }
+
     public static void annotateMethod(LuaState state, LuaTable annotationTable, MethodVisitor methodVisitor, EClass<?> annotation) throws InvalidArgumentException, LuaError {
         if (annotation.raw().isAnnotation()) {
-            boolean visible = true;
-            if (annotation.hasAnnotation(Retention.class)) {
-                visible = annotation.annotation(Retention.class).value().equals(RetentionPolicy.RUNTIME);
-            }
-            AnnotationVisitor visitor = methodVisitor.visitAnnotation(annotation.raw().descriptorString(), visible);
+            AnnotationVisitor visitor = attachAnnotation(methodVisitor, annotation.raw());
             annotate(state, annotationTable, visitor, annotation);
             visitor.visitEnd();
             return;

@@ -98,6 +98,7 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         config.add("mixins", mixins);
         String configJson = (new Gson()).toJson(config);
         Map<String, byte[]> mixinConfigMap = new HashMap<>(MixinClassBuilder.GENERATED_MIXIN_BYTES);
+        MixinClassBuilder.cleanup();
         mixinConfigMap.put("generated.mixin.json", configJson.getBytes(StandardCharsets.UTF_8));
         URL mixinUrl = EldritchURLStreamHandler.create("allium-mixin", mixinConfigMap);
 

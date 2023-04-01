@@ -17,7 +17,12 @@ public class MixinLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public MixinClassBuilder ofClass(String targetClass, @LuaStateArg LuaState state) throws IOException {
-        return new MixinClassBuilder(targetClass, script, state);
+    public MixinClassBuilder asClass(String targetClass, @LuaStateArg LuaState state) throws IOException {
+        return new MixinClassBuilder(targetClass, script, false, state);
+    }
+
+    @LuaWrapped
+    public MixinClassBuilder asInterface(String targetClass, @LuaStateArg LuaState state) throws IOException {
+        return new MixinClassBuilder(targetClass, script, true, state);
     }
 }

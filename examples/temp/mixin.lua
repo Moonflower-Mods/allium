@@ -3,7 +3,10 @@ print("it's mixin' time!")
 -- This is accursed Lua.
 
 -- Define a mixin class on ServerPlayerEntity.
-local ServerPlayerEntityMixin = mixin.ofClass("net.minecraft.server.network.ServerPlayerEntity")
+local ServerPlayerEntityMixin = mixin.asClass("net.minecraft.server.network.ServerPlayerEntity")
+local ServerPlayerEntityInterfaceMixin = mixin.asInterface("net.minecraft.server.network.ServerPlayerEntity")
+
+ServerPlayerEntityInterfaceMixin:getAccessor({"spawnPointPosition"})
 
 local SERVER_PLAYER_TICK = ServerPlayerEntityMixin:inject("server_player_tick", {
     at = {"HEAD"},
@@ -11,6 +14,8 @@ local SERVER_PLAYER_TICK = ServerPlayerEntityMixin:inject("server_player_tick", 
 })
 
 ServerPlayerEntityMixin:build()
+_G.later = {}
+later.AccessibleServerPlayer = ServerPlayerEntityInterfaceMixin:build()
 
 -- Create events AFTER mixin has been built.
 
@@ -18,8 +23,11 @@ ServerPlayerEntityMixin:build()
 local i = 1
 SERVER_PLAYER_TICK:register(script, function()
     -- code
-    print("tick "..tostring(i))
-    i = i+1
+    if i == 1 then
+
+    else
+        i = 0
+    end
 end)
 
 

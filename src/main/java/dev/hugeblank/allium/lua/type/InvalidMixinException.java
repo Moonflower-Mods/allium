@@ -3,16 +3,14 @@ package dev.hugeblank.allium.lua.type;
 public class InvalidMixinException extends Exception {
     public InvalidMixinException(Type type, String message) {
         super(switch (type) {
-            case INVALID_METHOD -> "Could not find method matching descriptor: "+message;
-            case MISSING_TARGET -> "Missing injection target (key 'at')";
-            case INVALID_TARGET -> "Invalid injection target: "+message;
+            case INVALID_DESCRIPTOR -> "Could not find method matching descriptor: "+message;
+            case INVALID_CLASSTYPE -> "Attempt to use "+message+" method on non-"+message+" mixin.";
         });
 
     }
 
     public enum Type {
-        INVALID_METHOD,
-        MISSING_TARGET,
-        INVALID_TARGET,
+        INVALID_DESCRIPTOR,
+        INVALID_CLASSTYPE,
     }
 }
