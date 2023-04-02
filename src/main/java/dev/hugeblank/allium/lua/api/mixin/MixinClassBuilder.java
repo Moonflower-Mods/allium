@@ -11,7 +11,6 @@ import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.util.*;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import net.minecraft.util.Identifier;
-import net.minecraft.util.Pair;
 import org.objectweb.asm.*;
 import org.spongepowered.asm.mixin.Dynamic;
 import org.spongepowered.asm.mixin.Final;
@@ -41,6 +40,7 @@ public class MixinClassBuilder {
     protected static final Map<String, Map<String, VisitedField>> CLASS_VISITED_FIELDS = new HashMap<>();
 
     private final String className = AsmUtil.getUniqueMixinClassName();
+    private final String targetClass;
     private final ClassWriter c = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
     private final List<Consumer<MethodVisitor>> fields = new ArrayList<>();
     private final Script script;
@@ -51,6 +51,7 @@ public class MixinClassBuilder {
 
     public MixinClassBuilder(String targetClass, Script script, boolean asInterface, @LuaStateArg LuaState state) throws IOException {
         targetClass = Allium.DEVELOPMENT ? targetClass : Allium.MAPPINGS.getYarn(targetClass);
+        this.targetClass = targetClass;
         this.state = state;
         this.asInterface = asInterface;
         this.script = script;
@@ -82,12 +83,22 @@ public class MixinClassBuilder {
                 public MethodVisitor visitMethod(int access, String name, String descriptor, String signature, String[] exceptions) {
                     String[] mapped = Allium.MAPPINGS.getYarn(Mappings.asMethod(Allium.MAPPINGS.getIntermediary(finalTargetClass).get(0), name)).split("#");
                     if (!Allium.DEVELOPMENT && mapped.length == 2) {
-                        visitedMethods.put(name+descriptor, new VisitedMethod(access, mapped[1], descriptor, signature, exceptions));
+                        String key = name;
+                        if (!name.equals("<init>") && !name.equals("<clinit>")) {
+                            key = key+descriptor;
+                        }
+                        visitedMethods.put(key, new VisitedMethod(access, mapped[1], descriptor, signature, exceptions));
                     } else { // Covers unmapped names
-                        visitedMethods.put(name+descriptor, new VisitedMethod(access, name, descriptor, signature, exceptions));
+                        String key = name;
+                        if (!name.equals("<init>") && !name.equals("<clinit>")) {
+                            key = key+descriptor;
+                        }
+                        visitedMethods.put(key, new VisitedMethod(access, name, descriptor, signature, exceptions));
                     }
                     return super.visitMethod(access, name, descriptor, signature, exceptions);
                 }
+
+
             }, ClassReader.SKIP_FRAMES);
         }
         GENERATED_EVENTS.put(className, new ArrayList<>());
@@ -136,6 +147,7 @@ public class MixinClassBuilder {
                     visitedField.signature(),
                     null
             );
+            //noinspection DuplicatedCode
             AnnotationHelpers.attachAnnotation(fieldVisitor, Shadow.class).visitEnd();
             // Automagically add other annotations, may or may not be needed.
             if ((visitedField.access() & ACC_FINAL) != 0) {
@@ -154,6 +166,7 @@ public class MixinClassBuilder {
                     visitedMethod.signature(),
                     null
             );
+            //noinspection DuplicatedCode
             AnnotationHelpers.attachAnnotation(methodVisitor, Shadow.class).visitEnd();
             // Automagically add other annotations, may or may not be needed.
             if ((visitedMethod.access() & ACC_FINAL) != 0) {
@@ -175,53 +188,36 @@ public class MixinClassBuilder {
 
     @LuaWrapped
     public void setAccessor(LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException {
-        if (!asInterface) throw new InvalidMixinException(InvalidMixinException.Type.INVALID_CLASSTYPE, "interface");
-        String name = null;
-        if (annotations.rawget("value").isString()) {
-            name = annotations.rawget("value").checkString();
-        } else if (annotations.rawget(1).isString()) {
-            name = annotations.rawget(1).checkString();
-        }
-        if (name == null) throw new InvalidArgumentException("Expected field name at key 'value' or index 1");
-        if (visitedFields.containsKey(name)) {
-            VisitedField visitedField = visitedFields.get(name);
-            String upper = name.substring(0, 1).toUpperCase(Locale.getDefault());
-            this.writeMethod(
-                    visitedField,
-                    ACC_ABSTRACT | ACC_PUBLIC,
-                    "set"+upper+visitedField.name().substring(1),
-                    List.of(Type.getType(visitedField.descriptor())), // field type
-                    Type.VOID_TYPE, // void
-                    List.of((methodVisitor, desc, thisVarOffset) -> {
-                        methodVisitor.visitEnd();
-                    }), // Abstract method
-                    (methodVisitor) -> AnnotationHelpers.annotateMethod(state, annotations, methodVisitor, EClass.fromJava(Accessor.class))
-            );
-        }
+        writeAccessor(true, annotations);
     }
 
     @LuaWrapped
     public void getAccessor(LuaTable annotations) throws LuaError, InvalidArgumentException, InvalidMixinException {
+        writeAccessor(false, annotations);
+    }
+
+    // TODO: throw new UnsupportedOperationException() in static Accessor methods.
+    private void writeAccessor(boolean isSetter, LuaTable annotations) throws InvalidMixinException, LuaError, InvalidArgumentException {
         if (!asInterface) throw new InvalidMixinException(InvalidMixinException.Type.INVALID_CLASSTYPE, "interface");
-        String name = null;
+        String fieldName = null;
         if (annotations.rawget("value").isString()) {
-            name = annotations.rawget("value").checkString();
+            fieldName = annotations.rawget("value").checkString();
         } else if (annotations.rawget(1).isString()) {
-            name = annotations.rawget(1).checkString();
+            fieldName = annotations.rawget(1).checkString();
         }
-        if (name == null) throw new InvalidArgumentException("Expected field name at key 'value' or index 1");
-        if (visitedFields.containsKey(name)) {
-            VisitedField visitedField = visitedFields.get(name);
-            String upper = name.substring(0, 1).toUpperCase(Locale.getDefault());
+        if (fieldName == null) throw new InvalidArgumentException("Expected field name at key 'value' or index 1");
+        if (visitedFields.containsKey(fieldName)) {
+            VisitedField visitedField = visitedFields.get(fieldName);
+            Type visitedFieldType = Type.getType(visitedField.descriptor());
             this.writeMethod(
                     visitedField,
-                    ACC_ABSTRACT | ACC_PUBLIC,
-                    "get"+upper+visitedField.name().substring(1),
-                    List.of(), // No parameters
-                    Type.getType(visitedField.descriptor()), // Return type of field
-                    List.of((methodVisitor, desc, thisVarOffset) -> {
-                        methodVisitor.visitEnd();
-                    }), // Abstract method
+                    ((visitedField.access() & ACC_STATIC) != 0) ? ACC_PUBLIC : (ACC_PUBLIC|ACC_ABSTRACT),
+                    (isSetter ? "set" : "get") + // set or get
+                            visitedField.name().substring(0, 1).toUpperCase(Locale.getDefault()) + // Uppercase first letter
+                            visitedField.name().substring(1), // Rest of field name
+                    isSetter ? List.of(visitedFieldType) : List.of(),
+                    isSetter ? Type.VOID_TYPE : visitedFieldType,
+                    List.of((methodVisitor, desc, thisVarOffset) -> methodVisitor.visitEnd()),
                     (methodVisitor) -> AnnotationHelpers.annotateMethod(state, annotations, methodVisitor, EClass.fromJava(Accessor.class))
             );
         }
@@ -268,13 +264,17 @@ public class MixinClassBuilder {
                         // eventType.invoker()
 
                         var args = Type.getArgumentTypes(desc);
-                        methodVisitor.visitLdcInsn(args.length-thisVarOffset+1);
+                        methodVisitor.visitLdcInsn(args.length+thisVarOffset);
                         methodVisitor.visitTypeInsn(ANEWARRAY, Type.getInternalName(Object.class));
                         methodVisitor.visitVarInsn(ASTORE, varPrefix);
 
-                        for (int i = thisVarOffset; i < args.length+thisVarOffset; i++) {
-                            int index = i-thisVarOffset;
-                            ProxyGenerator.loadAndWrapLocal(methodVisitor, varPrefix, args, i, index);
+                        if (thisVarOffset == 1) {
+                            ProxyGenerator.loadAndWrapLocal(methodVisitor, varPrefix, new Type[]{Type.getType("L"+ targetClass +";")}, 0, 0, 0);
+                            methodVisitor.visitInsn(AASTORE);
+                        }
+                        for (int i = 0; i < args.length; i++) { // TODO: Fix to handle double sized values.
+                            int index = i+thisVarOffset;
+                            ProxyGenerator.loadAndWrapLocal(methodVisitor, varPrefix, args, index, i, index);
                             methodVisitor.visitInsn(AASTORE);
                         }
                         methodVisitor.visitVarInsn(ALOAD, varPrefix);
@@ -289,24 +289,6 @@ public class MixinClassBuilder {
             return eventType;
         }
         throw new InvalidMixinException(InvalidMixinException.Type.INVALID_DESCRIPTOR, descriptor);
-    }
-
-    private Pair<String, Class<?>> writeEventInterface(List<Type> params) { // TODO: This can probably be converted to accessor/invoker.
-        String className = AsmUtil.getUniqueClassName();
-        ClassWriter classWriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        classWriter.visit(
-                V17,
-                ACC_PUBLIC | ACC_ABSTRACT | ACC_INTERFACE,
-                className,
-                null,
-                "java/lang/Object",
-                new String[]{Type.getInternalName(EventInvoker.class)}
-        );
-        var desc = Type.getMethodDescriptor(Type.VOID_TYPE, params.toArray(Type[]::new));
-        classWriter.visitMethod(ACC_PUBLIC | ACC_ABSTRACT, "invoke", desc, null, null);
-        byte[] classBytes = classWriter.toByteArray();
-        //GENERATED_EVENT_BYTES.put(className + ".class", classBytes);
-        return new Pair<>(className, AsmUtil.defineClass(className, classBytes));
     }
 
     private void writeMethod(VisitedValue visitedValue, int access, String name, List<Type> params, Type returnType, List<MethodWriteFactory> methodFactories, AnnotationFactory annotationFactory) throws LuaError, InvalidArgumentException, InvalidMixinException {

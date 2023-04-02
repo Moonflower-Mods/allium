@@ -91,7 +91,7 @@ public class JavaLib implements WrappedLuaLibrary {
         throw new LuaError(error.toString());
     }
 
-    // TODO: merge this with the Lua string library
+    // TODO: merge this with the Lua string library (maybe?)
     @LuaWrapped
     public static String[] split(String strToSplit, String delimiter) {
         return strToSplit.split(delimiter);

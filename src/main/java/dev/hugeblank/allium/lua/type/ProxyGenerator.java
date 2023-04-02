@@ -88,7 +88,7 @@ public class ProxyGenerator {
         int argIndex = 1;
         var args = Type.getArgumentTypes(desc);
         for (int i = 0; i < args.length; i++) {
-            loadAndWrapLocal(m, varPrefix, args, argIndex, i);
+            loadAndWrapLocal(m, varPrefix, args, argIndex, i, i);
 
             fields.storeAndGet(m, method.parameters().get(i).parameterType().lowerBound().wrapPrimitive(), EClass.class);
             m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(TypeCoercions.class), "toLuaValue", "(Ljava/lang/Object;Lme/basiqueevangelist/enhancedreflection/api/EClass;)Lorg/squiddev/cobalt/LuaValue;", false);
@@ -152,12 +152,12 @@ public class ProxyGenerator {
         }
     }
 
-    public static void loadAndWrapLocal(MethodVisitor methodVisitor, int varPrefix, Type[] args, int i, int index) {
+    public static void loadAndWrapLocal(MethodVisitor methodVisitor, int varPrefix, Type[] args, int local, int argIndex, int arrayIndex) {
         methodVisitor.visitVarInsn(ALOAD, varPrefix);
-        methodVisitor.visitLdcInsn(index);
-        methodVisitor.visitVarInsn(args[index].getOpcode(ILOAD), i);
-        if (args[index].getSort() != Type.OBJECT || args[index].getSort() != Type.ARRAY) {
-            AsmUtil.wrapPrimitive(methodVisitor, args[index]);
+        methodVisitor.visitLdcInsn(arrayIndex);
+        methodVisitor.visitVarInsn(args[argIndex].getOpcode(ILOAD), local);
+        if (args[argIndex].getSort() != Type.OBJECT || args[argIndex].getSort() != Type.ARRAY) {
+            AsmUtil.wrapPrimitive(methodVisitor, args[argIndex]);
         }
     }
 }

@@ -10,6 +10,7 @@ import me.basiqueevangelist.enhancedreflection.api.EConstructor;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.EParameter;
 import org.objectweb.asm.ClassWriter;
+import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Type;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;
@@ -122,6 +123,34 @@ public class ClassBuilder {
         throw new IllegalArgumentException("Couldn't find method " + methodName + " in parent class " + superClass.name() + "!");
     }
 
+    // A constructor in super with superParams must exist.
+    // Parameters that are passed to super must also exist in `params`.
+    // The parameters between params and superParams do not have to be in the same order.
+    @LuaWrapped
+    public void createConstructor(EClass<?>[] params, EClass<?>[] superParams, LuaFunction func) {
+
+        List<Type> superParamTypes = new ArrayList<>();
+        List<Integer> superParamIndexes = new ArrayList<>();
+
+        int argIndex = 1;
+        for (EClass<?> param : params) {
+            for (EClass<?> pass : superParams) { // Map out the values in this constructor we'll be passing to super.
+                if (param.equals(pass)) {
+                    superParamTypes.add(Type.getType(pass.raw()));
+                    superParamIndexes.add(argIndex);
+                }
+            }
+            argIndex += Type.getType(param.raw()).getSize();
+        }
+
+        writeConstructor(
+                Arrays.stream(params).map(x -> new WrappedType(x, x)).toArray(WrappedType[]::new),
+                superParamTypes.toArray(Type[]::new),
+                superParamIndexes,
+                func
+        );
+    }
+
     @LuaWrapped
     public void createMethod(String methodName, EClass<?>[] params, EClass<?> returnClass, boolean isStatic, LuaFunction func) {
         writeMethod(
@@ -133,17 +162,41 @@ public class ClassBuilder {
         );
     }
 
+    private void writeConstructor(WrappedType[] params, Type[] superParams, List<Integer> superParamIndexes, LuaFunction func) {
+        var paramsType = Arrays.stream(params).map(x -> x.raw).map(EClass::raw).map(Type::getType).toArray(Type[]::new);
+        String desc = Type.getMethodDescriptor(Type.VOID_TYPE, paramsType);
+        String superDesc = Type.getMethodDescriptor(Type.VOID_TYPE, superParams);
+        MethodVisitor methodVisitor = c.visitMethod(ACC_PUBLIC, "<init>", desc, null, null);
+
+        methodVisitor.visitCode();
+
+        var args = Type.getArgumentTypes(superDesc);
+
+        methodVisitor.visitVarInsn(ALOAD, 0);
+        for (int i = 0; i < args.length; i++) {
+            Type arg = args[i];
+            methodVisitor.visitVarInsn(arg.getOpcode(ILOAD), superParamIndexes.get(i));
+        }
+        methodVisitor.visitMethodInsn(INVOKESPECIAL, Type.getInternalName(superClass.raw()), "<init>", superDesc, false);
+
+        wrapLuaFunction(params, null, Type.VOID_TYPE, desc, func, false, methodVisitor);
+    }
+
     private void writeMethod(String methodName, WrappedType[] params, WrappedType returnClass, int access, LuaFunction func) {
+        var isStatic = (access & ACC_STATIC) != 0;
         var paramsType = Arrays.stream(params).map(x -> x.raw).map(EClass::raw).map(Type::getType).toArray(Type[]::new);
         var returnType = returnClass == null ? Type.VOID_TYPE : Type.getType(returnClass.raw.raw());
-        var isStatic = (access & ACC_STATIC) != 0;
-
         var desc = Type.getMethodDescriptor(returnType, paramsType);
         var m = c.visitMethod(access, methodName, desc, null, null);
-        int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
-        int thisVarOffset = isStatic ? 0 : 1;
 
         m.visitCode();
+
+        wrapLuaFunction(params, returnClass, returnType, desc, func, isStatic, m);
+    }
+
+    private void wrapLuaFunction(WrappedType[] params, WrappedType returnClass, Type returnType, String desc, LuaFunction func, boolean isStatic, MethodVisitor m) {
+        int varPrefix = Type.getArgumentsAndReturnSizes(desc) >> 2;
+        int thisVarOffset = isStatic ? 0 : 1;
 
         if (isStatic) varPrefix -= 1;
 

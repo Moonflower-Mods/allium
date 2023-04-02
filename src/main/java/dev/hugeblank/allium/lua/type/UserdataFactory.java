@@ -24,6 +24,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
@@ -80,8 +81,8 @@ public class UserdataFactory<T> {
             @Override
             public LuaValue call(LuaState state, LuaValue arg) throws LuaError {
                 try {
-                    return TypeCoercions.toLuaValue(clazz.method("toString").invoke(TypeCoercions.toJava(state, arg, clazz)));
-                } catch (InvocationTargetException | IllegalAccessException | InvalidArgumentException e) {
+                    return TypeCoercions.toLuaValue(Objects.requireNonNull(TypeCoercions.toJava(state, arg, clazz)).toString());
+                } catch (InvalidArgumentException e) {
                     throw new LuaError(e);
                 }
             }

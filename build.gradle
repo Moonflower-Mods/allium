@@ -36,7 +36,7 @@ repositories {
 
 	maven {
 		name "Basique's Maven"
-		url "https://www.basique.top/maven"
+		url "https://basique.top/maven"
 	}
 }
 
@@ -44,6 +44,7 @@ dependencies {
 	// To change the versions see the gradle.properties file
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
 	mappings "net.fabricmc:yarn:${project.yarn_mappings}:v2"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api}"
 	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 	modImplementation include("org.squiddev:Cobalt:${project.cobalt}")
 	modImplementation include("net.fabricmc:tiny-mappings-parser:${project.tiny_parser}")
