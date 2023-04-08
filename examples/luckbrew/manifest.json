@@ -1,7 +1,7 @@
 {
-  "id": "temp",
+  "id": "lucky_brew",
   "version": "1.0.0",
-  "name": "TEMP",
+  "name": "Lucky Brew",
   "entrypoints": {
     "mixin":"mixin.lua",
     "static":"main.lua"

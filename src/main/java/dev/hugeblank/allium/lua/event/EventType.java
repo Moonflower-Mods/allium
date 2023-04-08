@@ -5,7 +5,8 @@ import dev.hugeblank.allium.loader.ScriptResource;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.lua.type.annotation.OptionalArg;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @LuaWrapped
 public class EventType<T> {

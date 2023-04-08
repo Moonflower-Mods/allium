@@ -101,19 +101,23 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         injectors.addProperty("defaultRequire", 1);
         config.add("injectors", injectors);
         JsonArray mixins = new JsonArray();
-        MixinClassBuilder.GENERATED_MIXIN_BYTES.forEach((key, value) -> mixins.add(key.substring(0, key.length()-6).replace("allium/mixin/", "")));
+        MixinClassBuilder.MIXINS.forEach((key, value) -> {
+            if (key.matches(".*mixin.*")) {
+                mixins.add(key.substring(0, key.length()-6).replace("allium/mixin/", ""));
+            }
+        });
         config.add("mixins", mixins);
         String configJson = (new Gson()).toJson(config);
-        Map<String, byte[]> mixinConfigMap = new HashMap<>(MixinClassBuilder.GENERATED_MIXIN_BYTES);
-        MixinClassBuilder.cleanup();
+        Map<String, byte[]> mixinConfigMap = new HashMap<>();
+        MixinClassBuilder.MIXINS.forEach((name, info) -> mixinConfigMap.put(name, info.getBytes()));
         mixinConfigMap.put(MIXIN_CONFIG_NAME, configJson.getBytes(StandardCharsets.UTF_8));
         URL mixinUrl = EldritchURLStreamHandler.create("allium-mixin", mixinConfigMap);
 
         // Stuff those files into class loader
         ClassLoader loader = AlliumPreLaunch.class.getClassLoader();
         Method addUrlMethod = null;
-        for (Method method : loader.getClass().getDeclaredMethods()) {
-            if (method.getReturnType() == Void.TYPE && method.getParameterCount() == 1 && method.getParameterTypes()[0] == URL.class) {
+        for (Method method : loader.getClass().getMethods()) {
+            if (method.getName().equals("addUrlFwd")) {
                 addUrlMethod = method;
                 break;
             }

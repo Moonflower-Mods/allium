@@ -1,7 +1,7 @@
 package dev.hugeblank.allium.lua.event;
 
-import me.basiqueevangelist.enhancedreflection.api.EClass;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import me.basiqueevangelist.enhancedreflection.api.EClass;
 import net.minecraft.util.Identifier;
 
 import java.lang.reflect.InvocationHandler;

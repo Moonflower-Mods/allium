@@ -4,10 +4,7 @@ import dev.hugeblank.allium.lua.type.annotation.OptionalArg;
 import me.basiqueevangelist.enhancedreflection.api.EParameter;
 import dev.hugeblank.allium.lua.type.annotation.LuaArgs;
 import dev.hugeblank.allium.lua.type.annotation.LuaStateArg;
-import org.squiddev.cobalt.LuaError;
-import org.squiddev.cobalt.LuaState;
-import org.squiddev.cobalt.LuaTable;
-import org.squiddev.cobalt.Varargs;
+import org.squiddev.cobalt.*;
 
 import java.util.List;
 

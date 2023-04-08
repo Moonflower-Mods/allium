@@ -1,3 +1,5 @@
+-- don't mind this! templating a documentation scheme.
+
 --- A block is a voxel in a {@linkplain World world}. {@link AbstractBlock},
 -- this class, and its subclasses define all logic for those voxels.
 --

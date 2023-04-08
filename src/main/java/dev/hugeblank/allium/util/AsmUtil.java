@@ -7,6 +7,7 @@ import org.objectweb.asm.util.CheckClassAdapter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.objectweb.asm.Opcodes.*;
@@ -22,7 +23,7 @@ public class AsmUtil {
         return "allium/mixin/GeneratedClass_" + NEXT_CLASS_ID.incrementAndGet();
     }
 
-    public static Class<?> defineClass(String name, byte[] bytes) {
+    public static void dumpClass(String name, byte[] bytes) {
         if (Allium.DEVELOPMENT) {
             Path classPath = Allium.DUMP_DIRECTORY.resolve(name + ".class");
 
@@ -32,12 +33,53 @@ public class AsmUtil {
             } catch (IOException e) {
                 throw new RuntimeException("Couldn't dump class", e);
             }
-
-            ClassReader cr = new ClassReader(bytes);
-            cr.accept(new CheckClassAdapter(new ClassVisitor(Opcodes.ASM9) { }), 0);
         }
+    }
+
+    public static Class<?> loadClass(String name, byte[] bytes) {
+        ClassReader cr = new ClassReader(bytes);
+        cr.accept(new CheckClassAdapter(new ClassVisitor(Opcodes.ASM9) { }), 0);
 
         return DefiningClassLoader.INSTANCE.defineClass(name.replace('/', '.'), bytes);
+    }
+
+    public static Class<?> defineClass(String name, byte[] bytes) {
+        dumpClass(name, bytes);
+        return loadClass(name, bytes);
+    }
+
+    public static void createArray(MethodVisitor mv, int varIndex, List<Type> args, Class<?> type, ArrayVisitor arrayVisitor) {
+        mv.visitLdcInsn(args.size()); // <- 0
+        mv.visitTypeInsn(ANEWARRAY, Type.getInternalName(type)); // <- 0 | -> 0;
+        mv.visitVarInsn(ASTORE, varIndex); // -> 0
+
+        int argIndex = 0;
+        for (int i = 0; i < args.size(); i++) {
+            Type arg = args.get(i);
+            mv.visitVarInsn(ALOAD, varIndex); // <- 0
+            mv.visitLdcInsn(i); // <- 1
+            arrayVisitor.visit(mv, argIndex, arg); // pray.
+            mv.visitInsn(AASTORE); // -> 0, 1, 2
+            argIndex += arg.getSize();
+        }
+
+        mv.visitVarInsn(ALOAD, varIndex);
+    }
+
+    public static Runnable visitObjectDefinition(MethodVisitor visitor, String internalName, String descriptor) {
+        visitor.visitTypeInsn(NEW, internalName);
+        visitor.visitInsn(DUP);
+        return () -> visitor.visitMethodInsn(
+                INVOKESPECIAL,
+                internalName,
+                "<init>",
+                descriptor,
+                false
+        );
+    }
+
+    public interface ArrayVisitor {
+        void visit(MethodVisitor visitor, int index, Type arg);
     }
 
     private static class DefiningClassLoader extends ClassLoader {
@@ -71,6 +113,29 @@ public class AsmUtil {
             case Type.DOUBLE
                 -> m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Double.class), "valueOf", "(D)Ljava/lang/Double;", false);
         }
+    }
+
+    public static String getWrappedTypeName(Type type) {
+        return switch (type.getSort()) {
+            case Type.BOOLEAN
+                    -> Type.getType(Boolean.class).getClassName();
+            case Type.CHAR
+                    -> Type.getType(Character.class).getClassName();
+            case Type.BYTE
+                    -> Type.getType(Byte.class).getClassName();
+            case Type.SHORT
+                    -> Type.getType(Short.class).getClassName();
+            case Type.INT
+                    -> Type.getType(Integer.class).getClassName();
+            case Type.FLOAT
+                    -> Type.getType(Float.class).getClassName();
+            case Type.LONG
+                    -> Type.getType(Long.class).getClassName();
+            case Type.DOUBLE
+                    -> Type.getType(Double.class).getClassName();
+            default
+                    -> type.getClassName();
+        };
     }
 
     public static void unwrapPrimitive(MethodVisitor m, Type type) {

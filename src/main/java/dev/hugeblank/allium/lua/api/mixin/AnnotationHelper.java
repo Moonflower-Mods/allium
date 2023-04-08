@@ -15,7 +15,8 @@ import org.squiddev.cobalt.LuaValue;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
-public class AnnotationHelpers {
+// A masterpiece
+public class AnnotationHelper {
 
     private static void annotate(LuaState state, LuaValue value, AnnotationVisitor visitor, EClass<?> clazz) throws LuaError, InvalidArgumentException {
         LuaTable table = value.checkTable();
@@ -41,7 +42,7 @@ public class AnnotationHelpers {
 
     private static void annotateArray(LuaState state, AnnotationVisitor visitor, String name, LuaValue nextValue, EClass<?> returnType) throws LuaError, InvalidArgumentException {
         AnnotationVisitor array = visitor.visitArray(name);
-        if (nextValue.isString()) {
+        if (nextValue.isString() || (nextValue.isTable() && nextValue.checkTable().length() == 0)) {
             visitValue(state, nextValue, array, returnType.arrayComponent(), null);
         } else {
             LuaTable nextTable = nextValue.checkTable();

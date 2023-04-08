@@ -2,9 +2,9 @@ package dev.hugeblank.allium.lua.api.mixin;
 
 import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.lua.api.WrappedLuaLibrary;
-import dev.hugeblank.allium.lua.type.annotation.LuaStateArg;
+import dev.hugeblank.allium.lua.event.MixinEventType;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
-import org.squiddev.cobalt.LuaState;
+import net.minecraft.util.Identifier;
 
 import java.io.IOException;
 
@@ -17,12 +17,17 @@ public class MixinLib implements WrappedLuaLibrary {
     }
 
     @LuaWrapped
-    public MixinClassBuilder asClass(String targetClass, @LuaStateArg LuaState state) throws IOException {
-        return new MixinClassBuilder(targetClass, script, false, state);
+    public static MixinEventType get(Identifier eventId) {
+        return MixinEventType.EVENT_MAP.get(eventId);
     }
 
     @LuaWrapped
-    public MixinClassBuilder asInterface(String targetClass, @LuaStateArg LuaState state) throws IOException {
-        return new MixinClassBuilder(targetClass, script, true, state);
+    public MixinClassBuilder asClass(String targetClass) throws IOException {
+        return new MixinClassBuilder(targetClass, false, script);
+    }
+
+    @LuaWrapped
+    public MixinClassBuilder asInterface(String targetClass) throws IOException {
+        return new MixinClassBuilder(targetClass, true, script);
     }
 }

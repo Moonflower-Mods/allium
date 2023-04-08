@@ -91,6 +91,11 @@ public class JavaLib implements WrappedLuaLibrary {
         throw new LuaError(error.toString());
     }
 
+    @LuaWrapped(name = "instanceof")
+    public static boolean instanceOf(Object obj, EClass<?> clazz) {
+        return clazz.isInstance(obj);
+    }
+
     // TODO: merge this with the Lua string library (maybe?)
     @LuaWrapped
     public static String[] split(String strToSplit, String delimiter) {
