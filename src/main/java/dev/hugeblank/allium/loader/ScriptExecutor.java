@@ -81,7 +81,7 @@ public class ScriptExecutor {
 
         Entrypoint entrypoints = script.getManifest().entrypoints();
         state.setupThread(new LuaTable());
-        if (entrypoints.hasMixin()) {
+        if (entrypoints.hasPreLaunch()) {
             LuaThread.runMain(state, this.load(mMain, script.getId()));
         }
     }
@@ -101,13 +101,13 @@ public class ScriptExecutor {
         Entrypoint entrypoints = script.getManifest().entrypoints();
         LuaFunction staticFunction;
         LuaFunction dynamicFunction;
-        if (entrypoints.hasStatic() && entrypoints.hasDynamic()) {
+        if (entrypoints.hasMain() && entrypoints.hasDynamic()) {
             staticFunction = this.load(sMain, script.getId());
             dynamicFunction = this.load(dMain, script.getId());
             Varargs out = LuaThread.runMain(state, staticFunction);
             LuaThread.runMain(state, dynamicFunction);
             return out;
-        } else if (entrypoints.hasStatic()) {
+        } else if (entrypoints.hasMain()) {
             staticFunction = this.load(sMain, script.getId());
             return LuaThread.runMain(state, staticFunction);
         } else if (entrypoints.hasDynamic()) {
@@ -115,7 +115,7 @@ public class ScriptExecutor {
             return LuaThread.runMain(state, dynamicFunction);
         }
         // This should be caught sooner, but who knows maybe a dev (hugeblank) will come along and mess something up
-        throw new Exception("Expected either static or dynamic entrypoint, got none");
+        throw new Exception("Expected either main or dynamic entrypoint, got none");
     }
 
     public Varargs reload(InputStream dynamic) throws LuaError, InterruptedException, CompileException, IOException {

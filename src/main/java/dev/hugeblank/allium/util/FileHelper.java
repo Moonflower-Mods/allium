@@ -139,7 +139,7 @@ public class FileHelper {
     private static Script scriptFromContainer( Manifest man, ModContainer container) {
         final Script[] out = new Script[1];
         container.getRootPaths().forEach((path) -> {
-            if (path.resolve(man.entrypoints().getStatic()).toFile().exists()) {
+            if (path.resolve(man.entrypoints().getMain()).toFile().exists()) {
                 // This has an incidental safeguard in the event that if multiple root paths have the same script
                 // the most recent script loaded will just *overwrite* previous ones.
                 out[0] = new Script(man, path);

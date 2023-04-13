@@ -115,14 +115,14 @@ public class Script {
         AlliumResourcePack.drop(this);
     }
 
-    public void preInitialize() {
+    public void preLaunch() {
         if (isPreInitialized()) return;
         try {
             Entrypoint entrypoints = getManifest().entrypoints();
-            InputStream mixinEntrypoint = entrypoints.hasMixin() ?
-                    Files.newInputStream(path.resolve(entrypoints.getMixin())) :
+            InputStream preLaunchEntrypoint = entrypoints.hasPreLaunch() ?
+                    Files.newInputStream(path.resolve(entrypoints.getPreLaunch())) :
                     null;
-            getExecutor().preInitialize(mixinEntrypoint);
+            getExecutor().preInitialize(preLaunchEntrypoint);
             this.preInitialized = true;
         } catch (Throwable e) {
             getLogger().error("Could not pre-initialize allium script " + getId(), e);
@@ -134,14 +134,14 @@ public class Script {
         try {
             Entrypoint entrypoints = getManifest().entrypoints();
             // Create InputStreams for each entrypoint, if it exists
-            InputStream staticEntrypoint = entrypoints.hasStatic() ?
-                    Files.newInputStream(path.resolve(entrypoints.getStatic())) :
+            InputStream mainEntryPoint = entrypoints.hasMain() ?
+                    Files.newInputStream(path.resolve(entrypoints.getMain())) :
                     null;
             InputStream dynamicEntrypoint = entrypoints.hasDynamic() ?
                     Files.newInputStream(path.resolve(entrypoints.getDynamic())) :
                     null;
             // Initialize and set module used by require
-            this.module = getExecutor().initialize(staticEntrypoint, dynamicEntrypoint).arg(1);
+            this.module = getExecutor().initialize(mainEntryPoint, dynamicEntrypoint).arg(1);
             this.initialized = true; // If all these steps are successful, we can set initialized to true
         } catch (Throwable e) {
             getLogger().error("Could not initialize allium script " + getId(), e);

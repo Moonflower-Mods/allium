@@ -1,4 +1,4 @@
-package dev.hugeblank.allium.util;
+package dev.hugeblank.allium.util.asm;
 
 import com.mojang.datafixers.util.Pair;
 import org.objectweb.asm.ClassVisitor;

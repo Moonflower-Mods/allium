@@ -1,6 +1,8 @@
 package dev.hugeblank.allium.lua.type;
 
+import dev.hugeblank.allium.Allium;
 import dev.hugeblank.allium.lua.type.annotation.OptionalArg;
+import dev.hugeblank.allium.util.Mappings;
 import me.basiqueevangelist.enhancedreflection.api.EParameter;
 import dev.hugeblank.allium.lua.type.annotation.LuaArgs;
 import dev.hugeblank.allium.lua.type.annotation.LuaStateArg;
@@ -85,7 +87,7 @@ public class ArgumentUtils {
                     optionalsStarted = true;
                 }
 
-                sb.append(param);
+                sb.append(Allium.DEVELOPMENT ? param : Allium.MAPPINGS.getYarn(Mappings.asClass(param.rawParameterType())));
             }
 
         }

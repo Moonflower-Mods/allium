@@ -1,5 +1,7 @@
 package dev.hugeblank.allium.lua.type;
 
+import dev.hugeblank.allium.Allium;
+import dev.hugeblank.allium.util.Mappings;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
@@ -31,8 +33,9 @@ public final class UDFFunctions<T> extends VarArgFunction {
     @Override
     public Varargs invoke(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
         List<String> paramList = new ArrayList<>(); // String for displaying errors more smartly
+        String className = Allium.DEVELOPMENT ? clazz.name() : Allium.MAPPINGS.getYarn(Mappings.asClass(clazz));
         StringBuilder error = new StringBuilder("Could not find parameter match for called function \"" +
-            name + "\" for \"" + clazz.name() + "\"" +
+            name + "\" for \"" + className + "\"" +
             "\nThe following are correct argument types:\n"
         );
 

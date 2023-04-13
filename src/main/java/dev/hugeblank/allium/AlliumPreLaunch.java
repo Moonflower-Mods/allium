@@ -8,6 +8,7 @@ import dev.hugeblank.allium.lua.api.mixin.MixinClassBuilder;
 import dev.hugeblank.allium.util.EldritchURLStreamHandler;
 import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.YarnLoader;
+import dev.hugeblank.allium.util.asm.VisitedClass;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.entrypoint.PreLaunchEntrypoint;
 import org.spongepowered.asm.mixin.Mixins;
@@ -89,7 +90,7 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         Allium.CANDIDATES.addAll(FileHelper.getValidModScripts());
         list(new StringBuilder("Found: "), (script) -> true);
 
-        Allium.CANDIDATES.forEach(Script::preInitialize);
+        Allium.CANDIDATES.forEach(Script::preLaunch);
         list(new StringBuilder("Pre-initialized: "), Script::isPreInitialized);
 
         // Create a new mixin config
@@ -134,6 +135,7 @@ public class AlliumPreLaunch implements PreLaunchEntrypoint {
         }
 
         Mixins.addConfiguration(MIXIN_CONFIG_NAME);
+        VisitedClass.clear();
         complete = true;
     }
 }

@@ -207,7 +207,7 @@ public class JavaLib implements WrappedLuaLibrary {
                 var clazz = EClass.fromJava(Class.forName(cachedClassName));
                 CACHED_AUTO_COMPLETE.put(className, cachedClassName);
                 return clazz;
-            } catch (ClassNotFoundException e1) {
+            } catch (ClassNotFoundException ignored) {
 
             }
 
@@ -216,8 +216,28 @@ public class JavaLib implements WrappedLuaLibrary {
                 var clazz = EClass.fromJava(Class.forName(cachedClassName));
                 CACHED_AUTO_COMPLETE.put(className, cachedClassName);
                 return clazz;
-            } catch (ClassNotFoundException e) {
+            } catch (ClassNotFoundException ignored) {
 
+            }
+        }
+
+        throw new LuaError("Couldn't find class \"" + className + "\"");
+
+    }
+
+    @LuaWrapped
+    public static String getRawClassName(String className) throws LuaError {
+        var cachedClassName = CACHED_AUTO_COMPLETE.get(className);
+
+        if (cachedClassName != null) {
+            return cachedClassName;
+        }
+
+        for (var auto : AUTO_COMPLETE) {
+            cachedClassName = Allium.MAPPINGS.getIntermediary(auto + className).get(0);
+            if (cachedClassName != null) {
+                CACHED_AUTO_COMPLETE.put(className, cachedClassName);
+                return cachedClassName;
             }
         }
 

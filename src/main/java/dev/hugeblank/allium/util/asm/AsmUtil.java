@@ -1,4 +1,4 @@
-package dev.hugeblank.allium.util;
+package dev.hugeblank.allium.util.asm;
 
 import dev.hugeblank.allium.Allium;
 import org.objectweb.asm.*;
@@ -12,15 +12,17 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.objectweb.asm.Opcodes.*;
 
+// The goofiest class to exist in all of Allium.
 public class AsmUtil {
     private static final AtomicInteger NEXT_CLASS_ID = new AtomicInteger();
+    private static final AtomicInteger NEXT_MIXIN_ID = new AtomicInteger();
     public static final Handle LAMBDA_METAFACTORY = new Handle(H_INVOKESTATIC, "java/lang/invoke/LambdaMetafactory", "metafactory", "(Ljava/lang/invoke/MethodHandles$Lookup;Ljava/lang/String;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodType;Ljava/lang/invoke/MethodHandle;Ljava/lang/invoke/MethodType;)Ljava/lang/invoke/CallSite;", false);
 
     public static String getUniqueClassName() {
         return "allium/GeneratedClass_" + NEXT_CLASS_ID.incrementAndGet();
     }
     public static String getUniqueMixinClassName() {
-        return "allium/mixin/GeneratedClass_" + NEXT_CLASS_ID.incrementAndGet();
+        return "allium/mixin/GeneratedClass_" + NEXT_MIXIN_ID.incrementAndGet();
     }
 
     public static void dumpClass(String name, byte[] bytes) {
@@ -66,6 +68,10 @@ public class AsmUtil {
         mv.visitVarInsn(ALOAD, varIndex);
     }
 
+    public interface ArrayVisitor {
+        void visit(MethodVisitor visitor, int index, Type arg);
+    }
+
     public static Runnable visitObjectDefinition(MethodVisitor visitor, String internalName, String descriptor) {
         visitor.visitTypeInsn(NEW, internalName);
         visitor.visitInsn(DUP);
@@ -78,8 +84,18 @@ public class AsmUtil {
         );
     }
 
-    public interface ArrayVisitor {
-        void visit(MethodVisitor visitor, int index, Type arg);
+    public static String mapType(Type type) {
+        StringBuilder builder = new StringBuilder();
+        while (type.getSort() == Type.ARRAY) {
+            builder.append("[");
+            type = type.getElementType();
+        }
+        if (type.getSort() == Type.OBJECT) {
+            builder.append("L").append(Allium.MAPPINGS.getYarn(type.getInternalName())).append(";");
+        } else {
+            builder.append(type.getDescriptor());
+        }
+        return builder.toString();
     }
 
     private static class DefiningClassLoader extends ClassLoader {
