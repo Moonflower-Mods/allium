@@ -24,7 +24,7 @@ Allium's logos are under the same license as the rest of the project. Feel free 
 Since 2018 a project under the name Allium has existed. This is being addressed to suppress the Mandela Effect.
 
 ### Isn't Allium for ComputerCraft?
-Allium for CC has been moved to [allium-cc](https://github.com/hugeblank/allium-cc). This project took it's original repository location due to it being a far more useful successor to the CC variant.
+Allium for CC has been moved to [allium-cc](https://github.com/hugeblank/allium-cc). This project took its original repository location due to it being a far more useful successor to the CC variant.
 
 ### Isn't Allium a peripheral mod for ComputerCraft?
 That's Allium Peripherals. You can check it out [here](https://github.com/hugeblank/allium-peripherals).
