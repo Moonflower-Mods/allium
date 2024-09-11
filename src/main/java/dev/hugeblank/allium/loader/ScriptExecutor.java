@@ -1,6 +1,7 @@
 package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
+import dev.hugeblank.allium.loader.lib.Package;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -54,9 +55,9 @@ public class ScriptExecutor {
 //        globals.load( state, new RecipeLib() );
 
         // Package library, kinda quirky.
-//        PackageLib pkg = new PackageLib(script, state);
-//        globals.rawset( "package" , pkg.create() );
-//        globals.rawset( "require", new PackageLib.Require(pkg) );
+        Package pkg = new Package(script, state);
+        globals.rawset( "package" , pkg.getPackage() );
+        globals.rawset( "require", pkg.getRequire() );
         globals.rawset( "module", Constants.NIL ); // TODO: module call
 
         // Remove globals we don't want to expose
