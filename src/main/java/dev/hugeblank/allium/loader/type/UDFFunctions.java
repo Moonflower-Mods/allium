@@ -45,7 +45,8 @@ public final class UDFFunctions<T> extends VarArgFunction {
                     if (jargs.length == parameters.size()) { // Found a match!
                         try { // Get the return type, invoke method, cast returned value, cry.
                             EClassUse<?> ret = method.returnTypeUse().upperBound();
-                            method.raw().setAccessible(true); // TODO: Is this a good idea?
+                            // Some public methods are "inaccessible" despite being public. setAccessible coerces that.
+                            method.raw().setAccessible(true);
                             Object out = method.invoke(instance, jargs);
                             if (ret.type().raw() == Varargs.class)
                                 return (Varargs) out;
