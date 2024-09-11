@@ -11,18 +11,12 @@
 // See LICENSE for more information
 package dev.hugeblank.allium;
 
-import dev.hugeblank.allium.util.YarnLoader;
 import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.Mappings;
-import dev.hugeblank.allium.util.docs.Generator;
+import dev.hugeblank.allium.util.YarnLoader;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.SharedConstants;
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.server.MinecraftServer;
-import net.minecraft.util.Identifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -32,9 +26,7 @@ import java.nio.file.FileVisitor;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.attribute.BasicFileAttributes;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
 
@@ -42,22 +34,14 @@ public class Allium implements ModInitializer {
 
     public static final String ID = "allium";
     public static final Logger LOGGER = LoggerFactory.getLogger(ID);
-    public static final Map<Identifier, Block> BLOCKS = new HashMap<>();
-    public static final Map<Identifier, Item> ITEMS = new HashMap<>();
     public static final boolean DEVELOPMENT = FabricLoader.getInstance().isDevelopmentEnvironment();
-    public static MinecraftServer SERVER;
     public static Mappings MAPPINGS;
     public static Set<Script> CANDIDATES = new HashSet<>();
     public static final Path DUMP_DIRECTORY = FabricLoader.getInstance().getGameDir().resolve("allium-dump");
     public static final String VERSION = FabricLoader.getInstance().getModContainer("allium").orElseThrow().getMetadata().getVersion().getFriendlyString();
 
-    private static final boolean GEN_DOCS = false;
-
     @Override
     public void onInitialize() {
-        if (GEN_DOCS) {
-            Generator.generate(SharedConstants.class, Allium.class);
-        }
         if (DEVELOPMENT) {
             try {
                 if (Files.isDirectory(DUMP_DIRECTORY))
@@ -101,10 +85,10 @@ public class Allium implements ModInitializer {
 
         LOGGER.info("Loading Scripts");
 
-        if (DEVELOPMENT) CANDIDATES.addAll(FileHelper.getValidDirScripts(
-                // Load example scripts if in development environment
-                FabricLoader.getInstance().getGameDir().resolve("../examples")
-        ));
+//        if (DEVELOPMENT) CANDIDATES.addAll(FileHelper.getValidDirScripts(
+//                // Load example scripts if in development environment
+//                FabricLoader.getInstance().getGameDir().resolve("../examples")
+//        ));
         CANDIDATES.addAll(FileHelper.getValidDirScripts(FileHelper.getScriptsDirectory()));
         CANDIDATES.addAll(FileHelper.getValidModScripts());
         list(new StringBuilder("Found: "), (script) -> true);

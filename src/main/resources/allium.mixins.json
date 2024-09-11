@@ -3,32 +3,8 @@
   "minVersion": "0.8",
   "package": "dev.hugeblank.allium.mixin",
   "compatibilityLevel": "JAVA_17",
-  "plugin": "dev.hugeblank.allium.mixin.AlliumMixinPlugin",
   "injectors": {
     "defaultRequire": 1
   },
-  "mixins": [
-    "MinecraftServerMixin",
-    "PlayerManagerMixin",
-    "block.AbstractBlockMixin",
-    "command.CommandManagerMixin",
-    "command.ReloadCommandMixin",
-    "command.argument.ArgumentTypesMixin",
-    "entity.EntityMixin",
-    "entity.ServerPlayerEntityMixin",
-    "network.ServerPlayerEntityMixin",
-    "network.ServerPlayNetworkHandlerMixin",
-    "recipe.AbstractCookingRecipeMixin",
-    "recipe.CuttingRecipeMixin",
-    "recipe.RecipeManagerMixin",
-    "recipe.ShapedRecipeMixin",
-    "recipe.ShapelessRecipeMixin",
-    "recipe.SmithingRecipeMixin",
-    "recipe.fabric.RecipeManagerMixin",
-    "resource.ResourcePackManagerMixin"
-  ],
-  "client": [
-    "client.gui.hud.InGameHudMixin",
-    "entity.ClientPlayerEntityMixin"
-  ]
+  "mixins": []
 }

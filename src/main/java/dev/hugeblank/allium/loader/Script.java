@@ -1,8 +1,7 @@
 package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
-import dev.hugeblank.allium.lua.api.resources.AlliumResourcePack;
-import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
+import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.squiddev.cobalt.LuaError;
@@ -44,13 +43,13 @@ public class Script {
             if (SCRIPTS.containsKey(manifest.id()))
                 throw new Exception("Script with ID is already loaded!");
             SCRIPTS.put(manifest.id(), this);
-            AlliumResourcePack.register(this);
         } catch (Exception e) {
             getLogger().error("Could not load allium script " + getId(), e);
             unload();
         }
     }
 
+    // TODO: Move to Allium API
     public void reload() {
         destroyAllResources();
 
@@ -116,7 +115,6 @@ public class Script {
         SCRIPTS.remove(manifest.name(), this);
         destroyAllResources();
         this.executor.getState().abandon();
-        AlliumResourcePack.drop(this);
     }
 
     public void initialize() {

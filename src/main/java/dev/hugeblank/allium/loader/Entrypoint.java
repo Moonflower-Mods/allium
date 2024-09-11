@@ -9,9 +9,9 @@ import com.google.gson.annotations.SerializedName;
 public class Entrypoint {
 
     @SerializedName("static")
-    private String eStatic;
+    private final String eStatic;
     @SerializedName("dynamic")
-    private String eDynamic;
+    private final String eDynamic;
     @Expose(deserialize = false)
     private final Type type;
 

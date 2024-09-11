@@ -1,14 +1,6 @@
 package dev.hugeblank.allium.loader;
 
-import dev.hugeblank.allium.lua.api.*;
-import dev.hugeblank.allium.lua.api.PackageLib;
-import me.basiqueevangelist.enhancedreflection.api.EClass;
 import dev.hugeblank.allium.Allium;
-import dev.hugeblank.allium.lua.api.commands.CommandLib;
-import dev.hugeblank.allium.lua.api.commands.CommandsLib;
-import dev.hugeblank.allium.lua.api.http.HttpLib;
-import dev.hugeblank.allium.lua.api.recipe.RecipeLib;
-import dev.hugeblank.allium.lua.type.TypeCoercions;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -45,26 +37,26 @@ public class ScriptExecutor {
         globals.load( state, new DebugLib() );
 
         // Custom globals
-        globals.load( state, new AlliumLib() );
-        globals.load( state, new GameLib() );
-        globals.load( state, new JavaLib() );
-        globals.load( state, new TextLib() );
-        globals.load( state, new NbtLib() );
-        globals.load( state, new CommandLib(script) );
-        globals.load( state, new CommandsLib(script) );
-        globals.rawset( "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)) );
-        globals.load( state, new DefaultEventsLib() );
-        globals.load( state, new FabricLib() );
-        globals.load( state, new ConfigLib(script) );
-        globals.load( state, new FsLib(script) );
-        globals.load( state, new HttpLib() );
-        globals.load( state, new JsonLib() );
-        globals.load( state, new RecipeLib() );
+//        globals.load( state, new AlliumLib() );
+//        globals.load( state, new GameLib() );
+//        globals.load( state, new JavaLib() );
+//        globals.load( state, new TextLib() );
+//        globals.load( state, new NbtLib() );
+//        globals.load( state, new CommandLib(script) );
+//        globals.load( state, new CommandsLib(script) );
+//        globals.rawset( "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)) );
+//        globals.load( state, new DefaultEventsLib() );
+//        globals.load( state, new FabricLib() );
+//        globals.load( state, new ConfigLib(script) );
+//        globals.load( state, new FsLib(script) );
+//        globals.load( state, new HttpLib() );
+//        globals.load( state, new JsonLib() );
+//        globals.load( state, new RecipeLib() );
 
         // Package library, kinda quirky.
-        PackageLib pkg = new PackageLib(script, state);
-        globals.rawset( "package" , pkg.create() );
-        globals.rawset( "require", new PackageLib.Require(pkg) );
+//        PackageLib pkg = new PackageLib(script, state);
+//        globals.rawset( "package" , pkg.create() );
+//        globals.rawset( "require", new PackageLib.Require(pkg) );
         globals.rawset( "module", Constants.NIL ); // TODO: module call
 
         // Remove globals we don't want to expose
