@@ -1,7 +1,7 @@
 package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
-import dev.hugeblank.allium.loader.resources.AlliumResourcePack;
+import dev.hugeblank.allium.lua.api.resources.AlliumResourcePack;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

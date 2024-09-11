@@ -15,7 +15,7 @@
  */
 
 // Heavily stripped/modified version of FabricAPI's AlliumResourcePack
-package dev.hugeblank.allium.loader.resources;
+package dev.hugeblank.allium.lua.api.resources;
 
 import dev.hugeblank.allium.loader.Script;
 import net.minecraft.resource.AbstractFileResourcePack;
@@ -215,7 +215,7 @@ public class AlliumResourcePack extends AbstractFileResourcePack {
                     }
                 });
             } catch (IOException e) {
-                LOGGER.warn("findResources at " + path + " in namespace " + namespace + ", script " + basePath.getKey().getId() + " failed!", e);
+                LOGGER.warn("findResources at {} in namespace {}, script {} failed!", path, namespace, basePath.getKey().getId(), e);
             }
         }
 

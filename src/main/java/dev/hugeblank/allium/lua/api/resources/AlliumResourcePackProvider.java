@@ -1,4 +1,4 @@
-package dev.hugeblank.allium.loader.resources;
+package dev.hugeblank.allium.lua.api.resources;
 
 import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.resource.ResourcePackProvider;

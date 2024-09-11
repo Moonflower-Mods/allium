@@ -63,6 +63,7 @@ public class FsLib implements WrappedLuaLibrary {
         LuaTable out = new LuaTable();
         try {
             int i = 1;
+            //noinspection resource
             for (Path p : Files.list(contents).toList()) {
                 out.rawset(i++, ValueFactory.valueOf(String.valueOf(p.getFileName())));
             }
@@ -152,6 +153,7 @@ public class FsLib implements WrappedLuaLibrary {
             Files.delete(path);
         } catch (DirectoryNotEmptyException e) {
             try {
+                //noinspection resource
                 Stream<Path> list = Files.list(path);
                 for (Path p : list.toList()) {
                     deleteInternal(p);
@@ -212,6 +214,7 @@ public class FsLib implements WrappedLuaLibrary {
             }
             String route = routes[0];
             String expr = route.replace("*", "(|.*)");
+            //noinspection resource
             Stream<Path> list = Files.list(base);
             for (Path path : list.toList()) {
                 if (path.getFileName().toString().matches(expr))

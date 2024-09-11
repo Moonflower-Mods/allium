@@ -1,6 +1,6 @@
 package dev.hugeblank.allium.mixin.resource;
 
-import dev.hugeblank.allium.loader.resources.AlliumResourcePackProvider;
+import dev.hugeblank.allium.lua.api.resources.AlliumResourcePackProvider;
 import net.minecraft.resource.ResourcePackManager;
 import net.minecraft.resource.ResourcePackProfile;
 import net.minecraft.resource.ResourcePackProvider;
