@@ -84,7 +84,7 @@ public class Allium implements ModInitializer {
         MAPPINGS = YarnLoader.init();
 
         LOGGER.info("Loading Scripts");
-
+        // TODO: Reintroduce in a way that makes sense with the API
 //        if (DEVELOPMENT) CANDIDATES.addAll(FileHelper.getValidDirScripts(
 //                // Load example scripts if in development environment
 //                FabricLoader.getInstance().getGameDir().resolve("../examples")
