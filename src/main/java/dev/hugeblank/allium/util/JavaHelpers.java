@@ -8,35 +8,17 @@ import org.squiddev.cobalt.LuaValue;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 public class JavaHelpers {
-    private static final String[] AUTO_COMPLETE = new String[]{
-            "",
-            "java.util.",
-            "java.lang.",
-            "net.minecraft.",
-            "net.minecraft.item.",
-            "net.minecraft.block.",
-            "net.minecraft.entity.",
-            "net.minecraft.entity.player.",
-            "net.minecraft.inventory.",
-            "net.minecraft.nbt.",
-            "net.minecraft.potion.",
-            "net.minecraft.sound.",
-            "net.minecraft.text.",
-            "net.minecraft.tag.",
-            "net.minecraft.village.",
-            "net.minecraft.world.",
-            "net.minecraft.util.",
-            "net.minecraft.util.registry.",
-            "net.minecraft.server.",
-            "net.minecraft.server.command.",
-            "net.minecraft.server.world.",
-            "net.minecraft.server.network.",
-            "com.mojang."
-    };
+    private static final Set<String> AUTO_COMPLETE = Set.of("", "java.util", "java.lang");
 
     private static final Map<String, String> CACHED_AUTO_COMPLETE = new HashMap<>();
+
+    public static void addAutoComplete(String prefix) {
+        //noinspection DataFlowIssue
+        AUTO_COMPLETE.add(prefix);
+    }
 
     public static EClass<?> getRawClass(String className) throws LuaError {
         var cachedClassName = CACHED_AUTO_COMPLETE.get(className);
@@ -44,7 +26,7 @@ public class JavaHelpers {
         if (cachedClassName != null) {
             try {
                 return EClass.fromJava(Class.forName(cachedClassName));
-            } catch (ClassNotFoundException e1) {
+            } catch (ClassNotFoundException ignored) {
 
             }
         }
@@ -55,7 +37,7 @@ public class JavaHelpers {
                 var clazz = EClass.fromJava(Class.forName(cachedClassName));
                 CACHED_AUTO_COMPLETE.put(className, cachedClassName);
                 return clazz;
-            } catch (ClassNotFoundException e1) {
+            } catch (ClassNotFoundException ignored) {
 
             }
 
@@ -64,7 +46,7 @@ public class JavaHelpers {
                 var clazz = EClass.fromJava(Class.forName(cachedClassName));
                 CACHED_AUTO_COMPLETE.put(className, cachedClassName);
                 return clazz;
-            } catch (ClassNotFoundException e) {
+            } catch (ClassNotFoundException ignored) {
 
             }
         }
