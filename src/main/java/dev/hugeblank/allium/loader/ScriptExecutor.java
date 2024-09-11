@@ -1,7 +1,8 @@
 package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
-import dev.hugeblank.allium.loader.lib.Package;
+import dev.hugeblank.allium.loader.type.TypeCoercions;
+import me.basiqueevangelist.enhancedreflection.api.EClass;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -32,7 +33,7 @@ public class ScriptExecutor {
         globals.load( state, new TableLib() );
         globals.load( state, new StringLib() );
         globals.load( state, new MathLib() );
-        // globals.load( state, new CoroutineLib() ); // Not providing this for reasons(tm)
+        globals.load( state, new CoroutineLib() ); // TODO: Is this safe now?
         globals.load( state, new Bit32Lib() );
         globals.load( state, new Utf8Lib() );
         globals.load( state, new DebugLib() );
@@ -45,7 +46,6 @@ public class ScriptExecutor {
 //        globals.load( state, new NbtLib() );
 //        globals.load( state, new CommandLib(script) );
 //        globals.load( state, new CommandsLib(script) );
-//        globals.rawset( "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)) );
 //        globals.load( state, new DefaultEventsLib() );
 //        globals.load( state, new FabricLib() );
 //        globals.load( state, new ConfigLib(script) );
@@ -53,9 +53,10 @@ public class ScriptExecutor {
 //        globals.load( state, new HttpLib() );
 //        globals.load( state, new JsonLib() );
 //        globals.load( state, new RecipeLib() );
+        globals.rawset( "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)) );
 
         // Package library, kinda quirky.
-        Package pkg = new Package(script, state);
+        PackageLib pkg = new PackageLib(script, state);
         globals.rawset( "package" , pkg.getPackage() );
         globals.rawset( "require", pkg.getRequire() );
         globals.rawset( "module", Constants.NIL ); // TODO: module call

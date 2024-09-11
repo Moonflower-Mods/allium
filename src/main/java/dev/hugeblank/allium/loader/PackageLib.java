@@ -1,8 +1,6 @@
-package dev.hugeblank.allium.loader.lib;
+package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
-import dev.hugeblank.allium.loader.Entrypoint;
-import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.loader.type.StaticBinder;
 import dev.hugeblank.allium.util.JavaHelpers;
 import org.squiddev.cobalt.*;
@@ -16,7 +14,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Package {
+public class PackageLib {
     private final LuaTable loaders = new LuaTable();
     private final LuaTable preload = new LuaTable();
     private static final String pathString = "./?.lua;./?/init.lua";
@@ -24,7 +22,7 @@ public class Package {
     private final Require require;
     private final LuaTable packageApi;
 
-    public Package(Script script, LuaState state) {
+    public PackageLib(Script script, LuaState state) {
         this.loaded = state.loadedPackages;
         this.require = new Require(this);
 
@@ -92,9 +90,9 @@ public class Package {
     }
 
     public static class Require extends VarArgFunction {
-        private final Package pkg;
+        private final PackageLib pkg;
 
-        private Require(Package pkg) {
+        private Require(PackageLib pkg) {
             this.pkg = pkg;
         }
 
