@@ -11,7 +11,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(ReloadCommand.class)
 public class ReloadCommandMixin {
-    @Inject(at = @At("HEAD"), method = "method_13530")
+    @Inject(at = @At("HEAD"), method = "method_13530(Lcom/mojang/brigadier/context/CommandContext;)I")
     private static void executes(CommandContext<?> context, CallbackInfoReturnable<Integer> cir) {
         Allium.CANDIDATES.forEach(Script::reload);
     }

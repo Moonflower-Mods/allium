@@ -4,7 +4,6 @@ import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.lua.type.LuaHandle;
 import dev.hugeblank.allium.lua.type.LuaReadHandle;
 import dev.hugeblank.allium.lua.type.LuaWriteHandle;
-import me.hugeblank.allium.lua.type.*;
 import dev.hugeblank.allium.lua.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.lua.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.util.FileHelper;

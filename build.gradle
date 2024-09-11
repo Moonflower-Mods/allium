@@ -34,10 +34,9 @@ repositories {
 		url "https://maven.nucleoid.xyz"
 	}
 
-	// Seems dead?
 	maven {
 		name "Basique's Maven"
-		url "https://basique.top/maven"
+		url "https://basique.top/maven/releases"
 	}
 }
 

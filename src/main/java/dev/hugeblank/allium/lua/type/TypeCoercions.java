@@ -5,7 +5,6 @@ import dev.hugeblank.allium.lua.type.annotation.CoerceToBound;
 import dev.hugeblank.allium.lua.type.annotation.CoerceToNative;
 import me.basiqueevangelist.enhancedreflection.api.*;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
-import me.hugeblank.allium.lua.type.annotation.*;
 import net.minecraft.util.Identifier;
 import org.squiddev.cobalt.*;
 

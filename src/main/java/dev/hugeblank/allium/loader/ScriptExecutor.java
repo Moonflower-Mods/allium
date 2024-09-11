@@ -4,7 +4,6 @@ import dev.hugeblank.allium.lua.api.*;
 import dev.hugeblank.allium.lua.api.PackageLib;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import dev.hugeblank.allium.Allium;
-import me.hugeblank.allium.lua.api.*;
 import dev.hugeblank.allium.lua.api.commands.CommandLib;
 import dev.hugeblank.allium.lua.api.commands.CommandsLib;
 import dev.hugeblank.allium.lua.api.http.HttpLib;
