@@ -27,6 +27,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.stream.Stream;
@@ -78,6 +79,17 @@ public class UserdataFactory<T> {
 
     private LuaTable createMetatable(boolean isBound) {
         LuaTable metatable = new LuaTable();
+
+        metatable.rawset("__tostring", new OneArgFunction() {
+            @Override
+            public LuaValue call(LuaState state, LuaValue arg) throws LuaError {
+                try {
+                    return TypeCoercions.toLuaValue(Objects.requireNonNull(TypeCoercions.toJava(state, arg, clazz)).toString());
+                } catch (InvalidArgumentException e) {
+                    throw new LuaError(e);
+                }
+            }
+        });
 
         metatable.rawset("__pairs", new OneArgFunction() {
             // Technically, pairs is kinda cringe. In order to properly deliver all key-value pairs, we have to parse
@@ -212,7 +224,7 @@ public class UserdataFactory<T> {
                         if (jargs.length == parameters.size()) {
                             try {
                                 var instance = TypeCoercions.toJava(state, arg1, clazz);
-                                Object out = newIndexImpl.invoke(instance, jargs);
+                                newIndexImpl.invoke(instance, jargs);
                                 return Constants.NIL;
                             } catch (IllegalAccessException e) {
                                 throw new LuaError(e);
