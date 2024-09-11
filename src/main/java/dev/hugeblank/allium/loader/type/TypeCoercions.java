@@ -319,7 +319,7 @@ public class TypeCoercions {
         TypeCoercions.registerLuaToJava(Identifier.class, (state, value) -> {
             if (!value.isString()) return null;
 
-            return new Identifier(value.checkString());
+            return Identifier.of(value.checkString());
         });
     }
 

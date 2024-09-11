@@ -3,6 +3,7 @@ package dev.hugeblank.allium.loader;
 import dev.hugeblank.allium.Allium;
 import dev.hugeblank.allium.loader.type.TypeCoercions;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
+import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
@@ -10,7 +11,6 @@ import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
 import org.squiddev.cobalt.lib.*;
 
-import javax.annotation.Nullable;
 import java.io.IOException;
 import java.io.InputStream;
 

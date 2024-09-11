@@ -3,13 +3,13 @@
   "id": "allium",
   "version": "${mod_version}",
 
-  "name": "Allium",
+  "name": "Allium Loader",
   "description": "Lua Script loader for Minecraft",
   "authors": [
     "hugeblank"
   ],
   "contact": {
-    "homepage": "https://allium.hugeblank.me/",
+    "homepage": "https://allium.hugeblank.dev/",
     "sources": "https://github.com/hugeblank/allium"
   },
 
@@ -22,9 +22,7 @@
       "dev.hugeblank.allium.Allium"
     ]
   },
-  "mixins": [
-    "allium.mixins.json"
-  ],
+  "mixins": [],
 
   "depends": {
     "minecraft": ">=1.19",
