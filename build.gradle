@@ -11,7 +11,7 @@ String v = 'v' + project.mod_version
 if ("0" != project.release_candidate) {
 	v += "-rc" + project.release_candidate
 }
-version = v + '+mc' + project.minecraft_version
+version = v
 
 repositories {
 	// Add repositories to retrieve artifacts from in here.
@@ -88,15 +88,22 @@ jar {
 publishing {
 	publications {
 		mavenJava(MavenPublication) {
+			groupId = "dev.hugeblank"
+			artifactId = "allium"
+			version = version
 			from components.java
 		}
 	}
 
 	// See https://docs.gradle.org/current/userguide/publishing_maven.html for information on how to set up publishing.
 	repositories {
-		// Add repositories to publish to here.
-		// Notice: This block does NOT have the same function as the block in the top level.
-		// The repositories here will be used for publishing your artifact, not for
-		// retrieving dependencies.
+		maven {
+			name = "hugeblankRepo"
+			url = "https://maven.hugeblank.dev/releases"
+			credentials(org.gradle.api.credentials.PasswordCredentials)
+			authentication {
+				basic(BasicAuthentication)
+			}
+		}
 	}
 }
