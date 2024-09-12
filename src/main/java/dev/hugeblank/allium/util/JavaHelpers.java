@@ -59,17 +59,22 @@ public class JavaHelpers {
     public static EClass<?> asClass(LuaValue value) throws LuaError {
         if (value.isString()) {
             return getRawClass(value.checkString());
-        } else if (value.isUserdata(EClass.class)) {
-            return value.checkUserdata(EClass.class);
-        } else if (value.isUserdata(Class.class)) {
-            return EClass.fromJava(value.checkUserdata(Class.class));
-        } else if (value.isUserdata()) {
-            return EClass.fromJava(value.checkUserdata().getClass());
-        } else if (value.isTable() && value.checkTable().rawget("allium_java_class") != Constants.NIL) {
-            return value.checkTable().rawget("allium_java_class").checkUserdata(EClass.class);
         } else if (value.isNil()) {
             return null;
+        } else if (value.type() == Constants.TTABLE && value.checkTable().rawget("allium_java_class") != Constants.NIL) {
+            return value.checkTable().rawget("allium_java_class").checkUserdata(EClass.class);
+        } else {
+            try {
+                return value.checkUserdata(EClass.class);
+            } catch (LuaError ignored) {}
+            try {
+                return EClass.fromJava(value.checkUserdata(Class.class));
+            } catch (LuaError ignored) {}
+            try {
+                return EClass.fromJava(value.checkUserdata().getClass());
+            } catch (LuaError ignored) {}
         }
+
 
         throw new LuaError(new ClassNotFoundException());
     }

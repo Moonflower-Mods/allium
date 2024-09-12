@@ -23,7 +23,7 @@ public class PackageLib {
     private final LuaTable packageApi;
 
     public PackageLib(Script script, LuaState state) {
-        this.loaded = state.loadedPackages;
+        this.loaded = new LuaTable();
         this.require = new Require(this);
 
         // When writing a loader in Java, anywhere where a module value can't be determined `null` should be returned.

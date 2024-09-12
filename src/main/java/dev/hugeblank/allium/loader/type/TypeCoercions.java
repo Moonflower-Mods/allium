@@ -50,8 +50,9 @@ public class TypeCoercions {
         if (value.isNil())
             return null;
 
-        if (value.isUserdata(clatz.wrapPrimitive().raw()))
-            return value.toUserdata();
+        try {
+            return value.checkUserdata(clatz.wrapPrimitive().raw());
+        } catch (LuaError ignored) {}
 
         clatz = clatz.unwrapPrimitive();
 
@@ -67,20 +68,22 @@ public class TypeCoercions {
         }
 
         if (clatz.type() == ClassType.ARRAY) {
-            if (!value.isTable())
+            try {
+                LuaTable table = value.checkTable();
+                int length = table.length();
+                Object arr = Array.newInstance(clatz.arrayComponent().raw(), table.length());
+                for (int i = 0; i < length; i++) {
+                    Array.set(arr, i, toJava(state, table.rawget(i + 1), clatz.arrayComponent()));
+                }
+                return clatz.cast(arr);
+            } catch (Exception e) {
                 throw new LuaError(
                         "Expected table of "
                                 + clatz.arrayComponent()
                                 + "s, got "
                                 + value.typeName()
                 );
-            LuaTable table = value.checkTable();
-            int length = table.length();
-            Object arr = Array.newInstance(clatz.arrayComponent().raw(), table.length());
-            for (int i = 0; i < length; i++) {
-                Array.set(arr, i, toJava(state, table.rawget(i + 1), clatz.arrayComponent()));
             }
-            return clatz.cast(arr);
         }
 
         if (value.isFunction() && clatz.type() == ClassType.INTERFACE) { // Callbacks
@@ -260,15 +263,15 @@ public class TypeCoercions {
             };
         });
 
-        TypeCoercions.registerLuaToJava(int.class, (state, val) -> val.isInteger() ? val.toInteger() : null);
-        TypeCoercions.registerLuaToJava(byte.class, (state, val) -> val.isInteger() ? (byte)val.toInteger() : null);
-        TypeCoercions.registerLuaToJava(short.class, (state, val) -> val.isInteger() ? (short)val.toInteger() : null);
-        TypeCoercions.registerLuaToJava(char.class, (state, val) -> val.isInteger() ? (char)val.toInteger() : null);
-        TypeCoercions.registerLuaToJava(double.class, (state, val) -> val.isNumber() ? val.toDouble() : null);
-        TypeCoercions.registerLuaToJava(float.class, (state, val) -> val.isNumber() ? (float)val.toDouble() : null);
-        TypeCoercions.registerLuaToJava(long.class, (state, val) -> val.isLong() ? val.toLong() : null);
-        TypeCoercions.registerLuaToJava(boolean.class, (state, val) -> val.isBoolean() ? val.toBoolean() : null);
-        TypeCoercions.registerLuaToJava(String.class, (state, val) -> val.isString() ? val.toString() : null);
+        TypeCoercions.registerLuaToJava(int.class, (state, val) -> suppressError(val::checkInteger));
+        TypeCoercions.registerLuaToJava(byte.class, (state, val) -> suppressError(() -> (byte)val.checkInteger()));
+        TypeCoercions.registerLuaToJava(short.class, (state, val) -> suppressError(() -> (short)val.checkInteger()));
+        TypeCoercions.registerLuaToJava(char.class, (state, val) -> suppressError(() -> (char)val.checkInteger()));
+        TypeCoercions.registerLuaToJava(double.class, (state, val) -> suppressError(val::checkDouble));
+        TypeCoercions.registerLuaToJava(float.class, (state, val) -> suppressError(() -> (float)val.checkDouble()));
+        TypeCoercions.registerLuaToJava(long.class, (state, val) -> suppressError(val::checkLong));
+        TypeCoercions.registerLuaToJava(boolean.class, (state, val) -> suppressError(val::checkBoolean));
+        TypeCoercions.registerLuaToJava(String.class, (state, val) -> suppressError(val::checkString));
 
         TypeCoercions.registerLuaToJava(EClass.class, (state, val) -> JavaHelpers.asClass(val));
         TypeCoercions.registerLuaToJava(Class.class, (state, val) -> {
@@ -321,6 +324,17 @@ public class TypeCoercions {
 
             return Identifier.of(value.checkString());
         });
+    }
+
+    private static <T> T suppressError(SupplierThrowsLuaError<T> checkValue) {
+        try {
+            return checkValue.get();
+        } catch (LuaError ignored) {}
+        return null;
+    }
+
+    private interface SupplierThrowsLuaError<T> {
+        T get() throws LuaError;
     }
 
 }

@@ -9,6 +9,7 @@ import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
 import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
+import org.squiddev.cobalt.interrupt.InterruptAction;
 import org.squiddev.cobalt.lib.*;
 
 import java.io.IOException;
@@ -24,19 +25,19 @@ public class ScriptExecutor {
 
         // Derived from CobaltMachine.java
         // https://github.com/cc-tweaked/cc-restitched/blob/79366bf2f5389b45c0db1ad0d37fbddc6d1151b3/src/main/java/dan200/computercraft/core/lua/CobaltLuaMachine.java
-        state = LuaState.builder().build();
+        state = LuaState.builder().interruptHandler(() -> InterruptAction.SUSPEND).build();
 
         globals = new LuaTable();
 
         // Base globals
-        globals.load( state, new BaseLib() );
-        globals.load( state, new TableLib() );
-        globals.load( state, new StringLib() );
-        globals.load( state, new MathLib() );
-        globals.load( state, new CoroutineLib() ); // TODO: Is this safe now?
-        globals.load( state, new Bit32Lib() );
-        globals.load( state, new Utf8Lib() );
-        globals.load( state, new DebugLib() );
+        new BaseLib().add(globals);
+        TableLib.add(state, globals);
+        StringLib.add(state, globals);
+        new MathLib().add(state, globals);
+        CoroutineLib.add(state, globals);
+        Bit32Lib.add(state, globals);
+        new Utf8Lib().add(state, globals);
+        DebugLib.add(state, globals);
 
         // Custom globals
 //        globals.load( state, new AlliumLib() );
@@ -59,17 +60,16 @@ public class ScriptExecutor {
         PackageLib pkg = new PackageLib(script, state);
         globals.rawset( "package" , pkg.getPackage() );
         globals.rawset( "require", pkg.getRequire() );
-        globals.rawset( "module", Constants.NIL ); // TODO: module call
 
-        // Remove globals we don't want to expose
-        globals.rawset( "collectgarbage", Constants.NIL );
-        globals.rawset( "dofile", Constants.NIL );
-        globals.rawset( "loadfile", Constants.NIL );
+        // TODO: these calls, or mark them as unsupported
+//        globals.rawset( "module", Constants.NIL );
+//        globals.rawset( "collectgarbage", Constants.NIL );
+//        globals.rawset( "dofile", Constants.NIL );
+//        globals.rawset( "loadfile", Constants.NIL );
 
 
         globals.rawset( "print", new PrintMethod(script) );
 
-        globals.rawset( "_VERSION", ValueFactory.valueOf( "Lua 5.1" ) );
         globals.rawset( "_HOST", ValueFactory.valueOf(Allium.ID + Allium.VERSION) );
     }
 
@@ -81,7 +81,6 @@ public class ScriptExecutor {
         Entrypoint entrypoints = script.getManifest().entrypoints();
         LuaFunction staticFunction;
         LuaFunction dynamicFunction;
-        state.setupThread(new LuaTable());
         switch (entrypoints.getType()) {
             case STATIC -> {
                 staticFunction = this.load(sMain, script.getId());

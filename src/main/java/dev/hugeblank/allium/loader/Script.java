@@ -112,9 +112,10 @@ public class Script {
     }
 
     public void unload() {
+        // TODO: Does .interrupt work like this?
+        this.executor.getState().interrupt();
         SCRIPTS.remove(manifest.name(), this);
         destroyAllResources();
-        this.executor.getState().abandon();
     }
 
     public void initialize() {

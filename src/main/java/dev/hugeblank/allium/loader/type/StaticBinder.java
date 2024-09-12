@@ -136,9 +136,9 @@ public final class StaticBinder {
                     }
                 }
 
-                if (arg2.isTable()) {
+                if (arg2.type() == Constants.TTABLE) {
                     LuaTable table = arg2.checkTable();
-                    EClass<?>[] typeArgs = new EClass[table.getArrayLength()];
+                    EClass<?>[] typeArgs = new EClass[table.length()];
 
                     for (int i = 0; i < typeArgs.length; i++) {
                         typeArgs[i] = JavaHelpers.asClass(table.rawget(i + 1));
