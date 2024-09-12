@@ -4,26 +4,39 @@
 
 Lua script loader for Java Minecraft.
 
-Currently, only functioning and in development in Fabric, with the intent of supporting Forge/Quilt later on down the road.
+Currently, only functioning and in development in Fabric, with the intent of supporting Forge/Quilt later on down the 
+road.
 
 **NOTE**: this repo is only the loader, the Allium API can be found [here](https://github.com/hugeblank/allium-api/).
 
 ## Installing
-Allium installs just like any other Fabric mod. If you don't know how to do this, [this Tech Insider video](https://www.youtube.com/watch?v=vNz0z1Aht1U) does a pretty good job of explaining how.
+Allium installs just like any other Fabric mod. If you don't know how to do this, [this Tech Insider video](https://www.youtube.com/watch?v=vNz0z1Aht1U) does a 
+pretty good job of explaining how.
 
 ### Scripts
-In the same place that you create your `mods` directory, create a folder named `allium`. This is where your lua scripts will go. They may come in the form of a `.zip`, but may be expanded, and put into a regular directory if you'd like to tinker with them. If you're at all familiar with the Resource/Data Pack structure, then you'll know that this is similar.
+In the same place that you create your `mods` directory, create a folder named `allium`. This is where your lua scripts 
+will go. They may come in the form of a `.zip`, but may be expanded, and put into a regular directory if you'd like to 
+tinker with them. If you're at all familiar with the Resource/Data Pack structure, then you'll know that this is 
+similar.
+
+## Limitations
+Allium aims to be a gateway into modding, however there are currently some limitations that stifle its utility. Notably,
+mixins and documentation. There have been attempts in the past to get mixins working in a way that makes sense, and to
+get documentation that a Lua user can approach to understand Java logic, but none were particularly elegant. Both of 
+these limitations will be resolved before version 1.0.
 
 ## Logos
 Allium's logos are under the same license as the rest of the project. Feel free to use these in your own project
 
-<img src="logos/icon.png" alt="Allium Icon" height="100"/> <img src="logos/logo.png" alt="Allium Logo" height="100"/> <img src="logos/banner.png" alt="Powered by Allium" height="100"/>
+<img src="logos/icon.png" alt="Allium Icon" height="100"/> <img src="logos/logo.png" alt="Allium Logo" height="100"/> 
+<img src="logos/banner.png" alt="Powered by Allium" height="100"/>
 
 ## Too much Allium...
 Since 2018 a project under the name Allium has existed. This is being addressed to suppress the Mandela Effect.
 
 ### Isn't Allium for ComputerCraft?
-Allium for CC has been moved to [allium-cc](https://github.com/hugeblank/allium-cc). This project took its original repository location due to it being a far more useful successor to the CC variant.
+Allium for CC has been moved to [allium-cc](https://github.com/hugeblank/allium-cc). This project took its original repository location due to it being a 
+far more useful successor to the CC variant.
 
 ### Isn't Allium a peripheral mod for ComputerCraft?
 That's Allium Peripherals. You can check it out [here](https://github.com/hugeblank/allium-peripherals).
