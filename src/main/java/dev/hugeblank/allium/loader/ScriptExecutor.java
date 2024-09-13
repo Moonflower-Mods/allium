@@ -2,64 +2,43 @@ package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
 import dev.hugeblank.allium.loader.type.TypeCoercions;
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.compiler.CompileException;
 import org.squiddev.cobalt.compiler.LoadState;
+import org.squiddev.cobalt.function.LibFunction;
 import org.squiddev.cobalt.function.LuaFunction;
 import org.squiddev.cobalt.function.VarArgFunction;
-import org.squiddev.cobalt.interrupt.InterruptAction;
 import org.squiddev.cobalt.lib.*;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.HashSet;
+import java.util.Set;
 
 public class ScriptExecutor {
+    private static final Set<LibraryInitializer> LIBRARIES = new HashSet<>();
     protected final Script script;
     protected final LuaTable globals;
     protected final LuaState state;
 
     public ScriptExecutor(Script script) {
         this.script = script;
-
-        // Derived from CobaltMachine.java
-        // https://github.com/cc-tweaked/cc-restitched/blob/79366bf2f5389b45c0db1ad0d37fbddc6d1151b3/src/main/java/dan200/computercraft/core/lua/CobaltLuaMachine.java
-        state = LuaState.builder().interruptHandler(() -> InterruptAction.SUSPEND).build();
-
-        globals = new LuaTable();
+        this.state = new LuaState();
 
         // Base globals
-        new BaseLib().add(globals);
-        TableLib.add(state, globals);
-        StringLib.add(state, globals);
-        new MathLib().add(state, globals);
-        CoroutineLib.add(state, globals);
+        this.globals = CoreLibraries.debugGlobals(state);
         Bit32Lib.add(state, globals);
-        new Utf8Lib().add(state, globals);
-        DebugLib.add(state, globals);
 
-        // Custom globals
-//        globals.load( state, new AlliumLib() );
-//        globals.load( state, new GameLib() );
-//        globals.load( state, new JavaLib() );
-//        globals.load( state, new TextLib() );
-//        globals.load( state, new NbtLib() );
-//        globals.load( state, new CommandLib(script) );
-//        globals.load( state, new CommandsLib(script) );
-//        globals.load( state, new DefaultEventsLib() );
-//        globals.load( state, new FabricLib() );
-//        globals.load( state, new ConfigLib(script) );
-//        globals.load( state, new FsLib(script) );
-//        globals.load( state, new HttpLib() );
-//        globals.load( state, new JsonLib() );
-//        globals.load( state, new RecipeLib() );
-        globals.rawset( "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)) );
+        // TODO: Can Script implement WrappedLuaLibrary?
+        LibFunction.setGlobalLibrary(state, globals, "script", TypeCoercions.toLuaValue(script, EClass.fromJava(Script.class)));
+
+        // External libraries
+        LIBRARIES.forEach((library) -> library.init(script).add(state, globals));
 
         // Package library, kinda quirky.
-        PackageLib pkg = new PackageLib(script, state);
-        globals.rawset( "package" , pkg.getPackage() );
-        globals.rawset( "require", pkg.getRequire() );
 
         // TODO: these calls, or mark them as unsupported
 //        globals.rawset( "module", Constants.NIL );
@@ -70,11 +49,20 @@ public class ScriptExecutor {
 
         globals.rawset( "print", new PrintMethod(script) );
 
-        globals.rawset( "_HOST", ValueFactory.valueOf(Allium.ID + Allium.VERSION) );
+        globals.rawset( "_HOST", ValueFactory.valueOf(Allium.ID + "_" + Allium.VERSION) );
+    }
+
+    static {
+        registerLibrary(PackageLib::new);
+
     }
 
     public LuaState getState() {
         return state;
+    }
+
+    public LuaTable getGlobals() {
+        return globals;
     }
 
     public Varargs initialize(@Nullable InputStream sMain, @Nullable InputStream dMain) throws Throwable {
@@ -102,7 +90,7 @@ public class ScriptExecutor {
         throw new Exception("Expected either static or dynamic entrypoint, got none");
     }
 
-    public Varargs reload(InputStream dynamic) throws LuaError, InterruptedException, CompileException, IOException {
+    public Varargs reload(InputStream dynamic) throws LuaError, CompileException, IOException {
         Entrypoint entrypoint = script.getManifest().entrypoints();
         if (entrypoint.hasType(Entrypoint.Type.DYNAMIC)) {
             LuaFunction dynamicFunction = this.load(dynamic, script.getId());
@@ -118,6 +106,10 @@ public class ScriptExecutor {
                 name,
                 this.globals
         );
+    }
+
+    public static void registerLibrary(LibraryInitializer initializer) {
+        LIBRARIES.add(initializer);
     }
 
     private static final class PrintMethod extends VarArgFunction {
@@ -140,4 +132,9 @@ public class ScriptExecutor {
             return Constants.NIL;
         }
     }
+    
+    public interface LibraryInitializer {
+        WrappedLuaLibrary init(Script script);
+    }
+
 }

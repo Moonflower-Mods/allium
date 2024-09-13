@@ -81,10 +81,10 @@ public class FileHelper {
     public static Set<Script> getValidModScripts() { // I have no idea if this works in production.
         Set<Script> out = new HashSet<>();
         FabricLoader.getInstance().getAllMods().forEach((container) -> {
-            if (container.getMetadata().getCustomValue("allium") != null) {
+            if (container.getMetadata().getCustomValue(Allium.ID) != null) {
                 ModMetadata metadata = container.getMetadata();
                 try { // Let's see if the value we're after is an object
-                    CustomValue.CvObject value = metadata.getCustomValue("allium").getAsObject();
+                    CustomValue.CvObject value = metadata.getCustomValue(Allium.ID).getAsObject();
                     Manifest man = makeManifest( // Make a manifest using the default values, use optional args otherwise.
                             value,
                             metadata.getId(),
@@ -92,18 +92,18 @@ public class FileHelper {
                             metadata.getName()
                     );
                     if (man == null || man.entrypoints().valid()) { // Make sure the manifest exists and has an entrypoint
-                        Allium.LOGGER.error("Could not read manifest from script with ID " + metadata.getId());
+                        Allium.LOGGER.error("Could not read manifest from script with ID {}", metadata.getId());
                     } else {
                         Script script = scriptFromContainer(man, container);
                         if (script != null) {
                             out.add(script);
                         } else {
-                            Allium.LOGGER.error("Could not find entrypoint(s) for script with ID " + metadata.getId());
+                            Allium.LOGGER.error("Could not find entrypoint(s) for script with ID {}", metadata.getId());
                         }
                     }
                 } catch (ClassCastException e) { // Not an object...
                     try { // Maybe the value is an array?
-                        CustomValue.CvArray value = metadata.getCustomValue("allium").getAsArray();
+                        CustomValue.CvArray value = metadata.getCustomValue(Allium.ID).getAsArray();
                         int i = 0; // Index for developer to debug their mistakes
                         for (CustomValue v : value) { // For each array value
                             try { // test for object

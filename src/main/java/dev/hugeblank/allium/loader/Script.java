@@ -1,6 +1,7 @@
 package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -18,11 +19,10 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 
-@LuaWrapped
+@LuaWrapped()
 public class Script {
     private static final Map<String, Script> SCRIPTS = new HashMap<>();
 
-    // The Man(ifest) who can't be moved
     private final Manifest manifest;
     private final Logger logger;
     private final ScriptExecutor executor;
@@ -112,8 +112,6 @@ public class Script {
     }
 
     public void unload() {
-        // TODO: Does .interrupt work like this?
-        this.executor.getState().interrupt();
         SCRIPTS.remove(manifest.name(), this);
         destroyAllResources();
     }
