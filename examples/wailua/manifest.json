@@ -1,8 +1,0 @@
-{
-  "id": "wailua",
-  "version": "1.0.0",
-  "name": "WAILA in Lua",
-  "entrypoints": {
-    "dynamic":"main.lua"
-  }
-}
