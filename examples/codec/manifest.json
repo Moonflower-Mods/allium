@@ -1,0 +1,9 @@
+{
+  "id": "codec",
+  "version": "1.0.0",
+  "name": "Codec Test",
+
+  "entrypoints": {
+    "dynamic": "main.lua"
+  }
+}
