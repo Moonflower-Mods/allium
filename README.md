@@ -7,8 +7,6 @@ Lua script loader for Java Minecraft.
 Currently, only functioning and in development in Fabric, with the intent of supporting Forge/Quilt later on down the 
 road.
 
-**NOTE**: this repo is only the loader, the Allium API can be found [here](https://github.com/hugeblank/allium-api/).
-
 ## Installing
 Allium installs just like any other Fabric mod. If you don't know how to do this, [this Tech Insider video](https://www.youtube.com/watch?v=vNz0z1Aht1U) does a 
 pretty good job of explaining how.
@@ -28,8 +26,19 @@ these limitations will be resolved before version 1.0.
 ## Logos
 Allium's logos are under the same license as the rest of the project. Feel free to use these in your own project
 
-<img src="logos/icon.png" alt="Allium Icon" height="100"/> <img src="logos/logo.png" alt="Allium Logo" height="100"/> 
-<img src="logos/banner.png" alt="Powered by Allium" height="100"/>
+<img src="allium/logos/icon.png" alt="Allium Icon" height="100"/> <img src="allium/logos/logo.png" alt="Allium Logo" height="100"/> 
+<img src="allium/logos/banner.png" alt="Powered by Allium" height="100"/>
+
+## Contributing
+Allium is broken up into 2 gradle subprojects that each build into their own jars. When making a pull request please
+make sure to use the template that corresponds to which project you're contributing to (TODO).
+
+### Allium
+Found in the `allium` directory, this is the bare-minimum necessary for a Lua script to be run in the game.
+
+### Bouquet
+Found in the `bouquet` directory, this features additional quality of life libraries, as well as frequently used
+event hooks into the games logic.
 
 ## Too much Allium...
 Since 2018 a project under the name Allium has existed. This is being addressed to suppress the Mandela Effect.

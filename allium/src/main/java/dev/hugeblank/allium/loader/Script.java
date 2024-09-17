@@ -49,6 +49,10 @@ public class Script {
         }
     }
 
+    public static void reloadAll() {
+        SCRIPTS.forEach((s, script) -> script.reload());
+    }
+
     // TODO: Move to Allium API
     public void reload() {
         destroyAllResources();

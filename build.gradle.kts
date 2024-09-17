@@ -54,19 +54,22 @@ allprojects {
         modImplementation(include("org.squiddev", "Cobalt", cobalt))
         modImplementation(include("me.basiqueevangelist","enhanced-reflection", enhancedReflections))
     }
+}
 
+subprojects.forEach {
     tasks {
         processResources {
-            inputs.property("version", project.version)
+            inputs.property("version", it.version)
 
             filesMatching("fabric.mod.json") {
-                expand(mutableMapOf("version" to project.version))
+                expand(mutableMapOf("version" to it.version))
             }
         }
 
         jar {
             from("LICENSE") {
-                rename { "${it}_${project.base.archivesName.get()}" }
+                val archivesName = it.base.archivesName.get()
+                rename { "${it}_${archivesName}" }
             }
         }
     }
@@ -107,5 +110,10 @@ tasks {
                 }
             }
         }
+    }
+
+    register<GradleBuild>("buildMoonflower") {
+        group = "build"
+        tasks = subprojects.map {  ":${it.name}:build" }
     }
 }

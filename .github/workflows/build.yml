@@ -14,6 +14,10 @@ jobs:
         java: [
           21,    # Current Java LTS
         ]
+        mod: [
+          "allium",
+          "bouquet"
+        ]
     runs-on: ubuntu-22.04
     steps:
       - name: checkout repository
@@ -27,11 +31,10 @@ jobs:
           distribution: 'microsoft'
       - name: make gradle wrapper executable
         run: chmod +x ./gradlew
-      - name: build
-        run: ./gradlew build
-      - name: capture build artifacts
-        if: ${{ matrix.java == '21' }} # Only upload artifacts built from latest java
+      - name: build ${{ matrix.mod }}
+        run: ./gradlew :${{ matrix.mod }}:build
+      - name: capture ${{ matrix.mod }} build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Artifacts
-          path: build/libs/
+          name: ${{ matrix.mod }}
+          path: ${{ matrix.mod }}/build/libs/
