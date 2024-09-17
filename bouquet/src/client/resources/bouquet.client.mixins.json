@@ -1,10 +1,11 @@
 {
 	"required": true,
-	"package": "dev.hugeblank.bouquet.mixin.client",
+	"package": "dev.hugeblank.bouquet.mixin",
 	"compatibilityLevel": "JAVA_21",
 	"client": [
-      "ClientPlayerEntityMixin",
-      "gui.hud.InGameHudMixin"
+		"client.gui.hud.InGameHudMixin",
+		"client.network.ClientPlayerEntityMixin",
+		"server.integrated.IntegratedServerMixin"
 	],
 	"injectors": {
 		"defaultRequire": 1

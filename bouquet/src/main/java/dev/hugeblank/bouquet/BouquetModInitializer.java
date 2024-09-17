@@ -11,10 +11,11 @@ public class BouquetModInitializer implements ModInitializer {
 
 	@Override
 	public void onInitialize() {
-		/* TODO: Missing APIs
+		/* TODO: Missing/nerfed APIs
 			- Resource Pack
 			- Recipes Library
 			- Config Library (maybe it's better that it's gone?)
+			- Game Library (some stuff now requires scripts to get the MinecraftServer instance)
 		*/
 	}
 }

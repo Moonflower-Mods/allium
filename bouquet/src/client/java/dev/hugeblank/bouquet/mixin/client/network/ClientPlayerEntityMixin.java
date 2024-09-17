@@ -1,4 +1,4 @@
-package dev.hugeblank.bouquet.mixin.client;
+package dev.hugeblank.bouquet.mixin.client.network;
 
 import dev.hugeblank.bouquet.api.lib.ClientEventsLib;
 import net.minecraft.client.network.ClientPlayerEntity;

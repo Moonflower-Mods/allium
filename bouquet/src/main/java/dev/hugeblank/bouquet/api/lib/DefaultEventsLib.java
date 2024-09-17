@@ -16,8 +16,9 @@ public class DefaultEventsLib implements WrappedLuaLibrary {
     @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerBlockCollision> PLAYER_BLOCK_COLLISION; // player collides with a block
     @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerDeath> PLAYER_DEATH; // player dies
     @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerBlockInteract> BLOCK_INTERACT; // player interacts (right clicks) with a block
-    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.Tick> TICK; // server gets ticked
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.ServerTick> SERVER_TICK; // server gets ticked
     @LuaWrapped public static final SimpleEventType<CommonEventHandlers.CommandRegistration> COMMAND_REGISTER; // the result of a registered command
+    @LuaWrapped public static final SimpleEventType<CommonEventHandlers.ServerStart> SERVER_START; // server has started
 
     static {
         CHAT_MESSAGE = new SimpleEventType<>(Identifier.of("allium:chat_message"));
@@ -27,8 +28,9 @@ public class DefaultEventsLib implements WrappedLuaLibrary {
         PLAYER_BLOCK_COLLISION = new SimpleEventType<>(Identifier.of("allium:player_block_collision"));
         PLAYER_DEATH = new SimpleEventType<>(Identifier.of("allium:player_death"));
         BLOCK_INTERACT = new SimpleEventType<>(Identifier.of("allium:block_interact"));
-        TICK = new SimpleEventType<>(Identifier.of("allium:server_tick"));
+        SERVER_TICK = new SimpleEventType<>(Identifier.of("allium:server_tick"));
         COMMAND_REGISTER = new SimpleEventType<>(Identifier.of("allium:command_register"));
+        SERVER_START = new SimpleEventType<>(Identifier.of("allium:server_start"));
     }
 
 }

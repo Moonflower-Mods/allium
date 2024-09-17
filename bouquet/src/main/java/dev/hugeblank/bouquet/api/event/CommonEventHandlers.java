@@ -2,6 +2,7 @@ package dev.hugeblank.bouquet.api.event;
 
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.Hand;
@@ -37,8 +38,12 @@ public class CommonEventHandlers {
         void onPlayerBlockInteraction(BlockState state, ServerWorld world, BlockPos pos, ServerPlayerEntity player, Hand hand, BlockHitResult hitResult);
     }
 
-    public interface Tick {
-        void onServerTick();
+    public interface ServerTick {
+        void onServerTick(MinecraftServer server);
+    }
+
+    public interface ServerStart {
+        void onServerStart(MinecraftServer server);
     }
 
     public interface CommandRegistration {

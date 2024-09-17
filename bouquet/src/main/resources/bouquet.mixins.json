@@ -11,6 +11,7 @@
     "entity.EntityMixin",
     "resource.ResourcePackManagerMixin",
     "server.MinecraftServerMixin",
+    "server.MinecraftServerSubclassMixin",
     "server.PlayerManagerMixin",
     "server.network.ServerPlayerEntityMixin"
   ],
