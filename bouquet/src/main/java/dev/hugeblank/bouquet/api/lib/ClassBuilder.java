@@ -1,6 +1,6 @@
 package dev.hugeblank.bouquet.api.lib;
 
-import dev.hugeblank.allium.loader.type.TypeCoercions;
+import dev.hugeblank.allium.loader.type.coercion.TypeCoercions;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.loader.type.property.PropertyResolver;
 import dev.hugeblank.bouquet.util.AsmUtil;

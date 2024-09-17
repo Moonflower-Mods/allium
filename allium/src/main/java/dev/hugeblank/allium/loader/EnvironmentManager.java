@@ -1,8 +1,9 @@
 package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
-import dev.hugeblank.allium.loader.type.TypeCoercions;
-import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
+import dev.hugeblank.allium.api.LibraryInitializer;
+import dev.hugeblank.allium.loader.type.coercion.TypeCoercions;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
@@ -16,7 +17,7 @@ import java.util.Set;
 public class EnvironmentManager {
     protected final LuaState state;
 
-    private static final Set<dev.hugeblank.allium.loader.LibraryInitializer> INITIALIZERS = new HashSet<>();
+    private static final Set<LibraryInitializer> INITIALIZERS = new HashSet<>();
     private static final Set<WrappedLuaLibrary> LIBRARIES = new HashSet<>();
 
     EnvironmentManager() {

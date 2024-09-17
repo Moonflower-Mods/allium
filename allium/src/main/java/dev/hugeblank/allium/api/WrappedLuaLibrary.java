@@ -1,6 +1,7 @@
-package dev.hugeblank.allium.loader.type;
+package dev.hugeblank.allium.api;
 
 
+import dev.hugeblank.allium.loader.type.UserdataFactory;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import org.squiddev.cobalt.LuaState;
@@ -8,6 +9,11 @@ import org.squiddev.cobalt.LuaTable;
 import org.squiddev.cobalt.LuaValue;
 import org.squiddev.cobalt.function.LibFunction;
 
+/**
+ * Interface for lua libraries that take advantage of the LuaWrapped annotation
+ *
+ * @see dev.hugeblank.allium.loader.PackageLib
+ */
 public interface WrappedLuaLibrary {
 
     default LuaValue add(LuaState state, LuaTable globals) {

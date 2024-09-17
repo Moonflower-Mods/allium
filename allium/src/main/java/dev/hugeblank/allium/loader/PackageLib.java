@@ -2,7 +2,7 @@ package dev.hugeblank.allium.loader;
 
 import dev.hugeblank.allium.Allium;
 import dev.hugeblank.allium.loader.type.StaticBinder;
-import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.util.JavaHelpers;
 import org.squiddev.cobalt.*;

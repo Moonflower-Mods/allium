@@ -1,7 +1,7 @@
 package dev.hugeblank.bouquet.api.lib;
 
-import dev.hugeblank.allium.loader.type.TypeCoercions;
-import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
+import dev.hugeblank.allium.loader.type.coercion.TypeCoercions;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.bouquet.util.TableHelpers;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;

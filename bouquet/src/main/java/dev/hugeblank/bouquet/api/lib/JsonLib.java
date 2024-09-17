@@ -1,7 +1,7 @@
 package dev.hugeblank.bouquet.api.lib;
 
 import com.google.gson.*;
-import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.loader.type.annotation.OptionalArg;
 import dev.hugeblank.bouquet.util.TableHelpers;

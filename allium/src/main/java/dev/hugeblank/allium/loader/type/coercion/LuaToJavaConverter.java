@@ -1,5 +1,6 @@
-package dev.hugeblank.allium.loader.type;
+package dev.hugeblank.allium.loader.type.coercion;
 
+import dev.hugeblank.allium.loader.type.InvalidArgumentException;
 import org.squiddev.cobalt.LuaError;
 import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;

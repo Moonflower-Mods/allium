@@ -1,6 +1,6 @@
 package dev.hugeblank.allium.loader.type.property;
 
-import dev.hugeblank.allium.loader.type.AnnotationUtils;
+import dev.hugeblank.allium.util.AnnotationUtils;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import org.squiddev.cobalt.LuaValue;
 

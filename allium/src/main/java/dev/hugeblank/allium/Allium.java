@@ -12,8 +12,7 @@
 package dev.hugeblank.allium;
 
 import dev.hugeblank.allium.loader.Script;
-import dev.hugeblank.allium.loader.ScriptExecutor;
-import dev.hugeblank.allium.loader.type.AlliumExtension;
+import dev.hugeblank.allium.api.AlliumExtension;
 import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.Mappings;
 import dev.hugeblank.allium.util.YarnLoader;

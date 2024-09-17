@@ -1,7 +1,7 @@
 package dev.hugeblank.bouquet.api.lib;
 
 import dev.hugeblank.allium.loader.Script;
-import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.bouquet.api.lib.commands.CommandRegisterEntry;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;

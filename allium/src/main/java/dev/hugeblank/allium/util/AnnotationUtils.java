@@ -1,13 +1,10 @@
-package dev.hugeblank.allium.loader.type;
+package dev.hugeblank.allium.util;
 
 import me.basiqueevangelist.enhancedreflection.api.*;
 import dev.hugeblank.allium.loader.type.annotation.LuaStateArg;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 
 public final class AnnotationUtils {
-    private AnnotationUtils() {
-
-    }
 
     public static boolean isHiddenFromLua(EMember element) {
         return element.declaringClass().hasAnnotation(LuaWrapped.class) && !element.hasAnnotation(LuaWrapped.class);

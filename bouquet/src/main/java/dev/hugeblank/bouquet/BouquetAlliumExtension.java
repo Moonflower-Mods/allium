@@ -1,7 +1,7 @@
 package dev.hugeblank.bouquet;
 
 import dev.hugeblank.allium.loader.EnvironmentManager;
-import dev.hugeblank.allium.loader.type.AlliumExtension;
+import dev.hugeblank.allium.api.AlliumExtension;
 import dev.hugeblank.bouquet.api.lib.*;
 
 public class BouquetAlliumExtension implements AlliumExtension {

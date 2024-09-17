@@ -1,4 +1,4 @@
-package dev.hugeblank.allium.loader.type;
+package dev.hugeblank.allium.loader.type.coercion;
 
 import org.squiddev.cobalt.LuaValue;
 

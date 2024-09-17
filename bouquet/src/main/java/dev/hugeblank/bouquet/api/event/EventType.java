@@ -1,7 +1,7 @@
 package dev.hugeblank.bouquet.api.event;
 
 import dev.hugeblank.allium.loader.Script;
-import dev.hugeblank.allium.loader.ScriptResource;
+import dev.hugeblank.allium.api.ScriptResource;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.loader.type.annotation.OptionalArg;
 

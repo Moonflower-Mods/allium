@@ -1,11 +1,15 @@
 package dev.hugeblank.bouquet.api.lib;
 
 import dev.hugeblank.allium.Allium;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.*;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.loader.type.annotation.LuaStateArg;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.loader.type.annotation.OptionalArg;
+import dev.hugeblank.allium.loader.type.coercion.TypeCoercions;
+import dev.hugeblank.allium.util.AnnotationUtils;
+import dev.hugeblank.allium.util.ArgumentUtils;
 import dev.hugeblank.allium.util.JavaHelpers;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;

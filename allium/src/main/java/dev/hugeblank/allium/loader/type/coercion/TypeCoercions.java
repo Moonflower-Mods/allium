@@ -1,5 +1,8 @@
-package dev.hugeblank.allium.loader.type;
+package dev.hugeblank.allium.loader.type.coercion;
 
+import dev.hugeblank.allium.loader.type.InvalidArgumentException;
+import dev.hugeblank.allium.loader.type.UDFFunctions;
+import dev.hugeblank.allium.loader.type.UserdataFactory;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToBound;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.util.JavaHelpers;

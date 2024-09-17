@@ -1,6 +1,6 @@
 package dev.hugeblank.bouquet.api.lib;
 
-import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import eu.pb4.placeholders.api.parsers.ParserBuilder;
 import net.minecraft.registry.BuiltinRegistries;
