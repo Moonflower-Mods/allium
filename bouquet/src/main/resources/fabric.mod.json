@@ -1,0 +1,40 @@
+{
+	"schemaVersion": 1,
+	"id": "bouquet",
+	"version": "${version}",
+	"name": "Bouquet",
+	"description": "Essential hooks for Allium mods",
+	"authors": [
+		"hugeblank"
+	],
+	"contact": {
+		"homepage": "https://allium.hugeblank.dev/api",
+		"sources": "https://github.com/hugeblank/bouquet"
+	},
+	"license": "MIT",
+	"icon": "assets/bouquet/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"dev.hugeblank.bouquet.Bouquet"
+		],
+		"client": [
+			"dev.hugeblank.bouquet.BouquetClient"
+		]
+	},
+	"mixins": [
+		"bouquet.mixins.json",
+		{
+			"config": "bouquet.client.mixins.json",
+			"environment": "client"
+		}
+	],
+	"depends": {
+		"fabricloader": ">=0.16.2",
+		"minecraft": "~1.21.1",
+		"java": ">=21"
+	},
+	"suggests": {
+		"fabric-api": "*"
+	}
+}

@@ -1,0 +1,20 @@
+{
+  "required": true,
+  "package": "dev.hugeblank.bouquet.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "plugin": "dev.hugeblank.bouquet.mixin.AlliumMixinPlugin",
+  "mixins": [
+    "block.AbstractBlockMixin",
+    "command.CommandManagerMixin",
+    "command.ReloadCommandMixin",
+    "command.argument.ArgumentTypesMixin",
+    "entity.EntityMixin",
+    "resource.ResourcePackManagerMixin",
+    "server.MinecraftServerMixin",
+    "server.PlayerManagerMixin",
+    "server.network.ServerPlayerEntityMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+	}
+}

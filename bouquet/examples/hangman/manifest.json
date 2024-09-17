@@ -1,0 +1,8 @@
+{
+  "id": "hangman",
+  "version": "1.0.0",
+  "name": "Hangman",
+  "entrypoints": {
+    "static":"main.lua"
+  }
+}
