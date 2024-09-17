@@ -1,6 +1,7 @@
 package dev.hugeblank.bouquet.api.lib.commands;
 
 import com.mojang.brigadier.arguments.ArgumentType;
+import dev.hugeblank.allium.loader.type.StaticBinder;
 import dev.hugeblank.allium.loader.type.annotation.LuaIndex;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
@@ -32,7 +33,7 @@ public class ArgumentTypeLib {
         }
         Class<? extends ArgumentType<?>> clazz = types.get(toLoad);
         try {
-            return JavaLib.importClass(EClass.fromJava(clazz));
+            return StaticBinder.bindClass(EClass.fromJava(clazz));
         } catch (Exception e) {
             throw new LuaError(e);
         }
