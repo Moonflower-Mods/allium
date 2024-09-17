@@ -18,7 +18,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @LuaWrapped(name = "java")
-public class JavaLib {
+public class JavaLib implements WrappedLuaLibrary {
 
     @LuaWrapped(name = "import")
     public static LuaValue importClass(EClass<?> clazz) {

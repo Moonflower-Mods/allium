@@ -6,5 +6,5 @@ import java.util.function.Consumer;
 
 @SuppressWarnings("ALL")
 public interface AlliumExtension {
-    void onInitialize(Consumer<ScriptExecutor.LibraryInitializer> register);
+    void onInitialize();
 }

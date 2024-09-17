@@ -16,10 +16,13 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"dev.hugeblank.bouquet.Bouquet"
+          "dev.hugeblank.bouquet.BouquetModInitializer"
 		],
 		"client": [
 			"dev.hugeblank.bouquet.BouquetClient"
+		],
+		"allium": [
+			"dev.hugeblank.bouquet.BouquetAlliumExtension"
 		]
 	},
 	"mixins": [

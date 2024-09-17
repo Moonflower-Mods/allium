@@ -1,12 +1,13 @@
 package dev.hugeblank.bouquet.api.lib;
 
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.bouquet.api.event.CommonEventHandlers;
 import dev.hugeblank.bouquet.api.event.SimpleEventType;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import net.minecraft.util.Identifier;
 
 @LuaWrapped(name = "events")
-public class DefaultEventsLib {
+public class DefaultEventsLib implements WrappedLuaLibrary {
     // TODO: Consider a better naming scheme for events.
     @LuaWrapped public static final SimpleEventType<CommonEventHandlers.ChatMessage> CHAT_MESSAGE; // player sends a chat message
     @LuaWrapped public static final SimpleEventType<CommonEventHandlers.PlayerTick> PLAYER_TICK; // player gets ticked on the server

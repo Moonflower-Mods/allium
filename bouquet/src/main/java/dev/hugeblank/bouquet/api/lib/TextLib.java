@@ -1,12 +1,13 @@
 package dev.hugeblank.bouquet.api.lib;
 
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import eu.pb4.placeholders.api.parsers.ParserBuilder;
 import net.minecraft.registry.BuiltinRegistries;
 import net.minecraft.text.Text;
 
 @LuaWrapped(name = "texts")
-public class TextLib {
+public class TextLib implements WrappedLuaLibrary {
     @LuaWrapped(name = "empty")
     public Text EMPTY = Text.empty();
 

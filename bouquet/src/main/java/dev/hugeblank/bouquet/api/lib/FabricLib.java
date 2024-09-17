@@ -1,5 +1,6 @@
 package dev.hugeblank.bouquet.api.lib;
 
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import net.fabricmc.loader.api.FabricLoader;
@@ -8,7 +9,7 @@ import net.fabricmc.loader.api.ModContainer;
 import java.util.List;
 
 @LuaWrapped(name = "fabric")
-public class FabricLib {
+public class FabricLib implements WrappedLuaLibrary {
     @LuaWrapped
     public @CoerceToNative List<ModContainer> getAllMods() {
         return FabricLoader.getInstance().getAllMods().stream().toList();

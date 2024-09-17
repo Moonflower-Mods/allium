@@ -1,6 +1,7 @@
 package dev.hugeblank.bouquet.api.lib;
 
 import dev.hugeblank.allium.loader.type.TypeCoercions;
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.bouquet.util.TableHelpers;
 import it.unimi.dsi.fastutil.objects.ReferenceOpenHashSet;
@@ -11,7 +12,7 @@ import org.squiddev.cobalt.*;
 import java.util.Set;
 
 @LuaWrapped(name = "nbt")
-public class NbtLib {
+public class NbtLib implements WrappedLuaLibrary {
     @LuaWrapped
     public static LuaValue fromNbt(NbtElement element) {
         return switch (element.getType()) {

@@ -1,5 +1,6 @@
 package dev.hugeblank.bouquet.api.lib;
 
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import net.minecraft.block.Block;
@@ -17,7 +18,7 @@ import java.util.stream.Collectors;
 import java.util.stream.StreamSupport;
 
 @LuaWrapped(name = "game")
-public class GameLib {
+public class GameLib implements WrappedLuaLibrary {
 
     @LuaWrapped
     public Block getBlock(String id) {

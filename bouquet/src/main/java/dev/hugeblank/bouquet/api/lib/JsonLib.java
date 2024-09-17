@@ -1,6 +1,7 @@
 package dev.hugeblank.bouquet.api.lib;
 
 import com.google.gson.*;
+import dev.hugeblank.allium.loader.type.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.loader.type.annotation.OptionalArg;
 import dev.hugeblank.bouquet.util.TableHelpers;
@@ -10,7 +11,7 @@ import org.squiddev.cobalt.*;
 import java.util.Set;
 
 @LuaWrapped(name = "json")
-public class JsonLib {
+public class JsonLib implements WrappedLuaLibrary {
     public static final Gson PRETTY = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     public static final Gson COMPACT = new GsonBuilder().disableHtmlEscaping().create();
 

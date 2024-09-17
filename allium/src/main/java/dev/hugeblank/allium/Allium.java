@@ -57,16 +57,14 @@ public class Allium implements ModInitializer {
         LOGGER.info("Loading NathanFudge's Yarn Remapper");
         MAPPINGS = YarnLoader.init();
 
-        LOGGER.info("Loading Extensions");
         Set<ModContainer> mods = new HashSet<>();
         FabricLoader.getInstance().getEntrypointContainers(ID, AlliumExtension.class)
                 .forEach((initializer) -> {
-                    initializer.getEntrypoint().onInitialize(ScriptExecutor::registerLibrary);
+                    initializer.getEntrypoint().onInitialize();
                     mods.add(initializer.getProvider());
                 });
         list(mods, "Initialized Extensions: ", (builder, mod) -> builder.append(mod.getMetadata().getId()));
 
-        LOGGER.info("Loading Scripts");
         Set<Script> scripts = new HashSet<>();
         scripts.addAll(FileHelper.getValidDirScripts(FileHelper.getScriptsDirectory()));
         scripts.addAll(FileHelper.getValidModScripts());
