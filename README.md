@@ -26,8 +26,8 @@ these limitations will be resolved before version 1.0.
 ## Logos
 Allium's logos are under the same license as the rest of the project. Feel free to use these in your own project
 
-<img src="allium/logos/icon.png" alt="Allium Icon" height="100"/> <img src="allium/logos/logo.png" alt="Allium Logo" height="100"/> 
-<img src="allium/logos/banner.png" alt="Powered by Allium" height="100"/>
+<img src="logos/icon.png" alt="Allium Icon" height="100"/> <img src="logos/logo.png" alt="Allium Logo" height="100"/> 
+<img src="logos/banner.png" alt="Powered by Allium" height="100"/>
 
 ## Contributing
 Allium is broken up into 2 gradle subprojects that each build into their own jars. When making a pull request please
@@ -39,6 +39,10 @@ Found in the `allium` directory, this is the bare-minimum necessary for a Lua sc
 ### Bouquet
 Found in the `bouquet` directory, this features additional quality of life libraries, as well as frequently used
 event hooks into the games logic.
+
+### Dev Environment Notes
+- To build both projects at the same time use the `buildMoonflower` gradle task.
+- Multiple client run configurations are created. One is for running only allium, the other is for running both allium & bouquet.
 
 ## Too much Allium...
 Since 2018 a project under the name Allium has existed. This is being addressed to suppress the Mandela Effect.

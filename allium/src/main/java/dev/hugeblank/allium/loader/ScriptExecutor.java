@@ -61,10 +61,6 @@ public class ScriptExecutor {
         return state;
     }
 
-    public LuaTable getGlobals() {
-        return globals;
-    }
-
     public Varargs initialize(@Nullable InputStream sMain, @Nullable InputStream dMain) throws Throwable {
         Entrypoint entrypoints = script.getManifest().entrypoints();
         LuaFunction staticFunction;

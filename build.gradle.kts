@@ -1,3 +1,5 @@
+import java.util.Locale
+
 plugins {
     id("fabric-loom") version "1.7-SNAPSHOT"
     id("maven-publish")
@@ -51,25 +53,38 @@ allprojects {
         mappings("net.fabricmc", "yarn", yarnMappings, null, "v2")
         modImplementation("net.fabricmc", "fabric-loader", loaderVersion)
 
-        modImplementation(include("org.squiddev", "Cobalt", cobalt))
-        modImplementation(include("me.basiqueevangelist","enhanced-reflection", enhancedReflections))
+        modImplementation("org.squiddev", "Cobalt", cobalt)
+        modImplementation("me.basiqueevangelist","enhanced-reflection", enhancedReflections)
+        modImplementation("net.fabricmc", "tiny-mappings-parser", tinyParser)
     }
-}
 
-subprojects.forEach {
     tasks {
         processResources {
-            inputs.property("version", it.version)
+            inputs.property("version", project.version)
 
             filesMatching("fabric.mod.json") {
-                expand(mutableMapOf("version" to it.version))
+                expand(mutableMapOf("version" to project.version))
             }
         }
 
         jar {
             from("LICENSE") {
-                val archivesName = it.base.archivesName.get()
-                rename { "${it}_${archivesName}" }
+                rename { "${it}_${project.base.archivesName.get()}" }
+            }
+        }
+
+        loom {
+            runs {
+                named("client") {
+                    configName = "${
+                        project.name.replaceFirstChar {
+                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+                        }
+                    } Client"
+                    ideConfigGenerated(true)
+                    runDir("../run")
+                    programArgs("-username", "GradleDev")
+                }
             }
         }
     }
@@ -84,30 +99,11 @@ dependencies {
 evaluationDependsOnChildren()
 
 tasks {
-    loom {
-        val loomRootDir = project.projectDir.relativeTo(project.rootDir)
 
+    loom {
         runs {
             named("client") {
-                client()
-                configName = "Moonflower Dev Client"
-                ideConfigGenerated(true)
-                runDir(loomRootDir.resolve("run").toString())
-                programArgs("-username", "GradleDev")
-                dependencies {
-                    implementation(project(path = ":allium", configuration = "namedElements"))
-                    implementation(project(path = ":bouquet", configuration = "namedElements"))
-                }
-            }
-            register("allium") {
-                client()
-                configName = "Allium Only"
-                ideConfigGenerated(true)
-                runDir(loomRootDir.resolve("run").toString())
-                programArgs("-username", "GradleDev")
-                dependencies {
-                    implementation(project(path = ":allium", configuration = "namedElements"))
-                }
+                ideConfigGenerated(false)
             }
         }
     }

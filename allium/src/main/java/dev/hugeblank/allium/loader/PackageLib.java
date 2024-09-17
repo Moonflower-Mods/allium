@@ -27,8 +27,6 @@ public class PackageLib implements WrappedLuaLibrary {
         this.path = "./?.lua;./?/init.lua";
         this.preload = new LuaTable();
         this.loaded = new LuaTable();
-        script.getExecutor().getGlobals()
-                .rawset("require", RegisteredFunction.ofV("require", this::require).create());
 
         // When writing a loader in Java, anywhere where a module value can't be determined `nil` should be returned.
         loaders = ValueFactory.listOf(
@@ -42,6 +40,12 @@ public class PackageLib implements WrappedLuaLibrary {
                 RegisteredFunction.of("java_loader", this::javaLoader).create()
 
         );
+    }
+
+    @Override
+    public LuaValue add(LuaState state, LuaTable globals) {
+        globals.rawset("require", RegisteredFunction.ofV("require", this::require).create());
+        return WrappedLuaLibrary.super.add(state, globals);
     }
 
     public LuaValue preloadLoader(LuaState state, LuaValue arg) throws LuaError, UnwindThrowable {
