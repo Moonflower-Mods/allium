@@ -2,7 +2,7 @@ package dev.hugeblank.bouquet.api.lib;
 
 import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.bouquet.api.event.CommonEventHandlers;
-import dev.hugeblank.bouquet.api.event.SimpleEventType;
+import dev.hugeblank.allium.api.event.SimpleEventType;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import net.minecraft.util.Identifier;
 

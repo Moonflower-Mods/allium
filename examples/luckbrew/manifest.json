@@ -1,0 +1,9 @@
+{
+  "id": "lucky_brew",
+  "version": "1.0.0",
+  "name": "Lucky Brew",
+  "entrypoints": {
+    "preLaunch":"mixin.lua",
+    "main":"main.lua"
+  }
+}

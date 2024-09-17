@@ -20,6 +20,9 @@
   "entrypoints": {
     "main": [
       "dev.hugeblank.allium.Allium"
+    ],
+    "preLaunch": [
+      "dev.hugeblank.allium.AlliumPreLaunch"
     ]
   },
   "mixins": [],

@@ -12,12 +12,7 @@ import java.util.List;
 
 @LuaWrapped(name = "allium")
 public class AlliumLib implements WrappedLuaLibrary {
-    public static final List<CommandRegisterEntry>
-            COMMANDS = new ArrayList<>();
-
-    public AlliumLib(Script script) {
-
-    }
+    public static final List<CommandRegisterEntry> COMMANDS = new ArrayList<>();
 
     @LuaWrapped
     public boolean isScriptLoaded(String id) {

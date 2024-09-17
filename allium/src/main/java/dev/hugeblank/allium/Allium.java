@@ -13,6 +13,7 @@ package dev.hugeblank.allium;
 
 import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.api.AlliumExtension;
+import dev.hugeblank.allium.loader.ScriptLoader;
 import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.Mappings;
 import dev.hugeblank.allium.util.YarnLoader;
@@ -64,17 +65,14 @@ public class Allium implements ModInitializer {
                 });
         list(mods, "Initialized Extensions: ", (builder, mod) -> builder.append(mod.getMetadata().getId()));
 
-        Set<Script> scripts = new HashSet<>();
-        scripts.addAll(FileHelper.getValidDirScripts(FileHelper.getScriptsDirectory()));
-        scripts.addAll(FileHelper.getValidModScripts());
-        list(scripts, "Found Scripts: ", (builder, script) -> builder.append(script.getId()));
-        scripts.forEach(Script::initialize);
-        list(scripts, "Initialized Scripts: ", (builder, script) -> {
+        list(ScriptLoader.SCRIPTS, "Found Scripts: ", (builder, script) -> builder.append(script.getId()));
+        ScriptLoader.SCRIPTS.forEach(Script::initialize);
+        list(ScriptLoader.SCRIPTS, "Initialized Scripts: ", (builder, script) -> {
             if (script.isInitialized()) builder.append(script.getId());
         });
     }
 
-    private static <T> void list(Collection<T> collection, String initial, BiConsumer<StringBuilder, T> func) {
+    public static <T> void list(Collection<T> collection, String initial, BiConsumer<StringBuilder, T> func) {
         StringBuilder builder = new StringBuilder(initial);
         collection.forEach((script) -> {
             func.accept(builder, script);

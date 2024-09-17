@@ -1,9 +1,9 @@
 package dev.hugeblank.allium.loader.type.property;
 
 import dev.hugeblank.allium.loader.type.InvalidArgumentException;
+import dev.hugeblank.allium.util.ArgumentUtils;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
-import dev.hugeblank.allium.util.ArgumentUtils;
 import dev.hugeblank.allium.loader.type.coercion.TypeCoercions;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.Constants;
@@ -13,8 +13,8 @@ import org.squiddev.cobalt.LuaValue;
 
 import java.lang.reflect.InvocationTargetException;
 
-public record PropertyMethodData<I>(EMethod getter,
-                                    @Nullable EMethod setter) implements PropertyData<I> {
+public record PropertyMethodData<I>(EMethod getter, @Nullable EMethod setter) implements PropertyData<I> {
+
     @Override
     public LuaValue get(String name, LuaState state, I instance, boolean noThisArg) throws LuaError {
         var params = getter.parameters();

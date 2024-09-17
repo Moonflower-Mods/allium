@@ -1,4 +1,4 @@
-package dev.hugeblank.bouquet.api.event;
+package dev.hugeblank.allium.api.event;
 
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import me.basiqueevangelist.enhancedreflection.api.EClass;

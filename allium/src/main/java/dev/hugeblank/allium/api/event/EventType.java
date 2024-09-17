@@ -1,11 +1,12 @@
-package dev.hugeblank.bouquet.api.event;
+package dev.hugeblank.allium.api.event;
 
 import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.api.ScriptResource;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.loader.type.annotation.OptionalArg;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @LuaWrapped
 public class EventType<T> {

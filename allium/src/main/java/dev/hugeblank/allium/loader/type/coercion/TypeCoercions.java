@@ -91,24 +91,12 @@ public class TypeCoercions {
 
         if (value.isFunction() && clatz.type() == ClassType.INTERFACE) { // Callbacks
             var func = value.checkFunction();
-            EMethod ifaceMethod = null;
+            EMethod ifaceMethod = functionalInterfaceMethod(clatz);
 
-            int unimplemented = 0;
-            for (var meth : clatz.methods()) {
-                if (meth.isAbstract()) {
-                    unimplemented++;
-                    ifaceMethod = meth;
-
-                    if (unimplemented > 1) {
-                        break;
-                    }
-                }
-            }
-
-            if (unimplemented == 1) {
-                return ProxyGenerator.getProxyFactory(clatz, ifaceMethod).apply(state, func);
-            } else {
+            if (ifaceMethod == null) {
                 return value.checkUserdata(clatz.raw());
+            } else {
+                return ProxyGenerator.getProxyFactory(clatz, ifaceMethod).apply(state, func);
             }
         }
 
@@ -154,24 +142,11 @@ public class TypeCoercions {
             }
             return table;
         } else if (klass.type() == ClassType.INTERFACE && klass.hasAnnotation(FunctionalInterface.class)) {
-            EMethod ifaceMethod = null;
-
-            int unimplemented = 0;
-            for (var meth : klass.methods()) {
-                if (meth.isAbstract()) {
-                    unimplemented++;
-                    ifaceMethod = meth;
-
-                    if (unimplemented > 1) {
-                        break;
-                    }
-                }
-            }
-
-            if (unimplemented == 1) {
-                return new UDFFunctions(klass, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out, false);
-            } else {
+            EMethod ifaceMethod = functionalInterfaceMethod(klass);
+            if (ifaceMethod == null) {
                 return UserdataFactory.of(klass).create(klass.cast(out));
+            } else {
+                return new UDFFunctions(klass, Collections.singletonList(ifaceMethod), ifaceMethod.name(), out, false);
             }
         } else if (klass.raw().isAssignableFrom(out.getClass())) {
             EClass<?> trueRet = EClass.fromJava(out.getClass());
@@ -190,6 +165,24 @@ public class TypeCoercions {
         } else {
             return Constants.NIL;
         }
+    }
+
+    private static EMethod functionalInterfaceMethod(EClass<?> klass) {
+        EMethod ifaceMethod = null;
+
+        int unimplemented = 0;
+        for (var meth : klass.methods()) {
+            if (meth.isAbstract()) {
+                unimplemented++;
+                ifaceMethod = meth;
+
+                if (unimplemented > 1) {
+                    break;
+                }
+            }
+        }
+
+        return unimplemented == 1 ? ifaceMethod : null;
     }
 
     private static boolean canMatch(EType type, EType other) {
@@ -214,8 +207,7 @@ public class TypeCoercions {
             if (klass.allSuperclasses().stream().anyMatch(x -> canMatch(x, other)))
                 return true;
 
-            if (klass.interfaces().stream().anyMatch(x -> canMatch(x, other)))
-                return true;
+            return klass.interfaces().stream().anyMatch(x -> canMatch(x, other));
         }
 
         return false;

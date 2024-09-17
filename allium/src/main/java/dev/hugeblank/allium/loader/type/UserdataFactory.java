@@ -20,10 +20,7 @@ import dev.hugeblank.allium.loader.type.property.PropertyResolver;
 import org.apache.commons.lang3.ArrayUtils;
 import org.jetbrains.annotations.Nullable;
 import org.squiddev.cobalt.*;
-import org.squiddev.cobalt.function.OneArgFunction;
-import org.squiddev.cobalt.function.ThreeArgFunction;
-import org.squiddev.cobalt.function.TwoArgFunction;
-import org.squiddev.cobalt.function.VarArgFunction;
+import org.squiddev.cobalt.function.*;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;

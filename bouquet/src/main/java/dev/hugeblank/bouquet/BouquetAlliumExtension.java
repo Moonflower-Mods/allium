@@ -8,7 +8,7 @@ public class BouquetAlliumExtension implements AlliumExtension {
 
     @Override
     public void onInitialize() {
-        EnvironmentManager.registerLibrary(AlliumLib::new);
+        EnvironmentManager.registerLibrary(new AlliumLib());
         EnvironmentManager.registerLibrary(new DefaultEventsLib());
         EnvironmentManager.registerLibrary(new FabricLib());
         EnvironmentManager.registerLibrary(new GameLib());

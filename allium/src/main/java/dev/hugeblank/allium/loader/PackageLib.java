@@ -61,7 +61,7 @@ public class PackageLib implements WrappedLuaLibrary {
         for (Path path : getPathsFromModule(script, modStr)) {
             try {
                 if ( // If the script is requiring its own static entrypoint from the dynamic one, give the value.
-                        entrypoint.hasType(Entrypoint.Type.STATIC) &&
+                        entrypoint.containsStatic() &&
                                 Files.isSameFile( path, script.getPath().resolve(entrypoint.getStatic()))
                 ) return ValueFactory.varargsOf(script.getModule(), ValueFactory.valueOf(path.toString()));
             } catch (IOException ignored) {}

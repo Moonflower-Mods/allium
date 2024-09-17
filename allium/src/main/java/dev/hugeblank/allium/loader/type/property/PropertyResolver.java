@@ -49,7 +49,6 @@ public final class PropertyResolver {
         methods.forEach((method -> {
             if (AnnotationUtils.isHiddenFromLua(method)) return;
             if (staticOnly && !method.isStatic()) return;
-
             String[] altNames = AnnotationUtils.findNames(method);
             if (altNames != null) {
                 for (String altName : altNames) {
@@ -61,37 +60,40 @@ public final class PropertyResolver {
                 return;
             }
 
+            // var methodName = Allium.DEVELOPMENT ? method.name() : Allium.MAPPINGS.getYarn(Mappings.asMethod(method.declaringClass(), method)).split("#")[1];
             var methodName = method.name();
-
-            if (methodName.equals(name) || methodName.equals("allium$" + name) || name.equals("m_" + methodName)) {
-                consumer.accept(method);
-            }
 
             if (methodName.startsWith("allium_private$")) {
                 return;
             }
 
-            if (!Allium.DEVELOPMENT) {
-                var mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1];
-                if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
-                    consumer.accept(method);
-                }
+            if (methodName.equals(name) || methodName.equals("allium$" + name) || name.equals("m_" + methodName)) {
+                consumer.accept(method);
+            }
+
+            if (!Allium.DEVELOPMENT) { // Check class hierarchy for a match
+                findNameMatches(sourceClass, method, methodName, name, consumer);
 
                 for (var clazz : sourceClass.allSuperclasses()) {
-                    mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1];
-                    if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
-                        consumer.accept(method);
+                    findNameMatches(clazz, method, methodName, name, consumer);
+                    for (var iface : clazz.allInterfaces()) {
+                        findNameMatches(iface, method, methodName, name, consumer);
                     }
                 }
 
                 for (var clazz : sourceClass.allInterfaces()) {
-                    mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(clazz, method)).split("#")[1];
-                    if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
-                        consumer.accept(method);
-                    }
+                    findNameMatches(clazz, method, methodName, name, consumer);
                 }
             }
+
         }));
+    }
+
+    private static void findNameMatches(EClass<?> sourceClass, EMethod method, String methodName, String name, Consumer<EMethod> consumer) {
+        String mappedName = Allium.MAPPINGS.getYarn(Mappings.asMethod(sourceClass, method)).split("#")[1];
+        if (mappedName.equals(name) || mappedName.equals("m_" + methodName)) {
+            consumer.accept(method);
+        }
     }
 
     public static EMethod findMethod(EClass<?> sourceClass, List<EMethod> methods, String name, Predicate<EMethod> filter) {
