@@ -1,5 +1,6 @@
 package dev.hugeblank.bouquet.api.lib.fs;
 
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToNative;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
@@ -22,7 +23,7 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @LuaWrapped(name = "fs")
-public class FsLib {
+public class FsLib implements WrappedLuaLibrary {
     private final Script script;
     private final Path root;
 

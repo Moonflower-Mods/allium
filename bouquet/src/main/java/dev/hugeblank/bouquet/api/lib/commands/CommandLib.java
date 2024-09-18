@@ -1,6 +1,7 @@
 package dev.hugeblank.bouquet.api.lib.commands;
 
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.Script;
 import dev.hugeblank.allium.loader.type.annotation.CoerceToBound;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
@@ -11,7 +12,7 @@ import net.minecraft.server.command.ServerCommandSource;
 import static dev.hugeblank.bouquet.api.lib.AlliumLib.COMMANDS;
 
 @LuaWrapped(name = "command")
-public class CommandLib {
+public class CommandLib implements WrappedLuaLibrary {
     private final Script script;
 
     public CommandLib(Script script) {

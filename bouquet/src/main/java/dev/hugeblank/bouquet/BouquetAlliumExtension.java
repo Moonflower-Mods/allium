@@ -3,6 +3,9 @@ package dev.hugeblank.bouquet;
 import dev.hugeblank.allium.loader.EnvironmentManager;
 import dev.hugeblank.allium.api.AlliumExtension;
 import dev.hugeblank.bouquet.api.lib.*;
+import dev.hugeblank.bouquet.api.lib.commands.CommandLib;
+import dev.hugeblank.bouquet.api.lib.fs.FsLib;
+import dev.hugeblank.bouquet.api.lib.http.HttpLib;
 
 public class BouquetAlliumExtension implements AlliumExtension {
 
@@ -16,5 +19,8 @@ public class BouquetAlliumExtension implements AlliumExtension {
         EnvironmentManager.registerLibrary(new JsonLib());
         EnvironmentManager.registerLibrary(new NbtLib());
         EnvironmentManager.registerLibrary(new TextLib());
+        EnvironmentManager.registerLibrary(CommandLib::new);
+        EnvironmentManager.registerLibrary(FsLib::new);
+        EnvironmentManager.registerLibrary(new HttpLib());
     }
 }
