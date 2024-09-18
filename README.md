@@ -9,7 +9,12 @@ road.
 
 ## Installing
 Allium installs just like any other Fabric mod. If you don't know how to do this, [this Tech Insider video](https://www.youtube.com/watch?v=vNz0z1Aht1U) does a 
-pretty good job of explaining how.
+pretty good job of explaining how. Depending on the scripts you use, they may depend on Bouquet, an additional mod that 
+adds libraries to make scripting easier. Much like Fabric API, this mod is independent and not built into the loader
+side of Allium and must be downloaded individually.
+
+If you'd like to use Allium or Bouquet to extend functionality of your own Java mod, publications can be found on
+[hugeblank's maven](https://maven.hugeblank.dev/#/releases/dev/hugeblank).
 
 ### Scripts
 In the same place that you create your `mods` directory, create a folder named `allium`. This is where your lua scripts 
@@ -19,9 +24,10 @@ similar.
 
 ## Limitations
 Allium aims to be a gateway into modding, however there are currently some limitations that stifle its utility. Notably,
-mixins and documentation. There have been attempts in the past to get mixins working in a way that makes sense, and to
-get documentation that a Lua user can approach to understand Java logic, but none were particularly elegant. Both of 
-these limitations will be resolved before version 1.0.
+mixins and documentation. There was an attempt to get documentation that a Lua user can approach to understand Java 
+logic, but it wasn't particularly elegant, nor complete. Mixin support on the other hand is in progress, slowly. Both of 
+these limitations will be resolved before version 1.0. While there is not documentation, examples of how scripting works
+can be found in [`bouquet/examples`](bouquet/examples).
 
 ## Logos
 Allium's logos are under the same license as the rest of the project. Feel free to use these in your own project
@@ -31,7 +37,8 @@ Allium's logos are under the same license as the rest of the project. Feel free 
 
 ## Contributing
 Allium is broken up into 2 gradle subprojects that each build into their own jars. When making a pull request please
-make sure to use the template that corresponds to which project you're contributing to (TODO).
+make sure to use the template that corresponds to which project you're contributing to (TODO). If you'd like to discuss
+contribution please feel free to join the #allium-dev channel of [hugeblank's discord](https://discord.gg/sYps2KU2P9)
 
 ### Allium
 Found in the `allium` directory, this is the bare-minimum necessary for a Lua script to be run in the game.
@@ -41,7 +48,7 @@ Found in the `bouquet` directory, this features additional quality of life libra
 event hooks into the games logic.
 
 ### Dev Environment Notes
-- To build both projects at the same time use the `buildMoonflower` gradle task.
+- To build both projects at the same time use the `buildAll` gradle task.
 - Multiple client run configurations are created. One is for running only allium, the other is for running both allium & bouquet.
 
 ## Too much Allium...
