@@ -32,7 +32,7 @@ loom {
 }
 
 dependencies {
-	modImplementation("org.squiddev", "Cobalt", cobalt)
+	modImplementation("cc.tweaked", "cobalt", cobalt)
 	modImplementation("me.basiqueevangelist","enhanced-reflection", enhancedReflections)
 	modImplementation("net.fabricmc", "tiny-mappings-parser", tinyParser)
 

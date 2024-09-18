@@ -22,7 +22,7 @@ base {
 }
 
 dependencies {
-	modImplementation(include("org.squiddev", "Cobalt", cobalt))
+	modImplementation(include("cc.tweaked", "cobalt", cobalt))
 	modImplementation(include("me.basiqueevangelist","enhanced-reflection", enhancedReflections))
 	modImplementation(include("net.fabricmc", "tiny-mappings-parser", tinyParser))
 }

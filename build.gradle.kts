@@ -38,7 +38,7 @@ subprojects {
         }
         maven("https://squiddev.cc/maven") {
             content {
-                includeGroup("org.squiddev")
+                includeGroup("cc.tweaked")
             }
         }
         maven("https://maven.nucleoid.xyz") {
