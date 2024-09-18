@@ -4,8 +4,10 @@ val alliumVersion: String by project
 val alliumReleaseCandidate: String by project
 val alliumBaseName: String by project
 
+// Common Dependencies
+val cobalt: String by project
 val tinyParser: String by project
-
+val enhancedReflections: String by project
 
 // Following by example, using semantic versioning null
 var v = alliumVersion
@@ -20,6 +22,8 @@ base {
 }
 
 dependencies {
+	modImplementation(include("org.squiddev", "Cobalt", cobalt))
+	modImplementation(include("me.basiqueevangelist","enhanced-reflection", enhancedReflections))
 	modImplementation(include("net.fabricmc", "tiny-mappings-parser", tinyParser))
 }
 
@@ -38,17 +42,6 @@ publishing {
 			groupId = mavenGroup
 			artifactId = alliumBaseName
 			version = version
-		}
-	}
-
-	repositories {
-		maven {
-			name = "hugeblankRepo"
-			url = uri("https://maven.hugeblank.dev/releases")
-			credentials(PasswordCredentials::class)
-			authentication {
-				create<BasicAuthentication>("basic")
-			}
 		}
 	}
 }

@@ -1,8 +1,8 @@
-import java.util.Locale
+import java.util.*
 
 plugins {
-    id("fabric-loom") version "1.7-SNAPSHOT"
     id("maven-publish")
+    id("fabric-loom") version "1.7-SNAPSHOT"
 }
 // Common Mod Properties
 val mavenGroup: String by project
@@ -21,9 +21,14 @@ val enhancedReflections: String by project
 val nettyHttp: String by project
 val placeholderApi: String by project
 
-allprojects {
-    apply(plugin = "fabric-loom")
+dependencies {
+    minecraft("com.mojang", "minecraft", minecraftVersion)
+    mappings("net.fabricmc", "yarn", yarnMappings, null, "v2")
+}
+
+subprojects {
     apply(plugin = "maven-publish")
+    apply(plugin = "fabric-loom")
 
     repositories {
         maven("https://maven.hugeblank.dev/releases") {
@@ -52,10 +57,6 @@ allprojects {
         minecraft("com.mojang", "minecraft", minecraftVersion)
         mappings("net.fabricmc", "yarn", yarnMappings, null, "v2")
         modImplementation("net.fabricmc", "fabric-loader", loaderVersion)
-
-        modImplementation("org.squiddev", "Cobalt", cobalt)
-        modImplementation("me.basiqueevangelist","enhanced-reflection", enhancedReflections)
-        modImplementation("net.fabricmc", "tiny-mappings-parser", tinyParser)
     }
 
     tasks {
@@ -74,42 +75,53 @@ allprojects {
         }
 
         loom {
+            val moduleName = project.name.replaceFirstChar {
+                if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
+            }
             runs {
                 named("client") {
-                    configName = "${
-                        project.name.replaceFirstChar {
-                            if (it.isLowerCase()) it.titlecase(Locale.getDefault()) else it.toString()
-                        }
-                    } Client"
+                    configName = "$moduleName Client"
                     ideConfigGenerated(true)
                     runDir("../run")
                     programArgs("-username", "GradleDev")
+                }
+                named("server") {
+                    configName = "$moduleName Server"
+                    ideConfigGenerated(true)
+                    runDir("../run")
+                }
+            }
+        }
+    }
+
+    publishing {
+        repositories {
+            maven {
+                name = "hugeblankRepo"
+                url = uri("https://maven.hugeblank.dev/releases")
+                credentials(PasswordCredentials::class)
+                authentication {
+                    create<BasicAuthentication>("basic")
                 }
             }
         }
     }
 }
 
-dependencies {
-    implementation("net.fabricmc", "tiny-mappings-parser", tinyParser)
-    implementation("io.netty", "netty-codec-http", nettyHttp)
-    implementation("eu.pb4", "placeholder-api", placeholderApi)
-}
-
-evaluationDependsOnChildren()
-
 tasks {
+    register<GradleBuild>("buildAll") {
+        group = "build"
+        tasks = subprojects.map { ":${it.name}:build" }
+    }
 
     loom {
         runs {
             named("client") {
                 ideConfigGenerated(false)
             }
+            named("server") {
+                ideConfigGenerated(false)
+            }
         }
-    }
-
-    register<GradleBuild>("buildMoonflower") {
-        group = "build"
-        tasks = subprojects.map {  ":${it.name}:build" }
     }
 }

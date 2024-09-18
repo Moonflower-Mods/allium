@@ -1,5 +1,10 @@
 val mavenGroup: String by project
 
+// Common Dependencies
+val cobalt: String by project
+val tinyParser: String by project
+val enhancedReflections: String by project
+
 val bouquetVersion: String by project
 val bouquetReleaseCandidate: String by project
 val bouquetBaseName: String by project
@@ -27,7 +32,11 @@ loom {
 }
 
 dependencies {
-	modImplementation(include("io.netty", "netty-codec-http", nettyHttp))
+	modImplementation("org.squiddev", "Cobalt", cobalt)
+	modImplementation("me.basiqueevangelist","enhanced-reflection", enhancedReflections)
+	modImplementation("net.fabricmc", "tiny-mappings-parser", tinyParser)
+
+	implementation(include("io.netty", "netty-codec-http", nettyHttp))
 	modImplementation("eu.pb4", "placeholder-api", placeholderApi)
 	implementation(project(path = ":allium", configuration = "namedElements"))
 }
@@ -46,17 +55,6 @@ publishing {
 			groupId = mavenGroup
 			artifactId = bouquetBaseName
 			version = version
-		}
-	}
-
-	repositories {
-		maven {
-			name = "hugeblankRepo"
-			url = uri("https://maven.hugeblank.dev/releases")
-			credentials(PasswordCredentials::class)
-			authentication {
-				create<BasicAuthentication>("basic")
-			}
 		}
 	}
 }
