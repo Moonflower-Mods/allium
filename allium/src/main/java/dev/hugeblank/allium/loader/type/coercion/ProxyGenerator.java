@@ -11,6 +11,7 @@ import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;
 import org.squiddev.cobalt.ValueFactory;
 import org.squiddev.cobalt.Varargs;
+import org.squiddev.cobalt.function.Dispatch;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.util.HashMap;
@@ -110,10 +111,9 @@ public class ProxyGenerator {
         if (!isVoid) m.visitInsn(DUP);
         m.visitVarInsn(ALOAD, 0);
         m.visitFieldInsn(GETFIELD, className, FUNCTION_FIELD_NAME, Type.getDescriptor(LuaFunction.class));
-        m.visitInsn(SWAP);
         m.visitVarInsn(ALOAD, varPrefix);
         m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(ValueFactory.class), "varargsOf", "([Lorg/squiddev/cobalt/LuaValue;)Lorg/squiddev/cobalt/Varargs;", false);
-        m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(LuaFunction.class), "invoke", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/Varargs;)Lorg/squiddev/cobalt/Varargs;", false);
+        m.visitMethodInsn(INVOKESTATIC, Type.getInternalName(Dispatch.class), "invoke", "(Lorg/squiddev/cobalt/LuaState;Lorg/squiddev/cobalt/LuaValue;Lorg/squiddev/cobalt/Varargs;)Lorg/squiddev/cobalt/Varargs;", false);
 
         if (!isVoid) {
             m.visitMethodInsn(INVOKEVIRTUAL, Type.getInternalName(Varargs.class), "first", "()Lorg/squiddev/cobalt/LuaValue;", false);

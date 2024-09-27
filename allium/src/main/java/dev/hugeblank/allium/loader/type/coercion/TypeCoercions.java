@@ -11,6 +11,7 @@ import me.basiqueevangelist.enhancedreflection.api.*;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
 import net.minecraft.util.Identifier;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.function.LuaFunction;
 
 import java.lang.reflect.Array;
 import java.util.*;
@@ -55,9 +56,65 @@ public class TypeCoercions {
             return null;
         
         if (value instanceof AlliumUserdata<?> userdata)
-            return userdata.toUserdata(clatz.wrapPrimitive());
-        
-        return null;
+            try {
+                return userdata.toUserdata(clatz.wrapPrimitive());
+            } catch (ClassCastException e) {
+                throw new InvalidArgumentException(e);
+            }
+
+        clatz = clatz.unwrapPrimitive();
+
+        var deserializerFactory = FROM_LUA.get(clatz.raw());
+        if (deserializerFactory != null) {
+            var deserializer = deserializerFactory.apply(clatz);
+
+            if (deserializer != null) {
+                Object result = deserializer.fromLua(state, value);
+
+                if (result != null) return result;
+            }
+        }
+
+        if (clatz.type() == ClassType.ARRAY) {
+            try {
+                LuaTable table = value.checkTable();
+                int length = table.length();
+                Object arr = Array.newInstance(clatz.arrayComponent().raw(), table.length());
+                for (int i = 0; i < length; i++) {
+                    Array.set(arr, i, toJava(state, table.rawget(i + 1), clatz.arrayComponent()));
+                }
+                return clatz.cast(arr);
+            } catch (Exception e) {
+                throw new LuaError(
+                        "Expected table of "
+                                + clatz.arrayComponent()
+                                + "s, got "
+                                + value.typeName()
+                );
+            }
+        }
+
+        if (value instanceof LuaFunction func && clatz.type() == ClassType.INTERFACE) { // Callbacks
+            EMethod ifaceMethod = null;
+
+            int unimplemented = 0;
+            for (var meth : clatz.methods()) {
+                if (meth.isAbstract()) {
+                    unimplemented++;
+                    ifaceMethod = meth;
+
+                    if (unimplemented > 1) {
+                        break;
+                    }
+                }
+            }
+
+            if (unimplemented == 1) {
+                return ProxyGenerator.getProxyFactory(clatz, ifaceMethod).apply(state, func);
+            } // TODO: Weird code was removed here. Did that break anything?
+        }
+
+        throw new InvalidArgumentException("Couldn't convert " + value + " to java! Target type is " + clatz);
     }
 
     public static LuaValue toLuaValue(Object out) {
