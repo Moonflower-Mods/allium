@@ -1,12 +1,10 @@
 package dev.hugeblank.bouquet.mixin.block;
 
-import dev.hugeblank.bouquet.api.lib.DefaultEventsLib;
+import dev.hugeblank.bouquet.api.event.CommonEvents;
 import net.minecraft.block.AbstractBlock;
 import net.minecraft.block.BlockState;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
-import net.minecraft.server.network.ServerPlayerEntity;
-import net.minecraft.server.world.ServerWorld;
 import net.minecraft.util.ActionResult;
 import net.minecraft.util.Hand;
 import net.minecraft.util.ItemActionResult;
@@ -23,11 +21,11 @@ public class AbstractBlockMixin {
 
     @Inject(at = @At("TAIL"), method = "onUse")
     private void onUse(BlockState state, World world, BlockPos pos, PlayerEntity player, BlockHitResult hit, CallbackInfoReturnable<ActionResult> cir) {
-        if (!world.isClient()) DefaultEventsLib.BLOCK_INTERACT.invoker().onPlayerBlockInteraction(state, (ServerWorld) world, pos, (ServerPlayerEntity) player, null, hit);
+        CommonEvents.BLOCK_INTERACT.invoker().onPlayerBlockInteraction(state, world, pos,  player, null, hit);
     }
 
     @Inject(at = @At("TAIL"), method = "onUseWithItem")
     private void onUseWithItem(ItemStack stack, BlockState state, World world, BlockPos pos, PlayerEntity player, Hand hand, BlockHitResult hit, CallbackInfoReturnable<ItemActionResult> cir) {
-        if (!world.isClient()) DefaultEventsLib.BLOCK_INTERACT.invoker().onPlayerBlockInteraction(state, (ServerWorld) world, pos, (ServerPlayerEntity) player, hand, hit);
+        CommonEvents.BLOCK_INTERACT.invoker().onPlayerBlockInteraction(state, world, pos, player, hand, hit);
     }
 }

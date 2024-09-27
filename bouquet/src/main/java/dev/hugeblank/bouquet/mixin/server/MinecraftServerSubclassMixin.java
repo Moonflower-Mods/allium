@@ -1,6 +1,7 @@
 package dev.hugeblank.bouquet.mixin.server;
 
-import dev.hugeblank.bouquet.api.lib.DefaultEventsLib;
+import dev.hugeblank.bouquet.api.event.CommonEvents;
+import dev.hugeblank.bouquet.api.event.ServerEvents;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.dedicated.MinecraftDedicatedServer;
 import net.minecraft.test.TestServer;
@@ -13,6 +14,6 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 public class MinecraftServerSubclassMixin {
     @Inject(at = @At("TAIL"), method = "setupServer")
     private void init(CallbackInfoReturnable<Boolean> cir) {
-        DefaultEventsLib.SERVER_START.invoker().onServerStart((MinecraftServer) (Object) this);
+        ServerEvents.SERVER_START.invoker().onServerStart((MinecraftServer) (Object) this);
     }
 }

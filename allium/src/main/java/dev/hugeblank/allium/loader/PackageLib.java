@@ -6,6 +6,7 @@ import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import dev.hugeblank.allium.util.JavaHelpers;
 import org.squiddev.cobalt.*;
+import org.squiddev.cobalt.debug.DebugFrame;
 import org.squiddev.cobalt.function.*;
 
 import java.io.IOException;
@@ -31,11 +32,11 @@ public class PackageLib implements WrappedLuaLibrary {
         // When writing a loader in Java, anywhere where a module value can't be determined `nil` should be returned.
         loaders = ValueFactory.listOf(
                 // Loader to check if module has a loader provided by preload table
-                RegisteredFunction.of("preload_loader", this::preloadLoader).create(),
+                RegisteredFunction.ofS("preload_loader", this::preloadLoader).create(),
                 // Loader to check the path internal to the script
-                RegisteredFunction.ofV("path_loader", this::pathLoader).create(),
+                RegisteredFunction.ofS("path_loader", this::pathLoader).create(),
                 // Loader to check the path assuming the first value in the path is a script ID
-                RegisteredFunction.ofV("external_script_loader", this::externScriptLoader).create(),
+                RegisteredFunction.ofS("external_script_loader", this::externScriptLoader).create(),
                 // Loader to check the class files
                 RegisteredFunction.of("java_loader", this::javaLoader).create()
 
@@ -43,19 +44,19 @@ public class PackageLib implements WrappedLuaLibrary {
     }
 
     @Override
-    public LuaValue add(LuaState state, LuaTable globals) {
-        globals.rawset("require", RegisteredFunction.ofV("require", this::require).create());
+    public LuaValue add(LuaState state, LuaTable globals) throws LuaError {
+        globals.rawset("require", RegisteredFunction.ofS("require", this::require).create());
         return WrappedLuaLibrary.super.add(state, globals);
     }
 
-    public LuaValue preloadLoader(LuaState state, LuaValue arg) throws LuaError, UnwindThrowable {
-        if (preload.rawget(arg).isFunction()){
-            return preload.rawget(arg).checkFunction().call(state, arg);
+    public Varargs preloadLoader(LuaState state, DebugFrame frame, Varargs args) throws LuaError, UnwindThrowable {
+        if (preload.rawget(args.arg(1)) instanceof LuaFunction function){
+            return Dispatch.call(state, function);
         }
         return Constants.NIL;
     }
 
-    private Varargs pathLoader(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
+    private Varargs pathLoader(LuaState state, DebugFrame frame, Varargs args) throws LuaError, UnwindThrowable {
         String modStr = args.arg(1).checkString();
         Entrypoint entrypoint = script.getManifest().entrypoints();
         for (Path path : getPathsFromModule(script, modStr)) {
@@ -69,7 +70,7 @@ public class PackageLib implements WrappedLuaLibrary {
         return loadFromPaths(state, script, modStr);
     }
 
-    private Varargs externScriptLoader(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
+    private Varargs externScriptLoader(LuaState state, DebugFrame frame, Varargs args) throws LuaError, UnwindThrowable {
         String[] path = args.arg(1).checkString().split("\\.");
         Script candidate = Script.getFromID(path[0]);
         if (candidate != null) {
@@ -142,14 +143,13 @@ public class PackageLib implements WrappedLuaLibrary {
         return pathList;
     }
 
-    private Varargs require(LuaState state, Varargs args) throws LuaError, UnwindThrowable {
+    private Varargs require(LuaState state, DebugFrame frame, Varargs args) throws LuaError, UnwindThrowable {
         LuaString mod = args.arg(1).checkLuaString();
         if (!loaded.rawget(mod).isNil()) return loaded.rawget(mod);
         for (int i = 1; i <= loaders.length(); i++) {
             LuaValue loader = loaders.rawget(i);
-            if (loader.isFunction()) {
-                LuaFunction f = loader.checkFunction();
-                Varargs contents = f.call(state, mod);
+            if (loader instanceof LuaFunction f) {
+                Varargs contents = Dispatch.call(state, f, mod);
                 if (contents != Constants.NIL) {
                     loaded.rawset(mod, contents.arg(1));
                     return contents;

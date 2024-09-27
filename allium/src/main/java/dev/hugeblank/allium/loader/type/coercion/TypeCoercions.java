@@ -1,5 +1,6 @@
 package dev.hugeblank.allium.loader.type.coercion;
 
+import dev.hugeblank.allium.loader.type.AlliumUserdata;
 import dev.hugeblank.allium.loader.type.InvalidArgumentException;
 import dev.hugeblank.allium.loader.type.UDFFunctions;
 import dev.hugeblank.allium.loader.type.UserdataFactory;
@@ -52,67 +53,11 @@ public class TypeCoercions {
 
         if (value.isNil())
             return null;
-
-        try {
-            return value.checkUserdata(clatz.wrapPrimitive().raw());
-        } catch (LuaError ignored) {}
-
-        clatz = clatz.unwrapPrimitive();
-
-        var deserializerFactory = FROM_LUA.get(clatz.raw());
-        if (deserializerFactory != null) {
-            var deserializer = deserializerFactory.apply(clatz);
-
-            if (deserializer != null) {
-                Object result = deserializer.fromLua(state, value);
-
-                if (result != null) return result;
-            }
-        }
-
-        if (clatz.type() == ClassType.ARRAY) {
-            try {
-                LuaTable table = value.checkTable();
-                int length = table.length();
-                Object arr = Array.newInstance(clatz.arrayComponent().raw(), table.length());
-                for (int i = 0; i < length; i++) {
-                    Array.set(arr, i, toJava(state, table.rawget(i + 1), clatz.arrayComponent()));
-                }
-                return clatz.cast(arr);
-            } catch (Exception e) {
-                throw new LuaError(
-                        "Expected table of "
-                                + clatz.arrayComponent()
-                                + "s, got "
-                                + value.typeName()
-                );
-            }
-        }
-
-        if (value.isFunction() && clatz.type() == ClassType.INTERFACE) { // Callbacks
-            var func = value.checkFunction();
-            EMethod ifaceMethod = null;
-
-            int unimplemented = 0;
-            for (var meth : clatz.methods()) {
-                if (meth.isAbstract()) {
-                    unimplemented++;
-                    ifaceMethod = meth;
-
-                    if (unimplemented > 1) {
-                        break;
-                    }
-                }
-            }
-
-            if (unimplemented == 1) {
-                return ProxyGenerator.getProxyFactory(clatz, ifaceMethod).apply(state, func);
-            } else {
-                return value.checkUserdata(clatz.raw());
-            }
-        }
-
-        throw new InvalidArgumentException("Couldn't convert " + value + " to java! Target type is " + clatz);
+        
+        if (value instanceof AlliumUserdata<?> userdata)
+            return userdata.toUserdata(clatz.wrapPrimitive());
+        
+        return null;
     }
 
     public static LuaValue toLuaValue(Object out) {
@@ -259,7 +204,7 @@ public class TypeCoercions {
                 LuaTable table = new LuaTable();
 
                 for (Map.Entry<?, ?> entry : ((Map<?, ?>) map).entrySet()) {
-                    table.rawset(TypeCoercions.toLuaValue(entry.getKey(), keyUse), TypeCoercions.toLuaValue(entry.getValue(), valueUse));
+                    table.rawsetImpl(TypeCoercions.toLuaValue(entry.getKey(), keyUse), TypeCoercions.toLuaValue(entry.getValue(), valueUse));
                 }
 
                 return table;

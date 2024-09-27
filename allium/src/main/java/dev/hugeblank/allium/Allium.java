@@ -16,6 +16,7 @@ import dev.hugeblank.allium.api.AlliumExtension;
 import dev.hugeblank.allium.util.FileHelper;
 import dev.hugeblank.allium.util.Mappings;
 import dev.hugeblank.allium.util.YarnLoader;
+import net.fabricmc.api.EnvType;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.ModContainer;
@@ -62,6 +63,13 @@ public class Allium implements ModInitializer {
                     initializer.getEntrypoint().onInitialize();
                     mods.add(initializer.getProvider());
                 });
+        if (FabricLoader.getInstance().getEnvironmentType() == EnvType.CLIENT) {
+            FabricLoader.getInstance().getEntrypointContainers(ID+"-client", AlliumExtension.class)
+                    .forEach((initializer) -> {
+                        initializer.getEntrypoint().onInitialize();
+                        mods.add(initializer.getProvider());
+                    });
+        }
         list(mods, "Initialized Extensions: ", (builder, mod) -> builder.append(mod.getMetadata().getId()));
 
         Set<Script> scripts = new HashSet<>();

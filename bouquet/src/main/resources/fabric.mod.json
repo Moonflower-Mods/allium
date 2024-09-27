@@ -23,6 +23,9 @@
 		],
 		"allium": [
 			"dev.hugeblank.bouquet.BouquetAlliumExtension"
+		],
+		"allium-client": [
+			"dev.hugeblank.bouquet.BouquetAlliumExtensionClient"
 		]
 	},
 	"mixins": [

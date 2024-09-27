@@ -9,6 +9,7 @@
     "command.ReloadCommandMixin",
     "command.argument.ArgumentTypesMixin",
     "entity.EntityMixin",
+    "entity.PlayerEntityMixin",
     "resource.ResourcePackManagerMixin",
     "server.MinecraftServerMixin",
     "server.MinecraftServerSubclassMixin",

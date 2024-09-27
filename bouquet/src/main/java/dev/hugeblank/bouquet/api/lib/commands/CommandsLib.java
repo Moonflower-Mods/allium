@@ -2,6 +2,7 @@ package dev.hugeblank.bouquet.api.lib.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.tree.CommandNode;
+import dev.hugeblank.allium.api.WrappedLuaLibrary;
 import dev.hugeblank.allium.loader.type.annotation.LuaIndex;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import net.minecraft.server.MinecraftServer;
@@ -13,10 +14,7 @@ import java.util.Collections;
 // Functionally similar to ComputerCraft's commands API
 // See: https://github.com/cc-tweaked/CC-Tweaked/blob/mc-1.16.x/src/main/java/dan200/computercraft/shared/computer/apis/CommandAPI.java
 @LuaWrapped(name = "commands")
-public class CommandsLib {
-
-    public CommandsLib() {
-    }
+public class CommandsLib implements WrappedLuaLibrary {
 
     @LuaWrapped
     public void exec(MinecraftServer server, String... args) {

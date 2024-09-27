@@ -10,6 +10,7 @@ import org.squiddev.cobalt.LuaState;
 import org.squiddev.cobalt.LuaValue;
 import org.squiddev.cobalt.UnwindThrowable;
 import org.squiddev.cobalt.compiler.CompileException;
+import org.squiddev.cobalt.function.Dispatch;
 import org.squiddev.cobalt.function.LuaFunction;
 
 import java.io.FileNotFoundException;
@@ -148,7 +149,7 @@ public class Script {
         // Ensure the modules parent path is the root path, and that the module exists before loading
         try {
             LuaFunction loadValue = getExecutor().load(Files.newInputStream(mod), mod.getFileName().toString());
-            return loadValue.call(state);
+            return Dispatch.call(state, loadValue);
         } catch (FileNotFoundException e) {
             // This should never happen, but if it does, boy do I want to know.
             Allium.LOGGER.warn("File claimed to exist but threw a not found exception...", e);

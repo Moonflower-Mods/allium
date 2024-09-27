@@ -2,6 +2,7 @@ package dev.hugeblank.allium.loader.type;
 
 import dev.hugeblank.allium.loader.type.coercion.TypeCoercions;
 import dev.hugeblank.allium.util.ArgumentUtils;
+import dev.hugeblank.allium.util.JavaHelpers;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
 import me.basiqueevangelist.enhancedreflection.api.EMethod;
 import me.basiqueevangelist.enhancedreflection.api.typeuse.EClassUse;
@@ -38,7 +39,19 @@ public final class UDFFunctions<T> extends VarArgFunction {
         );
 
         try {
-            T instance = boundReceiver != null || isStatic ? boundReceiver : args.arg(1).checkUserdata(clazz.raw());
+//            final T instance;
+//            if (boundReceiver != null || isStatic) {
+//                instance = boundReceiver;
+//            } else if (args.arg(1) instanceof AlliumUserdata<?> userdata) {
+//                try {
+//                    instance = userdata.toUserdata(clazz);
+//                } catch (ClassCastException e) {
+//                    throw new LuaError(e);
+//                }
+//            } else {
+//                throw new LuaError("Invocation has no instance"); // This should never happen.
+//            }
+            T instance = boundReceiver != null || isStatic ? boundReceiver : JavaHelpers.checkUserdata(args.arg(1), clazz.raw());
             for (EMethod method : matches) { // For each matched method from the index call
                 var parameters = method.parameters();
                 try {

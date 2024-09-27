@@ -11,11 +11,10 @@ import java.io.InputStream;
 
 public class ScriptExecutor extends EnvironmentManager {
     protected final Script script;
-    protected final LuaTable globals;
 
     public ScriptExecutor(Script script) {
         this.script = script;
-        this.globals = createEnvironment(script);
+        createEnvironment(script);
     }
 
     public LuaState getState() {
@@ -56,12 +55,13 @@ public class ScriptExecutor extends EnvironmentManager {
         return null;
     }
 
-    public LuaFunction load(InputStream stream, String name) throws CompileException, IOException {
+    public LuaFunction load(InputStream stream, String name) throws CompileException, IOException, LuaError {
+        // TODO: Replacing using globals here with an empty table. Does it work?
         return LoadState.load(
                 state,
                 stream,
                 name,
-                this.globals
+                state.globals()
         );
     }
 

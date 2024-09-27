@@ -4,9 +4,7 @@ package dev.hugeblank.allium.api;
 import dev.hugeblank.allium.loader.type.UserdataFactory;
 import dev.hugeblank.allium.loader.type.annotation.LuaWrapped;
 import me.basiqueevangelist.enhancedreflection.api.EClass;
-import org.squiddev.cobalt.LuaState;
-import org.squiddev.cobalt.LuaTable;
-import org.squiddev.cobalt.LuaValue;
+import org.squiddev.cobalt.*;
 import org.squiddev.cobalt.function.LibFunction;
 
 /**
@@ -16,7 +14,7 @@ import org.squiddev.cobalt.function.LibFunction;
  */
 public interface WrappedLuaLibrary {
 
-    default LuaValue add(LuaState state, LuaTable globals) {
+    default LuaValue add(LuaState state, LuaTable globals) throws LuaError {
         LuaValue lib = UserdataFactory.of(EClass.fromJava(getClass())).createBound(this);
 
         LuaWrapped wrapped = getClass().getAnnotation(LuaWrapped.class);

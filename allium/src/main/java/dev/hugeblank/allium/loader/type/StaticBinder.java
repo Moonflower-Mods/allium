@@ -28,154 +28,145 @@ public final class StaticBinder {
 
     public static LuaUserdata bindClass(EClass<?> clazz) {
         Map<String, PropertyData<?>> cachedProperties = new HashMap<>();
-        GetClassFunction getClassFunc = new GetClassFunction(clazz);
+        LuaFunction getClassFunc = createGetClassFunction(clazz);
         LuaTable metatable = new LuaTable();
         EMethod indexImpl = clazz.methods().stream().filter(x -> x.isStatic() && x.hasAnnotation(LuaIndex.class)).findAny().orElse(null);
 
-        metatable.rawset("__pairs", new OneArgFunction() {
-            @Override
-            public LuaValue call(LuaState state, LuaValue arg) throws LuaError {
-                Stream.Builder<EMember> memberBuilder = Stream.builder();
-                clazz.methods().forEach(memberBuilder);
-                clazz.fields().forEach(memberBuilder);
-                Stream<Varargs> valueStream = memberBuilder.build().filter((member)->
-                        !clazz.hasAnnotation(LuaWrapped.class) ||
-                                (
-                                        clazz.hasAnnotation(LuaWrapped.class) &&
-                                                member.hasAnnotation(LuaWrapped.class)
-                                )
-                ).map((member)-> {
-                    String memberName = member.name();
-                    if (member.hasAnnotation(LuaWrapped.class)) {
-                        String[] names = AnnotationUtils.findNames(member);
-                        if (names != null && names.length > 0) {
-                            memberName = names[0];
-                        }
-                    }
-                    PropertyData<?> propertyData = cachedProperties.get(memberName);
-
-                    if (propertyData == null) { // caching
-                        propertyData = PropertyResolver.resolveProperty(clazz, memberName, member.isStatic());
-                        cachedProperties.put(memberName, propertyData);
-                    }
-
-                    if (!Allium.DEVELOPMENT) memberName = Allium.MAPPINGS.getYarn(memberName);
-                    try {
-                        return ValueFactory.varargsOf(LuaString.valueOf(memberName), propertyData.get(
-                                memberName,
-                                state,
-                                null,
-                                false
-                        ));
-                    } catch (LuaError e) {
-                        // I have no idea how this could happen, so it'll be interesting if we get an issue
-                        // report in the future with it...
-                        Allium.LOGGER.warn("Could not get property data for " + memberName, e);
-                        return Constants.NIL;
-                    }
-                });
-
-                Iterator<Varargs> iterator = valueStream.iterator();
-                return new VarArgFunction() { // next
-                    public Varargs invoke(LuaState state, Varargs varargs) throws LuaError, UnwindThrowable {
-                        if (!iterator.hasNext()) return Constants.NIL;
-                        return iterator.next();
-                    }
-                };
-            }
-        });
-
-        metatable.rawset("__index", new TwoArgFunction() {
-            @Override
-            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2) throws LuaError {
-                if (arg2.isString()) {
-                    String name = arg2.checkString(); // mapped name
-
-                    if (name.equals("getClass")) {
-                        return getClassFunc;
-                    }
-
-                    PropertyData<?> cachedProperty = cachedProperties.get(name);
-
-                    if (cachedProperty == null) {
-                        cachedProperty = PropertyResolver.resolveProperty(clazz, name, true);
-
-                        cachedProperties.put(name, cachedProperty);
-                    }
-
-                    if (cachedProperty != EmptyData.INSTANCE)
-                        return cachedProperty.get(name, state, null, false);
-                }
-
-                if (indexImpl != null) {
-                    var parameters = indexImpl.parameters();
-                    try {
-                        var jargs = ArgumentUtils.toJavaArguments(state, arg2, 1, parameters);
-
-                        if (jargs.length == parameters.size()) {
-                            try {
-                                var instance = TypeCoercions.toJava(state, arg1, clazz);
-                                EClassUse<?> ret = indexImpl.returnTypeUse().upperBound();
-                                Object out = indexImpl.invoke(instance, jargs);
-                                // If out is null, we can assume the index is nil
-                                if (out == null) throw new InvalidArgumentException();
-                                return TypeCoercions.toLuaValue(out, ret);
-                            } catch (IllegalAccessException e) {
-                                throw new LuaError(e);
-                            } catch (InvocationTargetException e) {
-                                var target = e.getTargetException();
-
-                                if (target instanceof LuaError err) {
-                                    throw err;
-                                } else if (target instanceof IndexOutOfBoundsException) {
-                                    // Continue.
-                                } else {
-                                    throw new LuaError(target);
-                                }
-                            } catch (InvalidArgumentException ignore) {}
-                        }
-                    } catch (InvalidArgumentException | IllegalArgumentException e) {
-                        // Continue.
+        metatable.rawset("__pairs", LibFunction.create((state) -> {
+            Stream.Builder<EMember> memberBuilder = Stream.builder();
+            clazz.methods().forEach(memberBuilder);
+            clazz.fields().forEach(memberBuilder);
+            Stream<Varargs> valueStream = memberBuilder.build().filter((member)->
+                    !clazz.hasAnnotation(LuaWrapped.class) ||
+                            (
+                                    clazz.hasAnnotation(LuaWrapped.class) &&
+                                            member.hasAnnotation(LuaWrapped.class)
+                            )
+            ).map((member)-> {
+                String memberName = member.name();
+                if (member.hasAnnotation(LuaWrapped.class)) {
+                    String[] names = AnnotationUtils.findNames(member);
+                    if (names != null && names.length > 0) {
+                        memberName = names[0];
                     }
                 }
+                PropertyData<?> propertyData = cachedProperties.get(memberName);
 
-                if (arg2.type() == Constants.TTABLE) {
-                    LuaTable table = arg2.checkTable();
-                    EClass<?>[] typeArgs = new EClass[table.length()];
-
-                    for (int i = 0; i < typeArgs.length; i++) {
-                        typeArgs[i] = JavaHelpers.asClass(table.rawget(i + 1));
-                    }
-
-                    try {
-                        return bindClass(clazz.instantiateWith(List.of(typeArgs)));
-                    } catch (IllegalArgumentException e) {
-                        throw new LuaError(e);
-                    }
+                if (propertyData == null) { // caching
+                    propertyData = PropertyResolver.resolveProperty(clazz, memberName, member.isStatic());
+                    cachedProperties.put(memberName, propertyData);
                 }
 
-                return Constants.NIL;
-            }
-        });
+                if (!Allium.DEVELOPMENT) memberName = Allium.MAPPINGS.getYarn(memberName);
+                try {
+                    return ValueFactory.varargsOf(LuaString.valueOf(memberName), propertyData.get(
+                            memberName,
+                            state,
+                            null,
+                            false
+                    ));
+                } catch (LuaError e) {
+                    // I have no idea how this could happen, so it'll be interesting if we get an issue
+                    // report in the future with it...
+                    Allium.LOGGER.warn("Could not get property data for " + memberName, e);
+                    return Constants.NIL;
+                }
+            });
 
-        metatable.rawset("__newindex", new ThreeArgFunction() {
-            @Override
-            public LuaValue call(LuaState state, LuaValue arg1, LuaValue arg2, LuaValue arg3) throws LuaError {
+            Iterator<Varargs> iterator = valueStream.iterator();
+            return new VarArgFunction() { // next
+                public Varargs invoke(LuaState state, Varargs varargs) throws LuaError, UnwindThrowable {
+                    if (!iterator.hasNext()) return Constants.NIL;
+                    return iterator.next();
+                }
+            };
+        }));
+
+        metatable.rawset("__index", LibFunction.create((state, arg1, arg2) -> {
+            if (arg2.isString()) {
                 String name = arg2.checkString(); // mapped name
+
+                if (name.equals("getClass")) {
+                    return getClassFunc;
+                }
 
                 PropertyData<?> cachedProperty = cachedProperties.get(name);
 
                 if (cachedProperty == null) {
-                    cachedProperty = PropertyResolver.resolveProperty(clazz, name, false);
+                    cachedProperty = PropertyResolver.resolveProperty(clazz, name, true);
 
                     cachedProperties.put(name, cachedProperty);
                 }
 
-                cachedProperty.set(name, state, null, arg3);
-
-                return Constants.NIL;
+                if (cachedProperty != EmptyData.INSTANCE)
+                    return cachedProperty.get(name, state, null, false);
             }
-        });
+
+            if (indexImpl != null) {
+                var parameters = indexImpl.parameters();
+                try {
+                    var jargs = ArgumentUtils.toJavaArguments(state, arg2, 1, parameters);
+
+                    if (jargs.length == parameters.size()) {
+                        try {
+                            var instance = TypeCoercions.toJava(state, arg1, clazz);
+                            EClassUse<?> ret = indexImpl.returnTypeUse().upperBound();
+                            Object out = indexImpl.invoke(instance, jargs);
+                            // If out is null, we can assume the index is nil
+                            if (out == null) throw new InvalidArgumentException();
+                            return TypeCoercions.toLuaValue(out, ret);
+                        } catch (IllegalAccessException e) {
+                            throw new LuaError(e);
+                        } catch (InvocationTargetException e) {
+                            var target = e.getTargetException();
+
+                            if (target instanceof LuaError err) {
+                                throw err;
+                            } else if (target instanceof IndexOutOfBoundsException) {
+                                // Continue.
+                            } else {
+                                throw new LuaError(target);
+                            }
+                        } catch (InvalidArgumentException ignore) {}
+                    }
+                } catch (InvalidArgumentException | IllegalArgumentException e) {
+                    // Continue.
+                }
+            }
+
+            if (arg2.type() == Constants.TTABLE) {
+                LuaTable table = arg2.checkTable();
+                EClass<?>[] typeArgs = new EClass[table.length()];
+
+                for (int i = 0; i < typeArgs.length; i++) {
+                    typeArgs[i] = JavaHelpers.asClass(table.rawget(i + 1));
+                }
+
+                try {
+                    return bindClass(clazz.instantiateWith(List.of(typeArgs)));
+                } catch (IllegalArgumentException e) {
+                    throw new LuaError(e);
+                }
+            }
+
+            return Constants.NIL;
+        }));
+
+        metatable.rawset("__newindex", LibFunction.create((state, arg1, arg2, arg3) -> {
+            String name = arg2.checkString(); // mapped name
+
+            PropertyData<?> cachedProperty = cachedProperties.get(name);
+
+            if (cachedProperty == null) {
+                cachedProperty = PropertyResolver.resolveProperty(clazz, name, false);
+
+                cachedProperties.put(name, cachedProperty);
+            }
+
+            cachedProperty.set(name, state, null, arg3);
+
+            return Constants.NIL;
+        }));
 
         metatable.rawset("__call", new VarArgFunction() {
             @Override
@@ -227,17 +218,9 @@ public final class StaticBinder {
         throw new LuaError(error.toString());
     }
 
-    private static class GetClassFunction extends ZeroArgFunction {
-        private final EClass<?> clazz;
-
-        public GetClassFunction(EClass<?> clazz) {
-            super();
-            this.clazz = clazz;
-        }
-
-        @Override
-        public LuaValue call(LuaState state) {
-            return TypeCoercions.toLuaValue(clazz, EClass.fromJava(EClass.class).instantiateWith(List.of(clazz)));
-        }
+    private static LuaFunction createGetClassFunction(EClass<?> clazz) {
+        return LibFunction.create((state) -> TypeCoercions
+                .toLuaValue(clazz, EClass.fromJava(EClass.class).instantiateWith(List.of(clazz)))
+        );
     }
 }
