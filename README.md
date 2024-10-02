@@ -30,10 +30,10 @@ these limitations will be resolved before version 1.0. While there is not docume
 can be found in [`bouquet/examples`](bouquet/examples).
 
 ## Logos
-Allium's logos are under the same license as the rest of the project. Feel free to use these in your own project
+Allium's logos are under the same license as the rest of the project. Feel free to use these in your own project.
 
 <img src="logos/icon.png" alt="Allium Icon" height="100"/> <img src="logos/logo.png" alt="Allium Logo" height="100"/> 
-<img src="logos/banner.png" alt="Powered by Allium" height="100"/>
+<img src="logos/banner.png" alt="Powered by Allium" height="100"/>.
 
 ## Contributing
 Allium is broken up into 2 gradle subprojects that each build into their own jars. When making a pull request please
