@@ -1,4 +1,4 @@
--- Let's add an allium on top of fully grown hand-planted cacti!
+-- Let's add an allium on top of fully grown cacti!
 mixin.to("net.minecraft.world.level.block.CactusBlock") -- Mix into the block class
     :method("addFlower")
         :inject({ -- Target the randomTick method, at a specific point after the cacti has grown
