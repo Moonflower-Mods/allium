@@ -12,6 +12,6 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 public class ClientEventHandlers {
 
     public interface GuiRender {
-        void onGuiRender(Minecraft client, GuiGraphicsExtractor context, DeltaTracker deltaTracker, Gui hud);
+        void onGuiRender(Gui hud, Minecraft client, GuiGraphicsExtractor context, DeltaTracker deltaTracker, boolean shouldRenderLevel, boolean resourcesLoaded);
     }
 }
